@@ -187,6 +187,54 @@ body{font-family:'Inter',system-ui,sans-serif;font-size:13px;color:var(--ink);ba
 .doc-c-ico i{font-size:20px;color:var(--blue)}
 .doc-c-name{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:3px}
 .doc-c-sub{font-size:11px;color:var(--gray2)}
+
+/* ===== Responsividade mobile (fix: responsividade mobile corrigida) ===== */
+.mobile-only{display:none}
+.menu-toggle{display:none;align-items:center;justify-content:center;width:44px;height:44px;border:1.5px solid var(--gray4);background:var(--white);border-radius:8px;color:var(--ink2);cursor:pointer;flex-shrink:0}
+.menu-toggle i{font-size:22px}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:90}
+.sb-overlay.open{display:block}
+@media (max-width:768px){
+  body{height:auto;min-height:100vh;overflow-x:hidden;display:block}
+  /* Sidebar vira gaveta (drawer) acionada por hamburguer */
+  .sb{position:fixed;top:0;left:0;height:100vh;height:100dvh;width:82vw;max-width:300px;transform:translateX(-100%);transition:transform .25s ease;z-index:100;overflow-y:auto}
+  .sb.open{transform:translateX(0)}
+  .mn{width:100%;height:auto}
+  .menu-toggle{display:flex}
+  .mobile-only{display:flex}
+  /* Topbar */
+  .top{height:auto;min-height:56px;padding:10px 14px;gap:10px;flex-wrap:wrap;align-items:center}
+  .top-title{font-size:17px}
+  .top-sub{font-size:11px}
+  .top-r{flex-wrap:wrap;gap:8px;width:100%}
+  .top-r .btn-p,.top-r .btn-o{min-height:44px}
+  /* Conteudo */
+  .ct{padding:14px;gap:14px;overflow:visible}
+  /* KPIs em coluna unica */
+  .krow{grid-template-columns:1fr;gap:12px}
+  .kpi{padding:16px}
+  .kpi-value{font-size:24px}
+  /* Secao de dois cards empilha */
+  .two{grid-template-columns:1fr;gap:14px}
+  .card{border-radius:14px}
+  .ch{padding:14px;flex-wrap:wrap;gap:10px}
+  .cb{padding:14px}
+  /* Tabelas com scroll horizontal */
+  .table{display:block;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+  /* Calendario */
+  .cal-cell{min-height:44px}
+  /* Alvos de toque >= 44px e fontes legiveis */
+  .btn-p,.btn-o,.notif,.date-c,.ic-btn{min-height:44px;font-size:14px}
+  .ic-btn{min-width:44px;width:44px;height:44px}
+  input,select,textarea,button{font-size:16px;min-height:44px}
+  .nav{padding:12px 16px;font-size:15px;min-height:44px}
+}
+@media (max-width:390px){
+  .top-title{font-size:16px}
+  .kpi-value{font-size:22px}
+  .ct{padding:12px}
+}
+
 </style>
 </head>
 <body>
@@ -650,5 +698,26 @@ function getBadge(l){const m={livre:'<span class="badge b-free">Livre</span>',co
 function fmtD(s){if(!s)return'—';return new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});}
 function toast(msg,tipo='inf'){const e=document.createElement('div');const ic={ok:'ti-circle-check',er:'ti-circle-x',inf:'ti-info-circle'};const cc={ok:'var(--green)',er:'var(--red)',inf:'var(--blue3)'};e.className='toast '+tipo;e.innerHTML=`<i class="ti ${ic[tipo]}" style="font-size:16px;color:${cc[tipo]}"></i>${msg}`;document.getElementById('toasts').appendChild(e);setTimeout(()=>e.remove(),4000);}
 </script>
+
+  <!-- Botao hamburguer mobile e overlay da gaveta lateral -->
+  <button class="menu-toggle mobile-only" id="mobileMenuBtn" aria-label="Abrir menu" onclick="(function(){var s=document.querySelector('.sb');var o=document.getElementById('sbOverlay');s.classList.add('open');o.classList.add('open');})()"><i class="ti ti-menu-2"></i></button>
+  <div class="sb-overlay" id="sbOverlay" onclick="(function(){document.querySelector('.sb').classList.remove('open');this.classList.remove('open');}).call(this)"></div>
+  <script>
+  (function(){
+    function closeDrawer(){var s=document.querySelector('.sb');var o=document.getElementById('sbOverlay');if(s)s.classList.remove('open');if(o)o.classList.remove('open');}
+    // mover o botao para dentro da topbar (antes do bloco de titulo)
+    function place(){
+      var btn=document.getElementById('mobileMenuBtn');var top=document.querySelector('.top');
+      if(btn&&top&&btn.parentElement!==top){top.insertBefore(btn,top.firstChild);}
+    }
+    if(document.readyState!=='loading'){place();}else{document.addEventListener('DOMContentLoaded',place);}
+    // fechar gaveta ao clicar em um item de navegacao (mobile)
+    document.addEventListener('click',function(e){
+      if(window.innerWidth<=768&&e.target.closest&&e.target.closest('.sb .nav')){closeDrawer();}
+    });
+    window.addEventListener('resize',function(){if(window.innerWidth>768)closeDrawer();});
+  })();
+  </script>
+
 </body>
 </html>
