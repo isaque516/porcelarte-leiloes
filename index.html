@@ -466,19 +466,7 @@ body{background:#F8F9FA}
         </div>
       </div>
       <div class="card" id="lotes-wrap"><div class="loading"><div class="spin"></div>Carregando lotes...</div></div>
-      <div class="card">
-        <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-upload"></i></div><div><div class="ch-title">Subir lotes em massa</div></div></div>
-          <div style="display:flex;gap:7px"><button class="btn-p" onclick="baixarPlanilha()" style="padding:6px 12px;font-size:11px"><i class="ti ti-download"></i>Baixar planilha pronta</button><button class="btn-o" onclick="document.getElementById('csv-f').click()" style="padding:6px 12px;font-size:11px"><i class="ti ti-file-spreadsheet"></i>Importar CSV</button><input type="file" id="csv-f" accept=".csv" style="display:none" onchange="importCSV(this)"></div>
-        </div>
-        <div class="cb">
-          <div style="font-size:11px;color:var(--gray);margin-bottom:8px"><strong>Formato:</strong> data; horario; numero; descricao; categoria; lance; condicional; retirou; pago</div>
-          <textarea id="csv-txt" style="width:100%;height:72px;border:1.5px solid var(--gray4);border-radius:8px;padding:8px 10px;font-family:monospace;font-size:11px;outline:none;resize:vertical" placeholder="Cole os dados aqui...&#10;Ex: 2026-06-23; 09:00; 008; Terreno 500m²; Imóveis; 120000; Nao; Nao; Nao"></textarea>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
-            <span id="csv-ct" style="font-size:11px;color:var(--gray2)">0 lote(s)</span>
-            <div style="display:flex;gap:7px"><button class="btn-o" onclick="document.getElementById('csv-txt').value=''" style="padding:5px 10px;font-size:11px"><i class="ti ti-trash"></i>Limpar</button><button class="btn-p" onclick="importTexto()" style="padding:5px 10px;font-size:11px"><i class="ti ti-plus"></i>Adicionar ao banco</button></div>
-          </div>
-        </div>
-      </div>
+      
       <div class="card">
         <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-file-spreadsheet"></i></div><div><div class="ch-title">Exportar planilha para o leiloeiro</div></div></div>
           <div style="display:flex;gap:7px"><button class="btn-p" onclick="baixarPlanilha()" style="padding:6px 12px;font-size:11px"><i class="ti ti-download"></i>Baixar planilha (.csv)</button><button class="btn-o" onclick="copiarDados()" style="padding:6px 12px;font-size:11px"><i class="ti ti-copy"></i>Copiar dados</button></div>
