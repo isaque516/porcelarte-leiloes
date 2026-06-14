@@ -675,6 +675,7 @@ function ir(p){
   if(p==='condicionais')renderCond();
   if(p==='aovivo')fillSelVivo();
   if(p==='dashboard')initDash();
+  if(p==='abadias')window.abadiasAoAbrir();
 }
 window.ir=ir;
 
@@ -840,10 +841,103 @@ window.modeloGmail=modeloGmail;window.envEmail=envEmail;
 
 function ctxAI(){const tv=lotes.filter(l=>l.pago).reduce((s,l)=>s+(l.lanceAtual||0),0);return `Você é Abadias, assistente pessoal de leilões da Porcelarte. Responda sempre em português brasileiro de forma direta e profissional.\n\nDados atuais:\n- Total de lotes: ${lotes.length}\n- Condicionais pendentes: ${lotes.filter(l=>l.condicional&&!l.pago).length}\n- Total arrecadado: R$${tv.toLocaleString('pt-BR')}\n\nLOTES:\n${lotes.map(l=>`Lote ${l.num}: ${l.descricao} | ${l.categoria} | ${l.data} | Lance: R$${l.lanceAtual||l.lanceInicial||0} | Arrematante: ${l.arrematante||'nenhum'} | Status: ${getSt(l)} | Condicional: ${l.condicional?'sim':'não'} | Pago: ${l.pago?'sim':'não'}`).join('\n')||'Nenhum lote cadastrado.'}`;}
 
-async function envMsg(){const inp=document.getElementById('chat-in'),msg=inp.value.trim();if(!msg)return;inp.value='';addMsg('me',msg);chatHist.push({role:'user',content:msg});const th=addMsg('ab','Digitando...',true);document.getElementById('btn-send').disabled=true;try{const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:ctxAI(),messages:chatHist})});const d=await r.json();const t=d.content?.[0]?.text||'Não consegui processar.';th.remove();addMsg('ab',t);chatHist.push({role:'assistant',content:t});if(chatHist.length>20)chatHist=chatHist.slice(-20);}catch(e){th.remove();addMsg('ab','Erro ao conectar com a IA.');}document.getElementById('btn-send').disabled=false;}
+async function envMsg(){const inp=document.getElementById('chat-in'),msg=inp.value.trim();if(!msg)return;inp.value='';addMsg('me',msg);chatHist.push({role:'user',content:msg});const th=addMsg('ab','Digitando...',true);document.getElementById('btn-send').disabled=true;try{await new Promise(r=>setTimeout(r,250));const resp=window.respostaAbadias(msg);th.remove();addMsg('ab',resp);chatHist.push({role:'assistant',content:resp});if(chatHist.length>20)chatHist=chatHist.slice(-20);}catch(e){th.remove();addMsg('ab','Tive um problema ao analisar os dados. Tente novamente.');}document.getElementById('btn-send').disabled=false;}
 window.envMsg=envMsg;
 
 function addMsg(tipo,txt,th=false){const c=document.getElementById('chat-msgs');const d=document.createElement('div');d.className=tipo==='me'?'msg-me':'msg-ab';d.innerHTML=`<div class="msg-av">${tipo==='me'?'IS':'AB'}</div><div><div class="msg-bub${th?' msg-th':''}">${txt.replace(/\n/g,'<br>')}</div><div class="msg-time">${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div></div>`;c.appendChild(d);c.scrollTop=c.scrollHeight;return d;}
+
+/* ===== ABADIAS — assistente inteligente (local, sem IA externa) ===== */
+window._fmtBRL=function(v){return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});};
+window._hojeISO=function(){return new Date().toISOString().slice(0,10);};
+window._stLote=function(l){if(l.pago)return'pago';if(l.arrematante)return'arrematado';if(l.condicional)return'condicional';return'aberto';};
+window._resumoNums=function(){
+  const ll=Array.isArray(lotes)?lotes:[];
+  const hoje=window._hojeISO();
+  const doDia=ll.filter(l=>l.data===hoje);
+  const arrecadado=ll.filter(l=>l.pago).reduce((s,l)=>s+(l.lanceAtual||l.lanceInicial||0),0);
+  const previsto=ll.reduce((s,l)=>s+(l.lanceAtual||l.lanceInicial||0),0);
+  const condicionais=ll.filter(l=>l.condicional&&!l.pago);
+  const naoPagos=ll.filter(l=>l.arrematante&&!l.pago);
+  const naoRetirados=ll.filter(l=>l.pago&&!l.retirou);
+  return {ll,hoje,doDia,arrecadado,previsto,condicionais,naoPagos,naoRetirados};
+};
+window.respostaAbadias=function(msg){
+  const q=(msg||'').toLowerCase();
+  const R=window._resumoNums();
+  const L=window._fmtBRL;
+  const linhaLote=l=>'• Lote '+(l.num||'?')+(l.descricao?' — '+l.descricao:'')+(l.lanceAtual||l.lanceInicial?' ('+L(l.lanceAtual||l.lanceInicial)+')':'');
+  const has=(...ks)=>ks.some(k=>q.includes(k));
+  if(!R.ll.length) return 'Ainda não há lotes cadastrados. Clique em "Novo lote" para começar e eu passo a te dar resumos e alertas automaticamente.';
+  if(has('arrecad','faturad','recebi','quanto') && has('mes','mês','total')||q.includes('total arrecad')){
+    return 'Total arrecadado (lotes pagos): '+L(R.arrecadado)+'.\nValor previsto somando todos os lances atuais: '+L(R.previsto)+'.';
+  }
+  if(has('condicional')){
+    if(!R.condicionais.length) return 'Não há lotes em condicional pendentes de pagamento no momento.';
+    return 'Lotes em condicional e ainda não pagos ('+R.condicionais.length+'):\n'+R.condicionais.map(linhaLote).join('\n');
+  }
+  if(has('retir','entrega') && has('nao','não','pend','falta')){
+    if(!R.naoRetirados.length) return 'Tudo certo! Não há lotes pagos aguardando retirada.';
+    return 'Lotes pagos aguardando retirada ('+R.naoRetirados.length+'):\n'+R.naoRetirados.map(linhaLote).join('\n');
+  }
+  if(has('nao pag','não pag','pendente de pag','falta pagar','inadimpl')){
+    if(!R.naoPagos.length) return 'Não há pagamentos pendentes. Todos os lotes arrematados estão pagos.';
+    return 'Lotes arrematados ainda não pagos ('+R.naoPagos.length+'):\n'+R.naoPagos.map(linhaLote).join('\n');
+  }
+  if(has('hoje','do dia','agora')){
+    if(!R.doDia.length) return 'Não há lotes com leilão agendado para hoje ('+R.hoje.split('-').reverse().join('/')+').';
+    return 'Hoje ('+R.hoje.split('-').reverse().join('/')+') temos '+R.doDia.length+' lote(s) em leilão:\n'+R.doDia.map(l=>linhaLote(l)+(l.hora?' às '+l.hora:'')).join('\n');
+  }
+  if(has('relat','resumo','panorama','visao','visão','status')){
+    return 'Relatório do leilão:\n'
+      +'• Total de lotes: '+R.ll.length+'\n'
+      +'• Em leilão hoje: '+R.doDia.length+'\n'
+      +'• Arrecadado (pagos): '+L(R.arrecadado)+'\n'
+      +'• Previsto (todos os lances): '+L(R.previsto)+'\n'
+      +'• Condicionais pendentes: '+R.condicionais.length+'\n'
+      +'• Pagamentos pendentes: '+R.naoPagos.length+'\n'
+      +'• Aguardando retirada: '+R.naoRetirados.length;
+  }
+  if(has('quantos lote','quantidade de lote','numero de lote','número de lote') || (has('lote')&&has('quant'))){
+    return 'Você tem '+R.ll.length+' lote(s) cadastrado(s) no total, sendo '+R.doDia.length+' com leilão hoje.';
+  }
+  if(has('maior lance','lance mais alto','lote mais caro','maior valor')){
+    const top=[...R.ll].sort((a,b)=>(b.lanceAtual||b.lanceInicial||0)-(a.lanceAtual||a.lanceInicial||0))[0];
+    return 'O maior lance é do '+linhaLote(top)+'.';
+  }
+  if(has('lista','todos os lote','mostrar lote')){
+    return 'Lotes cadastrados ('+R.ll.length+'):\n'+R.ll.slice(0,15).map(linhaLote).join('\n')+(R.ll.length>15?'\n…e mais '+(R.ll.length-15)+'.':'');
+  }
+  if(has('ola','olá','oi','bom dia','boa tarde','boa noite','tudo bem')){
+    return 'Olá, Isaque! '+window.abadiasProativo(true);
+  }
+  if(has('ajuda','o que voce faz','o que você faz','pode fazer','comandos')){
+    return 'Posso te ajudar com: resumo do leilão, lotes em leilão hoje, total arrecadado, lotes em condicional, pagamentos pendentes e retiradas pendentes. É só perguntar — ou usar os botões de atalho acima.';
+  }
+  // fallback inteligente: dá um panorama útil
+  return 'Não tenho certeza do que você precisa, mas aqui vai um resumo rápido:\n'
+    +'• '+R.doDia.length+' lote(s) em leilão hoje\n'
+    +'• Arrecadado: '+L(R.arrecadado)+'\n'
+    +'• '+R.naoPagos.length+' pagamento(s) pendente(s) · '+R.naoRetirados.length+' retirada(s) pendente(s).\n'
+    +'Pergunte por exemplo: "lotes de hoje", "total arrecadado", "condicionais" ou "retiradas pendentes".';
+};
+window.abadiasProativo=function(inline){
+  const R=window._resumoNums();
+  if(!R.ll.length) return inline?'Ainda não há lotes cadastrados — cadastre o primeiro para eu começar a te ajudar.':'';
+  const partes=[];
+  if(R.doDia.length) partes.push('temos '+R.doDia.length+' lote(s) em leilão hoje');
+  if(R.naoPagos.length) partes.push(R.naoPagos.length+' pagamento(s) pendente(s)');
+  if(R.naoRetirados.length) partes.push(R.naoRetirados.length+' retirada(s) pendente(s)');
+  if(R.condicionais.length) partes.push(R.condicionais.length+' condicional(is)');
+  const corpo = partes.length ? ('Isaque, '+partes.join(', ')+'. Quer que eu detalhe algum?') : 'Isaque, está tudo em dia: sem pagamentos, retiradas ou condicionais pendentes.';
+  return corpo;
+};
+window.__abadiasJaSaudou=false;
+window.abadiasAoAbrir=function(){
+  if(window.__abadiasJaSaudou) return;
+  window.__abadiasJaSaudou=true;
+  try{ const msg=window.abadiasProativo(false); if(msg) addMsg('ab',msg); }catch(e){}
+};
+
 function pergunta(t){ir('abadias');document.getElementById('chat-in').value=t;envMsg();}
 function limparChat(){chatHist=[];document.getElementById('chat-msgs').innerHTML='<div class="msg-ab"><div class="msg-av">AB</div><div><div class="msg-bub">Conversa reiniciada! 🎯</div></div></div>';}
 window.pergunta=pergunta;window.limparChat=limparChat;
