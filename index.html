@@ -331,6 +331,7 @@ body{background:#F8F9FA}
   .botnav a.on i{color:#6EA8FF}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 </head>
 <body>
 
@@ -739,7 +740,37 @@ function editarLote(id){const l=lotes.find(x=>x.id===id);if(!l)return;document.g
 window.editarLote=editarLote;
 
 function updateExpPrev(){const el=document.getElementById('exp-prev');if(!el)return;if(!lotes.length){el.textContent='(nenhum lote cadastrado)';return;}el.innerHTML=lotes.slice(0,3).map(l=>`${l.data}; ${l.hora||''}; ${l.num}; ${l.descricao}; ${l.categoria}; ${l.lanceInicial||0}; ${l.lanceAtual||l.lanceInicial||0}; ${l.arrematante||''}; ${getSt(l)}; ${l.condicional?'Sim':'Nao'}; ${l.retirou?'Sim':'Nao'}; ${l.pago?'Sim':'Nao'}`).join('<br>');}
-function baixarPlanilha(){const h='data;horario;numero;descricao;categoria;lance_ini;lance_atu;arrematante;status;condicional;retirou;pago\n';const fc=document.getElementById('exp-cond')?.checked,fp=document.getElementById('exp-pago')?.checked;let ll=[...lotes];if(fc)ll=ll.filter(x=>x.condicional);if(fp)ll=ll.filter(x=>x.pago);const c=ll.map(l=>`${l.data};${l.hora||''};${l.num};"${l.descricao}";${l.categoria};${l.lanceInicial||0};${l.lanceAtual||l.lanceInicial||0};"${l.arrematante||''}";${getSt(l)};${l.condicional?'Sim':'Nao'};${l.retirou?'Sim':'Nao'};${l.pago?'Sim':'Nao'}`).join('\n');const b=new Blob(['\uFEFF'+h+c],{type:'text/csv;charset=utf-8;'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='porcelarte-'+hoje.toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(u);toast('Planilha baixada!','ok');}
+function baixarPlanilha(){
+  const fc=document.getElementById('exp-cond')?.checked;
+  const fp=document.getElementById('exp-pago')?.checked;
+  let ll=[...lotes];
+  if(fc)ll=ll.filter(x=>x.condicional);
+  if(fp)ll=ll.filter(x=>x.pago);
+  const NCOLS=9;
+  const headers=['Código','Descrição resumida','Condições / Observações','Marca / Modelo','Metragem total','Qtd CX / Paletes','Lance inicial','Localização','Contato'];
+  const aoa=[];
+  aoa.push(['CONTROLE DE LOTES  ●  PORCELARTE']);
+  aoa.push(['Modelo premium para organizar porcelanatos, armários e pendências']);
+  aoa.push(['Preencha a partir da linha 5. Use os filtros no cabeçalho para localizar rapidamente.']);
+  aoa.push(headers);
+  ll.forEach(l=>{ aoa.push([l.num||'',l.descricao||'',l.obs||'',l.categoria||'','','',(l.lanceInicial!=null?l.lanceInicial:''),'',l.arrematante||'']); });
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:NCOLS-1}},{s:{r:1,c:0},e:{r:1,c:NCOLS-1}},{s:{r:2,c:0},e:{r:2,c:NCOLS-1}}];
+  ws['!cols']=[{wch:12},{wch:28},{wch:30},{wch:20},{wch:14},{wch:14},{wch:14},{wch:18},{wch:18}];
+  ws['!rows']=[{hpt:30},{hpt:20},{hpt:20},{hpt:24}];
+  const ESCURO='0F2027',VERDE='0E6B5C',BRANCO='FFFFFF';
+  const set=(rr,cc,s)=>{const a=XLSX.utils.encode_cell({r:rr,c:cc});if(!ws[a])ws[a]={t:'s',v:''};ws[a].s=s;};
+  for(let c=0;c<NCOLS;c++)set(0,c,{fill:{fgColor:{rgb:ESCURO}},font:{bold:true,sz:14,color:{rgb:BRANCO}},alignment:{horizontal:'center',vertical:'center'}});
+  for(let c=0;c<NCOLS;c++)set(1,c,{fill:{fgColor:{rgb:'13313A'}},font:{sz:10,color:{rgb:'D7E3E1'}},alignment:{horizontal:'center',vertical:'center'}});
+  for(let c=0;c<NCOLS;c++)set(2,c,{fill:{fgColor:{rgb:'EAF3F1'}},font:{bold:true,sz:10,color:{rgb:VERDE}},alignment:{horizontal:'center',vertical:'center'}});
+  for(let c=0;c<NCOLS;c++)set(3,c,{fill:{fgColor:{rgb:VERDE}},font:{bold:true,sz:11,color:{rgb:BRANCO}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'0A4A40'}}}});
+  const last=aoa.length;
+  for(let rr=4;rr<last;rr++)for(let c=0;c<NCOLS;c++)set(rr,c,{font:{sz:10,color:{rgb:'1F2933'}},alignment:{vertical:'center',horizontal:(c===6?'right':'left'),wrapText:true},border:{bottom:{style:'thin',color:{rgb:'E0E6E5'}}}});
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Controle de Lotes');
+  XLSX.writeFile(wb,'porcelarte-'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('Planilha baixada!');
+}
 window.baixarPlanilha=baixarPlanilha;
 function copiarDados(){const h='data\thorario\tnumero\tdescricao\tcategoria\tlance_ini\tlance_atu\tarrematante\tstatus\tcondicional\tretirou\tpago\n';navigator.clipboard.writeText(h+lotes.map(l=>[l.data,l.hora||'',l.num,l.descricao,l.categoria,l.lanceInicial||0,l.lanceAtual||l.lanceInicial||0,l.arrematante||'',getSt(l),l.condicional?'Sim':'Nao',l.retirou?'Sim':'Nao',l.pago?'Sim':'Nao'].join('\t')).join('\n')).then(()=>toast('Dados copiados! Cole no Excel.','ok'));}
 window.copiarDados=copiarDados;
