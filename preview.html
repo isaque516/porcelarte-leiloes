@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Porcelarte · Gestão de Leilões</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+--navy:#0F172A;--blue:#2563EB;--blue2:#1D4ED8;--blue3:#3B82F6;--blue4:#93C5FD;--blue5:#EFF6FF;--blue6:#DBEAFE;
+--green:#059669;--green2:#D1FAE5;--green3:#10B981;
+--amber:#D97706;--amber2:#FEF3C7;--red:#DC2626;--red2:#FEE2E2;
+--purple:#7C3AED;--purple2:#EDE9FE;--orange:#EA580C;--orange2:#FEF0E7;
+--gray:#64748B;--gray2:#94A3B8;--gray3:#CBD5E1;--gray4:#E2E8F0;--gray5:#F1F5F9;--gray6:#F8FAFC;
+--ink:#0F172A;--ink2:#1E293B;--white:#fff;
+--bg:#F4F6FB;
+--sf:0 1px 2px rgba(15,23,42,.03);
+--shadow-sm:0 1px 2px rgba(15,23,42,.04);
+--shadow:0 1px 3px rgba(15,23,42,.05),0 10px 24px -14px rgba(15,23,42,.14);
+--shadow-md:0 2px 6px rgba(15,23,42,.05),0 18px 40px -20px rgba(15,23,42,.28);
+--shadow-lg:0 24px 60px -18px rgba(15,23,42,.32);
+--ring:0 0 0 4px rgba(37,99,235,.14);
+--rad:20px;
+}
+html,body{height:100%}
+body{font-family:'Inter',system-ui,sans-serif;font-size:13px;color:var(--ink);background:var(--bg);display:flex;height:100vh;overflow:hidden;-webkit-font-smoothing:antialiased;letter-spacing:-.006em}
+
+/* ===== SIDEBAR (dark default) ===== */
+.sb{width:252px;background:#0A0F1D;display:flex;flex-direction:column;flex-shrink:0;position:relative;z-index:5}
+.sb::before{content:"";position:absolute;top:0;left:0;right:0;height:240px;background:radial-gradient(120% 80% at 20% 0%,rgba(37,99,235,.22),transparent 70%);pointer-events:none}
+.sb-logo{padding:20px 18px;display:flex;align-items:center;gap:13px;position:relative;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-ico{position:relative;overflow:hidden;width:46px;height:46px;background:linear-gradient(145deg,#5B9BFF 0%,#2563EB 55%,#1D4ED8 100%);border-radius:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 10px 24px -4px rgba(37,99,235,.65),inset 0 1px 0 rgba(255,255,255,.4),inset 0 0 0 1px rgba(255,255,255,.16)}
+.sb-ico::after{content:"";position:absolute;left:0;right:0;top:0;height:55%;background:linear-gradient(180deg,rgba(255,255,255,.32),transparent);pointer-events:none}
+.sb-ico i{position:relative;z-index:1;color:#fff;font-size:23px}
+.sb-name{font-size:17px;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1.1}
+.sb-sub{font-size:9px;color:#6E83AD;font-weight:700;text-transform:uppercase;letter-spacing:.16em;margin-top:3px}
+.sb-sec{padding:10px 0 2px;position:relative}
+.sb-lbl{font-size:9.5px;font-weight:700;color:#5A6E92;text-transform:uppercase;letter-spacing:.14em;padding:8px 20px 8px}
+.nav{display:flex;align-items:center;gap:12px;padding:10px 13px;margin:2px 12px;cursor:pointer;color:#9FB0CC;font-size:13px;font-weight:500;border-radius:12px;transition:.16s;position:relative}
+.nav:hover{color:#fff;background:rgba(255,255,255,.06)}
+.nav.on{color:#fff;background:linear-gradient(135deg,#2D6BE4,#2152C9);box-shadow:0 10px 22px -6px rgba(37,99,235,.6)}
+.nav.on i{color:#fff}
+.nav i{font-size:18.5px;flex-shrink:0;opacity:.92}
+.sb-div{height:1px;background:rgba(255,255,255,.06);margin:9px 18px}
+.sb-foot{margin-top:auto;padding:12px 14px;display:flex;flex-direction:column;gap:9px;position:relative}
+.sb-user{display:flex;align-items:center;gap:11px;padding:11px;background:rgba(255,255,255,.05);border-radius:14px}
+.sb-av{width:36px;height:36px;background:linear-gradient(140deg,#22D3EE,#2563EB);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;position:relative}
+.sb-av-dot{position:absolute;bottom:-2px;right:-2px;width:11px;height:11px;background:#22C55E;border-radius:50%;border:2.5px solid #0A0F1D}
+.sb-uname{font-size:12.5px;font-weight:700;color:#fff}
+.sb-urole{font-size:10.5px;color:#8094B8}
+.sb-fb{display:flex;align-items:center;gap:9px;padding:10px 12px;background:rgba(255,255,255,.04);border-radius:12px}
+.sb-fb i{font-size:16px;color:var(--green3)}
+.sb-fb-name{font-size:11.5px;font-weight:600;color:#fff}
+.sb-fb-st{font-size:10px;color:var(--green3);font-weight:500}
+
+/* ===== SIDEBAR (light theme) ===== */
+.theme-light .sb{background:#fff;border-right:1px solid var(--gray4)}
+.theme-light .sb-logo{border-bottom-color:var(--gray4)}
+.theme-light .sb::before{display:none}
+.theme-light .sb-name{color:var(--ink)}
+.theme-light .sb-sub{color:var(--gray2)}
+.theme-light .sb-lbl{color:var(--gray2)}
+.theme-light .nav{color:var(--gray)}
+.theme-light .nav:hover{color:var(--ink);background:var(--gray5)}
+.theme-light .nav.on{color:var(--blue);background:var(--blue5);box-shadow:none}
+.theme-light .nav.on i{color:var(--blue)}
+.theme-light .sb-div{background:var(--gray4)}
+.theme-light .sb-user{background:var(--gray5)}
+.theme-light .sb-av-dot{border-color:var(--gray5)}
+.theme-light .sb-uname{color:var(--ink)}
+.theme-light .sb-urole{color:var(--gray2)}
+.theme-light .sb-fb{background:var(--gray5)}
+.theme-light .sb-fb-name{color:var(--ink)}
+
+/* ===== MAIN ===== */
+.mn{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;background:var(--bg)}
+.top{background:rgba(255,255,255,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--gray4);padding:0 26px;height:66px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:14px}
+.top-title{font-size:22px;font-weight:800;color:var(--ink);letter-spacing:-.03em}
+.top-sub{font-size:12px;color:var(--gray2);margin-top:2px;font-weight:500}
+.top-r{display:flex;align-items:center;gap:9px}
+.theme-tg{width:42px;height:42px;border-radius:12px;border:none;background:var(--gray5);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--gray);transition:.15s;flex-shrink:0}
+.theme-tg:hover{background:var(--gray4);color:var(--ink2)}
+.theme-tg i{font-size:18px}
+.pill-ok{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;padding:8px 14px;border-radius:99px;color:var(--green);background:#ECFDF5}
+.pill-dot{width:7px;height:7px;border-radius:50%;background:var(--green3);box-shadow:0 0 0 3px rgba(16,185,129,.18)}
+.date-c{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:9px 14px;border-radius:12px;color:var(--ink2);background:#fff;box-shadow:var(--sf)}
+.date-c i{color:var(--gray2);font-size:15px}
+.notif{width:42px;height:42px;border-radius:12px;background:var(--gray5);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--gray);transition:.15s;border:none}
+.notif:hover{background:var(--gray4);color:var(--ink2)}
+
+/* ===== BUTTONS ===== */
+.btn-p{background:var(--blue);color:#fff;border:none;cursor:pointer;font-size:12.5px;font-weight:600;padding:10px 17px;border-radius:12px;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;box-shadow:0 8px 18px -6px rgba(37,99,235,.6);transition:.15s}
+.btn-p:hover{background:var(--blue2);box-shadow:0 10px 22px -6px rgba(37,99,235,.7);transform:translateY(-1px)}
+.btn-p:active{transform:translateY(0)}
+.btn-p i{font-size:14px}
+.btn-o{background:var(--gray5);color:var(--ink2);border:none;cursor:pointer;font-size:12px;font-weight:600;padding:9px 14px;border-radius:11px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:.15s}
+.btn-o:hover{background:var(--gray4)}
+.btn-o i{font-size:13px}
+
+/* ===== CONTENT ===== */
+.ct{flex:1;overflow-y:auto;padding:24px 26px;display:flex;flex-direction:column;gap:20px}
+.ct::-webkit-scrollbar,.chat-msgs::-webkit-scrollbar{width:10px}
+.ct::-webkit-scrollbar-thumb,.chat-msgs::-webkit-scrollbar-thumb{background:var(--gray3);border-radius:6px;border:3px solid transparent;background-clip:padding-box}
+.ct::-webkit-scrollbar-track{background:transparent}
+.pg{display:none;flex-direction:column;gap:20px}
+.pg.on{display:flex}
+
+/* ===== KPI ===== */
+.krow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
+.kpi{background:#fff;border-radius:18px;padding:18px;box-shadow:var(--shadow);transition:box-shadow .2s,transform .2s;position:relative;overflow:hidden}
+.kpi:hover{box-shadow:var(--shadow-md);transform:translateY(-3px)}
+.kpi-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:8px}
+.kpi-lbl{font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.01em;line-height:1.45;text-transform:none}
+.kpi-ic{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.kpi-ic i{font-size:22px}
+.kpi-ic.blue{background:var(--blue5);color:var(--blue)}
+.kpi-ic.purple{background:var(--purple2);color:var(--purple)}
+.kpi-ic.amber{background:var(--amber2);color:var(--amber)}
+.kpi-ic.green{background:var(--green2);color:var(--green)}
+.kpi-ic.orange{background:var(--orange2);color:var(--orange)}
+.kpi-val{font-size:28px;font-weight:800;color:var(--ink);letter-spacing:-.045em;margin-bottom:8px;font-variant-numeric:tabular-nums;line-height:1}
+.kpi-tr{font-size:10.5px;font-weight:600;color:var(--green);display:inline-flex;align-items:center;gap:4px;background:#ECFDF5;padding:3px 8px;border-radius:99px}
+.kpi-tr i{font-size:12px}
+
+/* ===== CARD ===== */
+.card{background:#fff;border-radius:var(--rad);overflow:hidden;box-shadow:var(--shadow)}
+.ch{padding:18px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--gray5);gap:12px}
+.ch-l{display:flex;align-items:center;gap:12px}
+.ch-ico{width:36px;height:36px;border-radius:11px;background:var(--blue5);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ch-ico i{font-size:18px;color:var(--blue)}
+.ch-title{font-size:15px;font-weight:700;color:var(--ink);letter-spacing:-.015em}
+.ch-sub{font-size:11.5px;color:var(--gray2);margin-top:2px}
+.cb{padding:20px 22px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+
+/* ===== EMPTY ===== */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:46px 24px;text-align:center;gap:12px}
+.empty-ic{width:84px;height:84px;background:radial-gradient(120% 120% at 50% 20%,var(--blue5),#fff);border-radius:26px;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:6px;box-shadow:inset 0 0 0 1px var(--gray4),var(--shadow-sm)}
+.empty-ic i{font-size:36px;color:var(--blue3)}
+.empty-badge{position:absolute;bottom:-8px;right:-8px;width:32px;height:32px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);}
+.empty-badge i{font-size:16px}
+.empty-title{font-size:15px;font-weight:700;color:var(--ink2)}
+.empty-sub{font-size:12px;color:var(--gray2);max-width:280px;line-height:1.65}
+
+/* ===== BADGE ===== */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:8px;letter-spacing:.01em;white-space:nowrap}
+.badge::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.b-live{background:var(--blue6);color:var(--blue2)}
+.b-cond{background:var(--amber2);color:#92400E}
+.b-pago{background:var(--green2);color:#047857}
+.b-free{background:var(--gray5);color:var(--gray)}
+.b-ret{background:var(--purple2);color:#5B21B6}
+
+/* ===== TABLE ===== */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{text-align:left;font-size:10px;font-weight:700;color:var(--gray2);text-transform:uppercase;letter-spacing:.06em;padding:13px 18px;border-bottom:1px solid var(--gray4);background:transparent;white-space:nowrap}
+.tbl td{padding:15px 18px;border-bottom:1px solid var(--gray5);vertical-align:middle;color:var(--ink2)}
+.tbl tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--blue)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr{transition:background .12s}
+.tbl tbody tr:hover td{background:var(--blue5)}
+.tbl .n{display:inline-flex;align-items:center;font-weight:700;color:var(--blue);font-size:11px;font-variant-numeric:tabular-nums;background:var(--blue5);padding:4px 10px;border-radius:8px}
+.tbl .d{font-weight:600;color:var(--ink)}
+.ic-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9px;border:none;background:var(--gray5);cursor:pointer;color:var(--gray);transition:.15s}
+.ic-btn:hover{background:var(--blue5);color:var(--blue)}
+.ic-btn.del:hover{background:var(--red2);color:var(--red)}
+
+/* ===== CALENDAR ===== */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--gray4);border-radius:14px;overflow:hidden}
+.cal-hd{background:#0A0F1D;color:rgba(255,255,255,.55);font-size:9.5px;font-weight:700;text-align:center;padding:9px 0;text-transform:uppercase;letter-spacing:.07em}
+.theme-light .cal-hd{background:var(--gray6);color:var(--gray2)}
+.cal-cell{background:#fff;padding:8px 4px;min-height:58px;cursor:pointer;transition:background .12s;display:flex;flex-direction:column;align-items:center}
+.cal-cell:hover{background:var(--blue5)}
+.cal-cell.today{background:var(--blue)}
+.cal-cell.today .cal-n{color:#fff;font-weight:800}
+.cal-cell.today .cal-dot{background:rgba(255,255,255,.85)}
+.cal-cell.sel{background:var(--blue5);box-shadow:inset 0 0 0 2px var(--blue)}
+.cal-cell.out{background:var(--gray6);cursor:default}
+.cal-n{font-size:12.5px;font-weight:600;text-align:center;color:var(--ink2)}
+.cal-cell.sel .cal-n{color:var(--blue);font-weight:800}
+.cal-cell.out .cal-n{color:var(--gray3)}
+.cal-dot{width:5px;height:5px;border-radius:50%;margin:4px auto 0;display:block;background:var(--blue)}
+.cal-ct{margin-top:5px;padding:1px 7px;border-radius:99px;background:rgba(37,99,235,.12);color:var(--blue);font-size:9px;font-weight:700;line-height:1.5;white-space:nowrap}
+.cal-cell.today .cal-ct{background:rgba(255,255,255,.28);color:#fff}
+.cal-cell.sel .cal-ct{background:rgba(37,99,235,.18);color:var(--blue)}
+.cal-leg{display:flex;gap:16px;margin-top:14px;flex-wrap:wrap}
+.cal-leg-item{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--gray)}
+.cal-leg-dot{width:9px;height:9px;border-radius:50%}
+
+/* ===== INFO BAR ===== */
+.info-bar{background:var(--blue5);border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:11px;font-size:12px;color:var(--blue2);font-weight:500}
+.info-bar i{font-size:18px;color:var(--blue3);flex-shrink:0}
+
+/* ===== FILTERS ===== */
+.frow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:16px 22px}
+.f-sel{height:40px;padding:0 13px;border:none;border-radius:11px;font-size:12.5px;color:var(--ink2);background:var(--gray5);outline:none;font-family:'Inter',system-ui;font-weight:500;cursor:pointer;transition:.15s}
+.f-sel:focus{background:#fff;box-shadow:var(--ring)}
+.sw{position:relative;flex:1;min-width:200px}
+.sw i{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--gray2);font-size:15px;pointer-events:none}
+.si{height:40px;padding:0 13px 0 36px;border:none;border-radius:11px;font-size:12.5px;color:var(--ink);background:var(--gray5);outline:none;font-family:'Inter',system-ui;width:100%;transition:.15s}
+.si:focus{background:#fff;box-shadow:var(--ring)}
+
+/* ===== ASSISTANT ===== */
+.ab-hd{background:radial-gradient(130% 180% at 85% 0%,#7C3AED 0%,#312E81 42%,#0A0F1D 100%);border-radius:var(--rad);padding:24px 26px;display:flex;align-items:center;gap:18px;position:relative;overflow:hidden;box-shadow:var(--shadow-lg)}
+.ab-av{width:64px;height:64px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;flex-shrink:0;position:relative}
+.ab-av-pulse{position:absolute;bottom:-2px;right:-2px;width:16px;height:16px;background:#22C55E;border-radius:50%;border:3px solid #312E81}
+.ab-name{font-size:20px;font-weight:800;color:#fff;letter-spacing:-.025em}
+.ab-desc{font-size:12.5px;color:#C4B5FD;margin-top:3px}
+.ab-tags{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}
+.ab-tag{background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);font-size:10px;font-weight:600;padding:4px 11px;border-radius:99px}
+.qrow{display:flex;gap:9px;flex-wrap:wrap}
+.qbtn{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;background:#fff;border:none;border-radius:99px;font-size:12px;font-weight:600;color:var(--ink2);cursor:pointer;transition:.15s;box-shadow:var(--sf)}
+.qbtn:hover{color:var(--purple);background:var(--purple2);transform:translateY(-1px)}
+.qbtn i{font-size:14px}
+
+/* ===== CHAT ===== */
+.chat-msgs{padding:20px;display:flex;flex-direction:column;gap:15px;max-height:360px;overflow-y:auto;min-height:260px}
+.msg-ab{display:flex;gap:10px;align-items:flex-start}
+.msg-me{display:flex;gap:10px;align-items:flex-start;flex-direction:row-reverse}
+.msg-av{width:34px;height:34px;border-radius:11px;background:linear-gradient(140deg,#8B5CF6,#7C3AED);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;flex-shrink:0}
+.msg-me .msg-av{background:var(--gray4);color:var(--gray)}
+.msg-bub{background:var(--gray5);border-radius:15px;border-top-left-radius:5px;padding:11px 14px;font-size:12.5px;color:var(--ink);max-width:78%;line-height:1.6}
+.msg-me .msg-bub{background:var(--blue);color:#fff;border-radius:15px;border-top-right-radius:5px}
+.msg-time{font-size:9.5px;color:var(--gray2);margin-top:4px}
+.msg-me .msg-time{text-align:right}
+.chat-inp{padding:15px 18px;border-top:1px solid var(--gray5);display:flex;gap:10px;align-items:flex-end}
+
+/* ===== MODAL ===== */
+.overlay{position:fixed;inset:0;background:rgba(10,15,29,.5);display:none;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(5px);padding:20px}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:24px;width:560px;max-width:100%;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:mpop .22s cubic-bezier(.2,.8,.2,1)}
+@keyframes mpop{from{transform:translateY(14px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+.mh{padding:20px 24px;border-bottom:1px solid var(--gray5);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:2}
+.mh-title{font-size:17px;font-weight:800;color:var(--ink);letter-spacing:-.02em}
+.mb{padding:24px}
+.mf{padding:18px 24px;border-top:1px solid var(--gray5);display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:#fff}
+.fg{display:flex;flex-direction:column;gap:6px;margin-bottom:15px}
+.fl{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.06em}
+.fi{height:40px;padding:0 13px;border:none;border-radius:11px;font-size:12.5px;color:var(--ink);background:var(--gray5);outline:none;font-family:'Inter',system-ui;font-weight:500;width:100%;transition:.15s}
+.fi:focus{background:#fff;box-shadow:var(--ring)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.chk{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:500;color:var(--gray);user-select:none}
+.chk input{width:16px;height:16px;accent-color:var(--blue)}
+
+/* ===== LIVE PANEL ===== */
+.live-wrap{background:radial-gradient(120% 160% at 84% 0%,#2563EB 0%,#1E3A8A 38%,#0A0F1D 100%);border-radius:var(--rad);padding:26px 28px;display:flex;align-items:center;justify-content:space-between;gap:24px;position:relative;overflow:hidden;box-shadow:var(--shadow-lg)}
+.live-wrap::after{content:"";position:absolute;top:-40%;right:6%;width:320px;height:320px;background:radial-gradient(circle,rgba(59,130,246,.45),transparent 68%);pointer-events:none}
+.live-badge{position:relative;display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.14);color:#fff;font-size:9.5px;font-weight:700;padding:5px 12px;border-radius:99px;margin-bottom:13px;text-transform:uppercase;letter-spacing:.1em}
+.live-pulse{width:7px;height:7px;background:#34D399;border-radius:50%;animation:lp 1.6s ease infinite}
+@keyframes lp{0%{box-shadow:0 0 0 0 rgba(52,211,153,.55)}70%{box-shadow:0 0 0 8px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+.live-lot{position:relative;font-size:10px;color:#A9C6FF;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.live-title{position:relative;font-size:22px;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom:9px}
+.live-meta{position:relative;font-size:11.5px;color:rgba(255,255,255,.6);display:flex;gap:14px;flex-wrap:wrap}
+.live-r{position:relative;text-align:right;flex-shrink:0}
+.live-llbl{position:relative;font-size:9.5px;color:rgba(255,255,255,.5);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.live-lval{position:relative;font-size:38px;font-weight:900;color:#fff;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+
+/* ===== TOAST ===== */
+.toast-wrap{position:fixed;top:18px;right:18px;z-index:2000;display:flex;flex-direction:column;gap:9px}
+.toast{background:#fff;border-radius:13px;padding:12px 16px;font-size:12.5px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:9px;min-width:240px;animation:tin .25s ease;box-shadow:var(--shadow-lg)}
+.toast.ok{border-left:4px solid var(--green)}
+.toast.er{border-left:4px solid var(--red)}
+.toast.inf{border-left:4px solid var(--blue)}
+@keyframes tin{from{transform:translateX(22px);opacity:0}to{transform:none;opacity:1}}
+
+/* ===== MISC ===== */
+.spin{width:18px;height:18px;border:2.5px solid var(--gray4);border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.loading{display:flex;align-items:center;justify-content:center;padding:38px;color:var(--gray2);gap:9px;font-size:12.5px}
+.doc-c{border-radius:16px;padding:20px 18px;cursor:pointer;transition:.18s;background:var(--gray5)}
+.doc-c:hover{background:var(--blue5);transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.doc-c-ico{width:46px;height:46px;border-radius:13px;background:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:13px;box-shadow:var(--sf)}
+.doc-c-ico i{font-size:22px;color:var(--blue)}
+.doc-c-name{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:3px}
+.doc-c-sub{font-size:11.5px;color:var(--gray2)}
+
+/* ===== CHARTS ===== */
+.chart-box{position:relative;height:230px}
+.legend-row{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.lg-item{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2);font-weight:600}
+.lg-dot{width:9px;height:9px;border-radius:50%}
+.fin-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--gray5)}
+.fin-lbl{font-size:12px;color:var(--gray);font-weight:500}
+.fin-val{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.donut-wrap{position:relative;width:140px;height:140px;margin:16px auto 0}
+.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+
+/* ===== ABADIAS AI (dark premium panel) ===== */
+.ai-shell{position:relative;background:linear-gradient(165deg,#1B1438 0%,#140F2A 46%,#0B0A1A 100%);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:16px;overflow:hidden;box-shadow:var(--shadow-lg);min-height:600px}
+.ai-glow{position:absolute;top:-130px;right:-70px;width:400px;height:400px;background:radial-gradient(circle,rgba(139,92,246,.5),transparent 64%);pointer-events:none}
+.ai-glow::after{content:"";position:absolute;bottom:-260px;left:-160px;width:340px;height:340px;background:radial-gradient(circle,rgba(37,99,235,.3),transparent 66%)}
+.ai-top{position:relative;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.ai-id{display:flex;align-items:center;gap:13px}
+.ai-av{position:relative;width:54px;height:54px;border-radius:17px;background:linear-gradient(140deg,#A855F7,#7C3AED);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;box-shadow:0 10px 26px -4px rgba(124,58,237,.75)}
+.ai-av-dot{position:absolute;bottom:-3px;right:-3px;width:14px;height:14px;background:#34D399;border-radius:50%;border:3px solid #140F2A}
+.ai-name{font-size:19px;font-weight:800;color:#fff;letter-spacing:-.025em}
+.ai-status{display:flex;align-items:center;gap:7px;font-size:11.5px;color:#B8A9E0;margin-top:3px;font-weight:500}
+.ai-online{width:6px;height:6px;border-radius:50%;background:#34D399;box-shadow:0 0 0 3px rgba(52,211,153,.22)}
+.ai-top-r{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.ai-wpp{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:9px 13px;color:#C9BEE8;font-size:12px;font-weight:600}
+.ai-wpp i{font-size:16px;color:#34D399}
+.ai-wpp input{background:transparent;border:none;outline:none;color:#fff;font-size:12.5px;font-weight:600;width:112px;font-family:'Inter',system-ui}
+.ai-clear{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:9px 14px;color:#C9BEE8;font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
+.ai-clear:hover{background:rgba(255,255,255,.14);color:#fff}
+.ai-clear i{font-size:15px}
+.ai-msgs{position:relative;flex:1;max-height:none;min-height:300px;padding:6px 4px}
+.ai-shell .msg-av{background:linear-gradient(140deg,#A855F7,#7C3AED);border-radius:11px}
+.ai-shell .msg-me .msg-av{background:rgba(255,255,255,.14);color:#C9BEE8}
+.ai-shell .msg-bub{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);color:#E9E4F7;border-radius:16px;border-top-left-radius:5px}
+.ai-shell .msg-me .msg-bub{background:linear-gradient(135deg,#7C3AED,#5B6CF0);color:#fff;border:none;border-radius:16px;border-top-right-radius:5px}
+.ai-shell .msg-time{color:#7E73A0}
+.ai-suggest{position:relative;display:flex;gap:9px;flex-wrap:wrap}
+.ai-chip{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:9px 14px;color:#D8CFF0;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:'Inter',system-ui}
+.ai-chip:hover{background:rgba(168,85,247,.22);border-color:rgba(168,85,247,.5);color:#fff;transform:translateY(-1px)}
+.ai-chip i{font-size:14px;color:#C4B5FD}
+.ai-composer{position:relative;display:flex;align-items:flex-end;gap:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);border-radius:18px;padding:9px 9px 9px 17px;transition:.15s}
+.ai-composer:focus-within{border-color:rgba(168,85,247,.55);box-shadow:0 0 0 4px rgba(124,58,237,.2)}
+.ai-composer textarea{flex:1;background:transparent;border:none;outline:none;resize:none;color:#fff;font-size:13px;font-family:'Inter',system-ui;line-height:1.5;height:24px;max-height:120px;padding:5px 0}
+.ai-composer textarea::placeholder{color:#8678AE}
+.ai-send{width:44px;height:44px;border-radius:14px;border:none;background:linear-gradient(140deg,#A855F7,#7C3AED);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;box-shadow:0 10px 20px -4px rgba(124,58,237,.7);transition:.15s}
+.ai-send:hover{transform:translateY(-1px)}
+.ai-send:disabled{opacity:.45;cursor:default;transform:none}
+.ai-send i{font-size:20px}
+
+/* ===== OVERVIEW (charts) ===== */
+#overview-sec .ch-sub{display:block}
+.ov-grid{display:grid;grid-template-columns:1fr 320px;gap:24px}
+.ov-left{display:flex;flex-direction:column;gap:18px;min-width:0}
+.ov-cap{font-size:11px;color:var(--gray2);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.ov-big{font-size:42px;font-weight:800;letter-spacing:-.05em;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+.ov-cap2{font-size:11.5px;color:var(--gray2);margin-top:4px}
+.ov-trend{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--green);font-weight:600;margin-top:14px;background:#ECFDF5;padding:5px 11px;border-radius:99px}
+.ov-trend i{font-size:13px}
+.ov-right{background:var(--gray6);border-radius:18px;padding:18px 20px;display:flex;flex-direction:column}
+.ov-rtitle{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px;letter-spacing:-.01em}
+
+/* ===== TYPOGRAPHY (display) ===== */
+.top-title,.sb-name,.ai-name,.ch-title,.mh-title,.empty-title,.kpi-val,.live-title,.live-lval,.ov-big,.fin-val,.donut-center,#fin-conv,.tbl .n{font-family:'Inter','Inter',system-ui,sans-serif}
+.kpi-tr{display:none}
+.kpi-top{margin-bottom:18px}
+
+/* ===== MOBILE ===== */
+.mobile-only{display:none}
+.menu-toggle{display:none}
+.sb-overlay{display:none}
+.botnav{display:none}
+@media (max-width:1100px){.krow{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:768px){
+  body{height:auto;min-height:100vh;overflow-x:hidden;display:block;padding-bottom:74px}
+  .sb{display:none}
+  .menu-toggle{display:none}
+  .mn{width:100%;height:auto}
+  .top{height:auto;min-height:60px;padding:12px 16px;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:50}
+  .top-title{font-size:18px}
+  .top-r{flex-wrap:wrap;gap:8px;width:100%}
+  .top-r .btn-p{flex:1;justify-content:center}
+  .ct{padding:16px;gap:16px;overflow:visible}
+  .krow{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:13px;scroll-snap-type:x mandatory;padding-bottom:6px;scrollbar-width:none}
+  .krow::-webkit-scrollbar{display:none}
+  .krow .kpi{flex:0 0 72%;scroll-snap-align:start}
+  .two{grid-template-columns:1fr}
+  #overview-sec .cb{grid-template-columns:1fr !important}
+  #overview-sec .cb>div:last-child{border-left:none !important;padding-left:0 !important;border-top:1px solid var(--gray5);padding-top:16px;margin-top:4px}
+  .live-wrap{flex-direction:column;align-items:flex-start;gap:16px}
+  .live-r{text-align:left;width:100%}
+  .ab-hd{flex-direction:column;align-items:flex-start;gap:16px}
+  .ab-hd>div[style*="margin-left:auto"]{margin-left:0 !important;text-align:left !important}
+  #lotes-wrap,#cal-day-lotes,#cond-list{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tbl{min-width:660px}
+  .btn-p,.btn-o,.notif,.date-c,.ic-btn,.theme-tg{min-height:44px}
+  .ic-btn{min-width:42px}
+  input,select,textarea{font-size:16px;min-height:44px}
+  .nav{padding:12px 14px;min-height:44px}
+  .botnav{display:flex;position:fixed;left:0;right:0;bottom:0;height:70px;background:#0A0F1D;z-index:120;justify-content:space-around;align-items:stretch;box-shadow:0 -8px 24px rgba(10,15,29,.28)}
+  .theme-light .botnav{background:#fff;border-top:1px solid var(--gray4)}
+  .botnav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#8094B8;text-decoration:none;font-size:9.5px;font-weight:600;min-height:44px}
+  .botnav a i{font-size:22px}
+  .botnav a.on{color:#fff}
+  .botnav a.on i{color:var(--blue3)}
+  .theme-light .botnav a{color:var(--gray)}
+  .theme-light .botnav a.on{color:var(--blue)}
+  .theme-light .botnav a.on i{color:var(--blue)}
+}
+@media (max-width:400px){.top-title{font-size:16px}.kpi-val{font-size:24px}.ct{padding:13px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+
+<div class="sb">
+  <div class="sb-logo">
+    <div class="sb-ico"><i class="ti ti-gavel"></i></div>
+    <div><div class="sb-name">Porcelarte</div><div class="sb-sub">Gestão de Leilões</div></div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-lbl">Principal</div>
+    <div class="nav on" data-p="dashboard"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
+    <div class="nav" data-p="calendario"><i class="ti ti-calendar"></i>Calendário</div>
+    <div class="nav" data-p="lotes"><i class="ti ti-package"></i>Lotes</div>
+    <div class="nav" data-p="aovivo"><i class="ti ti-player-play"></i>Leilão ao vivo</div>
+  </div>
+  <div class="sb-div"></div>
+  <div class="sb-sec">
+    <div class="sb-lbl">Gestão</div>
+    <div class="nav" data-p="condicionais"><i class="ti ti-clock-pause"></i>Condicionais</div>
+    <div class="nav" data-p="documentos"><i class="ti ti-file-text"></i>Documentos</div>
+    <div class="nav" data-p="gmail"><i class="ti ti-mail"></i>Gmail</div>
+  </div>
+  <div class="sb-div"></div>
+  <div class="sb-sec">
+    <div class="sb-lbl">Assistente</div>
+    <div class="nav" data-p="abadias"><i class="ti ti-robot"></i>Abadias AI</div>
+  </div>
+  <div class="sb-div"></div>
+  <div class="sb-sec">
+    <div class="sb-lbl">Integrações</div>
+    <div class="nav" data-p="integracoes"><i class="ti ti-plug"></i>APIs externas</div>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-user">
+      <div class="sb-av">AB<div class="sb-av-dot"></div></div>
+      <div><div class="sb-uname">Abadias</div><div class="sb-urole">Administrador</div></div>
+      <i class="ti ti-chevron-down" style="font-size:13px;color:rgba(255,255,255,.3);margin-left:auto"></i>
+    </div>
+    <div class="sb-fb">
+      <i class="ti ti-cloud"></i>
+      <div><div class="sb-fb-name">Firebase</div><div class="sb-fb-st" id="fb-st">Conectando...</div></div>
+      <div id="fb-dot" style="width:8px;height:8px;border-radius:50%;background:var(--gray2);margin-left:auto;flex-shrink:0"></div>
+    </div>
+  </div>
+</div>
+
+<div class="mn">
+  <div class="top">
+    <div>
+      <div class="top-title" id="pg-title">Olá, Abadias! 👋</div>
+      <div class="top-sub" id="pg-sub">Aqui está o resumo do seu sistema de leilões.</div>
+    </div>
+    <div class="top-r">
+      <button class="theme-tg" id="themeTg" title="Alternar tema claro/escuro"><i class="ti ti-sun"></i></button><div class="pill-ok"><div class="pill-dot"></div>Firebase conectado</div>
+      <button class="btn-p" onclick="openModal()"><i class="ti ti-plus"></i>Novo lote</button>
+      <div class="date-c"><i class="ti ti-calendar"></i><span id="date-txt"></span></div>
+      <div class="notif"><i class="ti ti-bell" style="font-size:16px"></i></div>
+    </div>
+  </div>
+
+  <div class="ct">
+
+    <div class="pg on" id="pg-dashboard">
+      <div class="krow">
+        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Lotes no mês</div><div class="kpi-ic blue"><i class="ti ti-gavel"></i></div></div><div class="kpi-val" id="k-lotes">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
+        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Dias com leilão</div><div class="kpi-ic purple"><i class="ti ti-calendar-event"></i></div></div><div class="kpi-val" id="k-dias">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
+        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Lance inicial total</div><div class="kpi-ic amber"><i class="ti ti-currency-dollar"></i></div></div><div class="kpi-val" id="k-total">R$ 0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
+        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Condicionais</div><div class="kpi-ic orange"><i class="ti ti-tag"></i></div></div><div class="kpi-val" id="k-cond">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
+        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Pagtos pendentes</div><div class="kpi-ic amber"><i class="ti ti-clock"></i></div></div><div class="kpi-val" id="k-pend">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
+        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Total vendido</div><div class="kpi-ic green"><i class="ti ti-chart-bar"></i></div></div><div class="kpi-val" id="k-vend">R$ 0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
+      </div>
+      <div id="live-sec" style="display:none">
+        <div class="live-wrap">
+          <div><div class="live-badge"><span class="live-pulse"></span>Ao vivo agora</div><div class="live-lot" id="lv-num"></div><div class="live-title" id="lv-title"></div><div class="live-meta" id="lv-meta"></div></div>
+          <div class="live-r"><div class="live-llbl">Lance atual</div><div class="live-lval" id="lv-val"></div><button class="btn-o" onclick="ir('aovivo')" style="margin-top:12px;border-color:rgba(255,255,255,.2);color:#fff;background:rgba(255,255,255,.08)"><i class="ti ti-external-link"></i>Gerenciar</button></div>
+        </div>
+      </div>
+      <div class="two">
+        <div class="card">
+          <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-calendar"></i></div><div><div class="ch-title">Próximos leilões</div></div></div><button class="btn-o" onclick="ir('calendario')">Ver calendário</button></div>
+          <div id="dash-prox"><div class="empty"><div class="empty-ic"><i class="ti ti-calendar-event"></i><div class="empty-badge" style="color:#93C5FD"><i class="ti ti-clock"></i></div></div><div class="empty-title">Nenhum leilão agendado</div><div class="empty-sub">Você ainda não possui leilões agendados. Acesse o calendário para criar ou agendar um leilão.</div></div></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-clock-pause"></i></div><div><div class="ch-title">Condicionais recentes</div></div></div><button class="btn-o" onclick="ir('condicionais')">Ver todos</button></div>
+          <div id="dash-cond"><div class="empty"><div class="empty-ic"><i class="ti ti-clipboard-check"></i><div class="empty-badge" style="color:var(--green3)"><i class="ti ti-check"></i></div></div><div class="empty-title">Nenhum condicional pendente</div><div class="empty-sub">Tudo em dia! Não há condicionais aguardando ações no momento.</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pg" id="pg-calendario">
+      <div class="two">
+        <div class="card">
+          <div class="ch">
+            <div class="ch-l"><div class="ch-ico"><i class="ti ti-calendar"></i></div><div><div class="ch-title">Calendário mensal</div></div></div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <button class="btn-o" onclick="mudaMes(-1)" style="padding:5px 8px"><i class="ti ti-chevron-left" style="font-size:13px"></i></button>
+              <button class="btn-o" onclick="mudaMes(1)" style="padding:5px 8px"><i class="ti ti-chevron-right" style="font-size:13px"></i></button>
+              <div style="display:flex;gap:2px;background:var(--gray5);border-radius:7px;padding:3px">
+                <button style="padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600;color:#fff;background:var(--blue);border:none;cursor:pointer">Mês</button>
+                <button style="padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600;color:var(--gray);background:transparent;border:none;cursor:pointer">Semana</button>
+                <button style="padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600;color:var(--gray);background:transparent;border:none;cursor:pointer" onclick="selDia(new Date().toISOString().slice(0,10))">Hoje</button>
+              </div>
+            </div>
+          </div>
+          <div class="cb">
+            <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:14px" id="cal-title"></div>
+            <div class="cal-grid" id="cal-grid"></div>
+            <div class="cal-leg">
+              <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--blue)"></div>Hoje</div>
+              <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--green3)"></div>Selecionado</div>
+              <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--blue3)"></div>Lote agendado</div>
+              <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--amber)"></div>Leilão ao vivo</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-package"></i></div><div><div class="ch-title">Lotes do dia</div><div class="ch-sub" id="cal-day-lbl">Selecione uma data</div></div></div><span id="cal-day-ct" style="font-size:11px;color:var(--gray2);font-weight:600"></span></div>
+          <div id="cal-day-lotes"><div class="empty"><div class="empty-ic"><i class="ti ti-calendar-off"></i><div class="empty-badge" style="color:var(--red)"><i class="ti ti-x"></i></div></div><div class="empty-title">Nenhum lote neste dia</div><div class="empty-sub">Não há lotes agendados para esta data.</div></div></div>
+        </div>
+      </div>
+      <div class="info-bar"><i class="ti ti-info-circle"></i><span><strong>Dica:</strong> selecione uma data no calendário para visualizar os lotes agendados para o dia.</span></div>
+    </div>
+
+    <div class="pg" id="pg-lotes">
+      <div class="card">
+        <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-adjustments-horizontal"></i></div><div><div class="ch-title">Filtros</div></div></div><button class="btn-p" onclick="openModal()" style="padding:6px 12px;font-size:11px"><i class="ti ti-plus"></i>Novo lote</button></div>
+        <div class="frow">
+          <div class="sw"><i class="ti ti-search"></i><input class="si" type="text" placeholder="Buscar lote, arrematante..." id="s-lote" oninput="renderLotes()"></div>
+          <select class="f-sel" id="f-st" onchange="renderLotes()"><option value="">Todos os status</option><option value="livre">Livre</option><option value="condicional">Condicional</option><option value="pago">Pago</option></select>
+          <select class="f-sel" id="f-ct" onchange="renderLotes()"><option value="">Todas as categorias</option><option value="Imóveis">Imóveis</option><option value="Veículos">Veículos</option><option value="Equipamentos">Equipamentos</option><option value="Outros">Outros</option></select>
+        </div>
+      </div>
+      <div class="card" id="lotes-wrap"><div class="loading"><div class="spin"></div>Carregando lotes...</div></div>
+      
+      <div class="card">
+        <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-file-spreadsheet"></i></div><div><div class="ch-title">Exportar planilha para o leiloeiro</div></div></div>
+          <div style="display:flex;gap:7px"><button class="btn-p" onclick="baixarPlanilha()" style="padding:6px 12px;font-size:11px"><i class="ti ti-download"></i>Baixar planilha (.csv)</button><button class="btn-o" onclick="copiarDados()" style="padding:6px 12px;font-size:11px"><i class="ti ti-copy"></i>Copiar dados</button></div>
+        </div>
+        <div class="cb">
+          <div style="font-size:11px;color:var(--gray);margin-bottom:10px">Exporta todos os lotes com dados atuais — lance, arrematante, status, condicional, retirada e pagamento.</div>
+          <div style="display:flex;gap:12px;margin-bottom:10px"><label class="chk"><input type="checkbox" id="exp-todos" checked><span>Todos os lotes</span></label><label class="chk"><input type="checkbox" id="exp-cond"><span>Apenas condicionais</span></label><label class="chk"><input type="checkbox" id="exp-pago"><span>Apenas pagos</span></label></div>
+          <div style="background:var(--gray6);border:1.5px solid var(--gray4);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;color:var(--gray);overflow-x:auto;white-space:nowrap;line-height:1.7">data; horario; numero; descricao; categoria; lance_ini; lance_atu; arrematante; status; condicional; retirou; pago<br><span id="exp-prev" style="color:var(--gray2)">(nenhum lote cadastrado)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pg" id="pg-aovivo">
+      <div class="card">
+        <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-player-play"></i></div><div><div class="ch-title">Lote ativo no leilão ao vivo</div></div></div></div>
+        <div class="cb"><div class="fg"><div class="fl">Selecionar lote</div><select class="fi" id="sel-vivo" onchange="ativarVivo()" style="max-width:360px"><option value="">— Selecione um lote —</option></select></div></div>
+      </div>
+      <div id="vivo-panel" style="display:none;flex-direction:column;gap:14px">
+        <div class="live-wrap">
+          <div><div class="live-badge"><span class="live-pulse"></span>Ao vivo agora</div><div class="live-lot" id="vp-num"></div><div class="live-title" id="vp-title"></div><div class="live-meta" id="vp-meta"></div></div>
+          <div class="live-r"><div class="live-llbl">Lance atual</div><div class="live-lval" id="vp-val"></div></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-edit"></i></div><div><div class="ch-title">Atualizar lance</div></div></div></div>
+          <div class="cb">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+              <div class="fg" style="flex:1;margin-bottom:0"><div class="fl">Novo lance (R$)</div><input class="fi" type="number" id="vp-lance" placeholder="0"></div>
+              <div class="fg" style="flex:1;margin-bottom:0"><div class="fl">Arrematante</div><input class="fi" type="text" id="vp-arrem" placeholder="Nome"></div>
+              <button class="btn-p" style="align-self:flex-end;padding:7px 14px;font-size:12px" onclick="salvarVivo()"><i class="ti ti-check"></i>Salvar lance</button>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <label class="chk"><input type="checkbox" id="vp-cond"><span>Condicional</span></label>
+              <label class="chk"><input type="checkbox" id="vp-ret"><span>Retirou</span></label>
+              <label class="chk"><input type="checkbox" id="vp-pago"><span>Pago</span></label>
+              <button class="btn-o" style="margin-left:auto;padding:5px 10px;font-size:11px" onclick="salvarStVivo()"><i class="ti ti-device-floppy"></i>Salvar status</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pg" id="pg-condicionais">
+      <div class="card">
+        <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-clock-pause"></i></div><div><div class="ch-title">Lotes em condicional</div></div></div><span id="cond-ct" style="font-size:11px;color:var(--gray2);font-weight:600"></span></div>
+        <div id="cond-list"><div class="empty"><div class="empty-ic"><i class="ti ti-clipboard-check"></i><div class="empty-badge" style="color:var(--green3)"><i class="ti ti-check"></i></div></div><div class="empty-title">Nenhum lote em condicional</div><div class="empty-sub">Marque "Cond." em um lote para acompanhar retirada e pagamento.</div></div></div>
+      </div>
+    </div>
+
+    <div class="pg" id="pg-documentos">
+      <div class="card">
+        <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-file-text"></i></div><div><div class="ch-title">Gerar documentos</div></div></div></div>
+        <div class="cb">
+          <div class="fg" style="margin-bottom:16px"><div class="fl">Selecionar lote</div><select class="fi" id="sel-doc" style="max-width:360px"><option value="">— Selecione —</option></select></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+            <div class="doc-c" onclick="gerarRecibo()"><div class="doc-c-ico"><i class="ti ti-receipt"></i></div><div class="doc-c-name">Recibo do lote</div><div class="doc-c-sub">Comprovante de arrematação</div></div>
+            <div class="doc-c" onclick="gerarTermo()"><div class="doc-c-ico"><i class="ti ti-file-check"></i></div><div class="doc-c-name">Termo de retirada</div><div class="doc-c-sub">Autorização de retirada</div></div>
+            <div class="doc-c" onclick="gerarRel()"><div class="doc-c-ico"><i class="ti ti-report"></i></div><div class="doc-c-name">Relatório do leilão</div><div class="doc-c-sub">Resumo completo</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" id="doc-prev" style="display:none">
+        <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-eye"></i></div><div><div class="ch-title">Prévia do documento</div></div></div><div style="display:flex;gap:8px"><button class="btn-o" onclick="envDocGmail()" style="padding:5px 10px;font-size:11px"><i class="ti ti-mail"></i>Enviar por Gmail</button><button class="btn-p" onclick="window.print()" style="padding:6px 12px;font-size:11px"><i class="ti ti-printer"></i>Imprimir</button></div></div>
+        <div class="cb"><pre id="doc-txt" style="font-size:11px;line-height:1.8;white-space:pre-wrap;background:var(--gray6);padding:14px;border-radius:8px;border:1.5px solid var(--gray4);font-family:monospace"></pre></div>
+      </div>
+    </div>
+
+    <div class="pg" id="pg-gmail">
+      <div class="card">
+        <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-mail"></i></div><div><div class="ch-title">Enviar email</div></div></div></div>
+        <div class="cb">
+          <div class="fg"><div class="fl">Destinatário</div><input class="fi" type="email" id="gm-para" placeholder="email@exemplo.com"></div>
+          <div class="fg"><div class="fl">Assunto</div><input class="fi" type="text" id="gm-ass"></div>
+          <div class="fg"><div class="fl">Mensagem</div><textarea class="fi" id="gm-corpo" rows="5" style="height:auto;padding:8px 11px" placeholder="Escreva a mensagem..."></textarea></div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:4px">
+            <button class="btn-o" onclick="modeloGmail('recibo')" style="padding:5px 10px;font-size:11px">Modelo: Recibo</button>
+            <button class="btn-o" onclick="modeloGmail('cond')" style="padding:5px 10px;font-size:11px">Modelo: Condicional</button>
+            <button class="btn-o" onclick="modeloGmail('rel')" style="padding:5px 10px;font-size:11px">Modelo: Relatório</button>
+            <button class="btn-p" onclick="envEmail()" style="margin-left:auto;padding:6px 14px;font-size:12px"><i class="ti ti-send"></i>Enviar via Gmail</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pg" id="pg-abadias">
+      <div class="ai-shell">
+        <div class="ai-glow"></div>
+        <div class="ai-top">
+          <div class="ai-id">
+            <div class="ai-av">AB<span class="ai-av-dot"></span></div>
+            <div>
+              <div class="ai-name">Abadias AI</div>
+              <div class="ai-status"><span class="ai-online"></span>Online · assistente de leilões</div>
+            </div>
+          </div>
+          <div class="ai-top-r">
+            <label class="ai-wpp"><i class="ti ti-brand-whatsapp"></i><input id="wpp-num" type="text" value="19981875215"></label>
+            <button class="ai-clear" onclick="limparChat()"><i class="ti ti-eraser"></i>Limpar</button>
+          </div>
+        </div>
+        <div id="chat-msgs" class="chat-msgs ai-msgs">
+          <div class="msg-ab"><div class="msg-av">AB</div><div><div class="msg-bub">Olá! Sou o Abadias, seu assistente de leilões. Tenho acesso a todos os seus lotes e dados financeiros. Como posso te ajudar hoje? 🎯</div><div class="msg-time">agora</div></div></div>
+        </div>
+        <div class="ai-suggest">
+          <button class="ai-chip" onclick="pergunta('Quantos lotes temos cadastrados este mês?')"><i class="ti ti-package"></i>Resumo dos lotes</button>
+          <button class="ai-chip" onclick="pergunta('Quais lotes estão em condicional e não foram pagos?')"><i class="ti ti-clock-pause"></i>Condicionais</button>
+          <button class="ai-chip" onclick="pergunta('Qual o total arrecadado este mês?')"><i class="ti ti-cash"></i>Total arrecadado</button>
+          <button class="ai-chip" onclick="pergunta('Relatório completo do leilão de hoje')"><i class="ti ti-report"></i>Relatório</button>
+          <button class="ai-chip" onclick="pergunta('Quais lotes ainda não foram retirados?')"><i class="ti ti-truck"></i>Retiradas pendentes</button>
+        </div>
+        <div class="ai-composer">
+          <textarea id="chat-in" placeholder="Pergunte ao Abadias sobre lotes, lances, pagamentos..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();envMsg()}"></textarea>
+          <button class="ai-send" onclick="envMsg()" id="btn-send"><i class="ti ti-arrow-up"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pg" id="pg-integracoes">
+      <div class="card">
+        <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-plug"></i></div><div><div class="ch-title">APIs externas</div></div></div></div>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1.5px solid var(--gray4)"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:10px;background:var(--blue5);display:flex;align-items:center;justify-content:center"><i class="ti ti-building-store" style="font-size:20px;color:var(--blue)"></i></div><div><div style="font-size:13px;font-weight:700;color:var(--ink)">Superbid</div><div style="font-size:11px;color:var(--gray2)">Importar lotes e resultados</div></div></div><span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--amber2);color:#92400E">Aguardando credenciais</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1.5px solid var(--gray4)"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:10px;background:var(--amber2);display:flex;align-items:center;justify-content:center"><i class="ti ti-gavel" style="font-size:20px;color:var(--amber)"></i></div><div><div style="font-size:13px;font-weight:700;color:var(--ink)">Sodré Leilões</div><div style="font-size:11px;color:var(--gray2)">Sincronizar lotes e lances</div></div></div><span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--amber2);color:#92400E">Aguardando credenciais</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1.5px solid var(--gray4)"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:10px;background:var(--green2);display:flex;align-items:center;justify-content:center"><i class="ti ti-mail" style="font-size:20px;color:var(--green)"></i></div><div><div style="font-size:13px;font-weight:700;color:var(--ink)">Gmail</div><div style="font-size:11px;color:var(--gray2)">Enviar recibos e notificações</div></div></div><span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--green2);color:#065F46">Configurado</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:10px;background:var(--purple2);display:flex;align-items:center;justify-content:center"><i class="ti ti-database" style="font-size:20px;color:var(--purple)"></i></div><div><div style="font-size:13px;font-weight:700;color:var(--ink)">Firebase Firestore</div><div style="font-size:11px;color:var(--gray2)">Banco de dados — porcelarte-leiloes</div></div></div><span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--green2);color:#065F46">Conectado</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="mh"><div class="mh-title" id="m-title">Cadastrar novo lote</div><button class="btn-o" onclick="closeModal()" style="padding:5px 8px"><i class="ti ti-x"></i></button></div>
+    <div class="mb">
+      <input type="hidden" id="edit-id">
+      <div class="fgrid">
+        <div class="fg"><div class="fl">Nº do lote</div><input class="fi" type="text" id="f-num" placeholder="Ex: 010"></div>
+        <div class="fg"><div class="fl">Data</div><input class="fi" type="date" id="f-data"></div>
+        <div class="fg"><div class="fl">Horário</div><input class="fi" type="time" id="f-hora"></div>
+        <div class="fg"><div class="fl">Categoria</div><select class="fi" id="f-cat"><option>Imóveis</option><option>Veículos</option><option>Equipamentos</option><option>Outros</option></select></div>
+        <div class="fg" style="grid-column:span 2"><div class="fl">Descrição</div><input class="fi" type="text" id="f-desc" placeholder="Descrição completa"></div>
+        <div class="fg"><div class="fl">Lance inicial (R$)</div><input class="fi" type="number" id="f-lance" placeholder="0"></div>
+        <div class="fg"><div class="fl">Incremento (R$)</div><input class="fi" type="number" id="f-incr" placeholder="0"></div>
+        <div class="fg" style="grid-column:span 2"><div class="fl">Observações</div><input class="fi" type="text" id="f-obs" placeholder="Vistoria, etc."></div><div class="fg"><div class="fl">Metragem total (m²)</div><input class="fi" type="number" step="0.01" id="f-m2" placeholder="0"></div><div class="fg"><div class="fl">Qtd CX / Paletes</div><input class="fi" type="text" id="f-cx" placeholder="Ex: 10 cx"></div><div class="fg" style="grid-column:span 2"><div class="fl">Localização</div><input class="fi" type="text" id="f-local" placeholder="Ex: Galpão A, Rua X"></div><div class="fg" style="grid-column:span 2"><div class="fl">Fotos do lote</div><input type="file" id="f-fotos" accept="image/*" multiple style="display:none" onchange="window.onFotosSelected(event)"><button type="button" class="btn-o" style="width:100%;justify-content:center" onclick="document.getElementById('f-fotos').click()"><i class="ti ti-camera"></i> Adicionar fotos</button><div id="f-fotos-prev" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn-o" onclick="closeModal()">Cancelar</button><button class="btn-p" onclick="salvarLote()"><i class="ti ti-check"></i>Salvar lote</button></div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import{getFirestore,collection,doc,getDocs,addDoc,updateDoc,deleteDoc,query,orderBy}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+const cfg={apiKey:"AIzaSyCk5wE8UUvUGOTjEGzEGecCBFjRd4Am0ro",authDomain:"porcelarte-leiloes.firebaseapp.com",projectId:"porcelarte-leiloes",storageBucket:"porcelarte-leiloes.firebasestorage.app",messagingSenderId:"1022628888843",appId:"1:1022628888843:web:fe1ade18896ae2696d220e"};
+const app=initializeApp(cfg);const db=getFirestore(app);
+window._db=db;window._col=collection;window._doc=doc;window._getDocs=getDocs;window._add=addDoc;window._upd=updateDoc;window._del=deleteDoc;window._q=query;window._ord=orderBy;
+window.dispatchEvent(new Event('fb-ok'));
+</script>
+
+<script>
+let lotes=[],loteVivo=null,chatHist=[],calM=new Date().getMonth(),calY=new Date().getFullYear(),selDay=null;
+const hoje=new Date();
+const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const pgs=['dashboard','calendario','lotes','aovivo','condicionais','documentos','gmail','abadias','integracoes'];
+const titles={dashboard:'Olá, Abadias! 👋',calendario:'Calendário',lotes:'Lotes',aovivo:'Leilão ao vivo',condicionais:'Condicionais',documentos:'Documentos',gmail:'Gmail',abadias:'Abadias AI 🤖',integracoes:'Integrações'};
+const subs={dashboard:'Aqui está o resumo do seu sistema de leilões.',calendario:`${meses[new Date().getMonth()]} de ${new Date().getFullYear()} · Porcelarte`,lotes:`${meses[new Date().getMonth()]} de ${new Date().getFullYear()} · Porcelarte`,aovivo:'Controle o leilão em tempo real',condicionais:'Acompanhe pagamentos e retiradas',documentos:'Gere recibos, termos e relatórios',gmail:'Envie emails para arrematantes',abadias:'Seu assistente pessoal de leilões',integracoes:'Conecte plataformas externas'};
+
+document.getElementById('date-txt').textContent=hoje.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+document.getElementById('f-data').value=hoje.toISOString().slice(0,10);
+document.getElementById('f-hora').value='10:00';
+
+window.addEventListener('fb-ok',async()=>{
+  document.getElementById('fb-st').textContent='Conectado';
+  document.getElementById('fb-dot').style.background='#22C55E';
+  await loadLotes();
+  initDash();renderCal();updateDocSel();updateExpPrev();
+  {const _c=document.getElementById('csv-ct');if(_c)_c.textContent=lotes.length+' lote(s) cadastrados';}
+});
+
+function ir(p){
+  document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('on',x.dataset.p===p));
+  pgs.forEach(pg=>{
+    const el=document.getElementById('pg-'+pg);
+    if(!el)return;
+    if(pg===p){el.style.display='flex';el.style.flexDirection='column';el.style.gap='16px';}
+    else{el.style.display='none';}
+  });
+  if(titles[p])document.getElementById('pg-title').textContent=titles[p];
+  if(subs[p])document.getElementById('pg-sub').textContent=subs[p];
+  if(p==='lotes')renderLotes();
+  if(p==='condicionais')renderCond();
+  if(p==='aovivo')fillSelVivo();
+  if(p==='dashboard')initDash();
+  if(p==='abadias')window.abadiasAoAbrir();
+}
+window.ir=ir;
+
+document.querySelectorAll('.nav').forEach(el=>{
+  el.onclick=function(){if(this.dataset.p)ir(this.dataset.p);};
+});
+
+async function loadLotes(){
+  try{const q=window._q(window._col(window._db,'lotes'),window._ord('data','asc'));const s=await window._getDocs(q);lotes=[];s.forEach(d=>lotes.push({id:d.id,...d.data()}));updateExpPrev();{const _c=document.getElementById('csv-ct');if(_c)_c.textContent=lotes.length+' lote(s) cadastrados';}}
+  catch(e){toast('Erro ao carregar: '+e.message,'er');}
+}
+
+function initDash(){
+  const m=hoje.getMonth(),y=hoje.getFullYear();
+  const lm=lotes.filter(l=>{const d=new Date(l.data+'T12:00:00');return d.getMonth()===m&&d.getFullYear()===y;});
+  const dias=new Set(lm.map(l=>l.data)).size;
+  const ini=lm.reduce((s,l)=>s+(l.lanceInicial||0),0);
+  const conds=lotes.filter(l=>l.condicional&&!l.pago).length;
+  const vend=lotes.filter(l=>l.pago).reduce((s,l)=>s+(l.lanceAtual||0),0);
+  document.getElementById('k-lotes').textContent=lm.length;
+  document.getElementById('k-dias').textContent=dias;
+  document.getElementById('k-total').textContent='R$ '+ini.toLocaleString('pt-BR');
+  document.getElementById('k-cond').textContent=conds;
+  document.getElementById('k-pend').textContent=conds;
+  document.getElementById('k-vend').textContent='R$ '+vend.toLocaleString('pt-BR');
+  if(loteVivo){document.getElementById('live-sec').style.display='block';document.getElementById('lv-num').textContent='Lote '+loteVivo.num;document.getElementById('lv-title').textContent=loteVivo.descricao;document.getElementById('lv-meta').innerHTML=`<span>${loteVivo.categoria}</span><span>${loteVivo.arrematante||'A definir'}</span>`;document.getElementById('lv-val').textContent='R$ '+(loteVivo.lanceAtual||loteVivo.lanceInicial||0).toLocaleString('pt-BR');}else{document.getElementById('live-sec').style.display='none';}
+  const prox=lotes.filter(l=>new Date(l.data+'T12:00:00')>=hoje).slice(0,5);
+  const pe=document.getElementById('dash-prox');
+  if(prox.length===0){pe.innerHTML='<div class="empty"><div class="empty-ic"><i class="ti ti-calendar-event"></i><div class="empty-badge" style="color:#93C5FD"><i class="ti ti-clock"></i></div></div><div class="empty-title">Nenhum leilão agendado</div><div class="empty-sub">Você ainda não possui leilões agendados. Acesse o calendário para criar ou agendar um leilão.</div></div>';}
+  else{pe.innerHTML='<div style="padding:0 18px">'+prox.map(l=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--gray4)"><div><div style="font-weight:600;font-size:12.5px;color:var(--ink)">${l.descricao}</div><div style="font-size:11px;color:var(--gray2);margin-top:1px">Lote ${l.num} · ${fmtD(l.data)}${l.hora?' · '+l.hora:''}</div></div><div style="font-size:13px;font-weight:800;color:var(--blue)">R$ ${(l.lanceInicial||0).toLocaleString('pt-BR')}</div></div>`).join('')+'</div>';}
+  const clist=lotes.filter(l=>l.condicional&&!l.pago).slice(0,5);
+  const ce=document.getElementById('dash-cond');
+  if(clist.length===0){ce.innerHTML='<div class="empty"><div class="empty-ic"><i class="ti ti-clipboard-check"></i><div class="empty-badge" style="color:var(--green3)"><i class="ti ti-check"></i></div></div><div class="empty-title">Nenhum condicional pendente</div><div class="empty-sub">Tudo em dia! Não há condicionais aguardando ações no momento.</div></div>';}
+  else{ce.innerHTML='<div style="padding:0 18px">'+clist.map(l=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--gray4)"><div><div style="font-weight:600;font-size:12.5px;color:var(--ink)">${l.descricao}</div><div style="font-size:11px;color:var(--gray2);margin-top:1px">${l.arrematante||'A definir'}</div></div><span class="badge b-cond">Pendente</span></div>`).join('')+'</div>';}
+}
+
+function renderCal(){
+  document.getElementById('cal-title').textContent=meses[calM]+' de '+calY;
+  const lpd={};lotes.forEach(l=>{if(!lpd[l.data])lpd[l.data]=[];lpd[l.data].push(l);});
+  const first=new Date(calY,calM,1).getDay();
+  const daysM=new Date(calY,calM+1,0).getDate();
+  const prevD=new Date(calY,calM,0).getDate();
+  const todayS=hoje.toISOString().slice(0,10);
+  let h='<div class="cal-hd">DOM</div><div class="cal-hd">SEG</div><div class="cal-hd">TER</div><div class="cal-hd">QUA</div><div class="cal-hd">QUI</div><div class="cal-hd">SEX</div><div class="cal-hd">SÁB</div>';
+  for(let i=0;i<first;i++)h+=`<div class="cal-cell out"><div class="cal-n" style="opacity:.3">${prevD-first+i+1}</div></div>`;
+  for(let d=1;d<=daysM;d++){const ds=`${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const isT=ds===todayS,isS=ds===selDay,hasL=lpd[ds]?.length>0,ct=lpd[ds]?.length||0;let cls='cal-cell';if(isT)cls+=' today';if(isS)cls+=' sel';h+=`<div class="${cls}" onclick="selDia('${ds}')"><div class="cal-n">${d}</div>${ct?'<span class="cal-ct">'+ct+(ct>1?' lotes':' lote')+'</span>':''}</div>`;}
+  const total=first+daysM;const rem=total%7===0?0:7-total%7;
+  for(let d=1;d<=rem;d++)h+=`<div class="cal-cell out"><div class="cal-n" style="opacity:.3">${d}</div></div>`;
+  document.getElementById('cal-grid').innerHTML=h;
+}
+function mudaMes(dir){calM+=dir;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCal();}
+window.mudaMes=mudaMes;
+function selDia(ds){selDay=ds;renderCal();const d=new Date(ds+'T12:00:00');document.getElementById('cal-day-lbl').textContent=d.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});const dl=lotes.filter(l=>l.data===ds);document.getElementById('cal-day-ct').textContent=dl.length+' lote(s)';const el=document.getElementById('cal-day-lotes');if(dl.length===0){el.innerHTML='<div class="empty"><div class="empty-ic"><i class="ti ti-calendar-off"></i><div class="empty-badge" style="color:var(--red)"><i class="ti ti-x"></i></div></div><div class="empty-title">Nenhum lote neste dia</div><div class="empty-sub">Não há lotes agendados para esta data.</div></div>';return;}el.innerHTML='<table class="tbl"><thead><tr><th>Lote</th><th>Descrição</th><th>Horário</th><th>Lance</th><th>Status</th></tr></thead><tbody>'+dl.map(l=>`<tr><td class="n">${l.num}</td><td class="d">${l.descricao}</td><td>${l.hora||'—'}</td><td style="font-weight:700">R$ ${(l.lanceAtual||l.lanceInicial||0).toLocaleString('pt-BR')}</td><td>${getBadge(l)}</td></tr>`).join('')+'</tbody></table>';}
+window.selDia=selDia;
+
+function renderLotes(){const s=(document.getElementById('s-lote')?.value||'').toLowerCase();const st=document.getElementById('f-st')?.value||'';const ct=document.getElementById('f-ct')?.value||'';const fl=lotes.filter(l=>(!s||l.descricao?.toLowerCase().includes(s)||l.num?.toLowerCase().includes(s)||l.arrematante?.toLowerCase().includes(s))&&(!st||getSt(l)===st)&&(!ct||l.categoria===ct));fl.sort((a,b)=>((parseInt(a.num,10)||0)-(parseInt(b.num,10)||0))||String(a.num).localeCompare(String(b.num)));const el=document.getElementById('lotes-wrap');if(fl.length===0){el.innerHTML='<div class="empty"><div class="empty-ic"><i class="ti ti-package-off"></i><div class="empty-badge" style="color:var(--gray2)"><i class="ti ti-search"></i></div></div><div class="empty-title">Nenhum lote encontrado</div><div class="empty-sub">Ainda não há lotes cadastrados ou os filtros não retornaram resultados.</div></div>';return;}el.innerHTML='<table class="tbl"><thead><tr><th>Lote</th><th>Descrição</th><th>Categoria</th><th>Data</th><th>Hora</th><th>Lance inicial</th><th>Lance atual</th><th>Arrematante</th><th>Status</th><th></th></tr></thead><tbody>'+fl.map(l=>`<tr><td class="n">${l.num}</td><td class="d">${l.descricao}</td><td style="font-size:10px;color:var(--gray)">${l.categoria||'—'}</td><td style="font-size:11px;white-space:nowrap">${fmtD(l.data)}</td><td style="font-size:11px">${l.hora||'—'}</td><td style="font-weight:700">R$ ${(l.lanceInicial||0).toLocaleString('pt-BR')}</td><td style="font-weight:700">R$ ${(l.lanceAtual||l.lanceInicial||0).toLocaleString('pt-BR')}</td><td style="font-size:11px;color:var(--gray)">${l.arrematante||'—'}</td><td>${getBadge(l)}</td><td><div style="display:flex;gap:4px"><button class="ic-btn" onclick="editarLote('${l.id}')"><i class="ti ti-edit" style="font-size:12px"></i></button><button class="ic-btn del" onclick="deletarLote('${l.id}')"><i class="ti ti-trash" style="font-size:12px"></i></button></div></td></tr>`).join('')+'</tbody></table>';}
+window.renderLotes=renderLotes;
+
+async function salvarLote(){const id=document.getElementById('edit-id').value;const num=document.getElementById('f-num').value.trim(),data=document.getElementById('f-data').value,desc=document.getElementById('f-desc').value.trim();if(!num||!data||!desc){toast('Preencha número, data e descrição','er');return;}if((lotes||[]).some(x=>(String(x.num).trim().replace(/^0+/,'')||'0')===(String(num).trim().replace(/^0+/,'')||'0')&&x.id!==id)){toast('Lote já cadastrado','er');return;}const lance=parseFloat(document.getElementById('f-lance').value)||0;const obj={num,data,hora:document.getElementById('f-hora').value,categoria:document.getElementById('f-cat').value,descricao:desc,lanceInicial:lance,incremento:parseFloat(document.getElementById('f-incr').value)||0,obs:document.getElementById('f-obs').value.trim(),m2:parseFloat(document.getElementById('f-m2').value)||'',qtdCaixas:document.getElementById('f-cx').value.trim(),localizacao:document.getElementById('f-local').value.trim(),lanceAtual:lance,arrematante:'',condicional:false,retirou:false,pago:false,criadoEm:new Date().toISOString()};try{if(id)await window._upd(window._doc(window._db,'lotes',id),obj);else await window._add(window._col(window._db,'lotes'),obj);toast(id?'Lote atualizado!':'Lote cadastrado!','ok');try{await window.saveFotos(num,window.__fotosBuffer||[]);}catch(_e){}closeModal();await loadLotes();initDash();renderLotes();renderCal();updateDocSel();}catch(e){toast('Erro: '+e.message,'er');}}
+window.salvarLote=salvarLote;
+async function deletarLote(id){if(!confirm('Excluir este lote?'))return;try{await window._del(window._doc(window._db,'lotes',id));toast('Excluído','inf');await loadLotes();initDash();renderLotes();renderCal();updateDocSel();}catch(e){toast('Erro: '+e.message,'er');}}
+window.deletarLote=deletarLote;
+function editarLote(id){const l=lotes.find(x=>x.id===id);if(!l)return;openModal();document.getElementById('edit-id').value=id;document.getElementById('m-title').textContent='Editar lote';document.getElementById('f-num').value=l.num;document.getElementById('f-data').value=l.data;document.getElementById('f-hora').value=l.hora||'';document.getElementById('f-cat').value=l.categoria;document.getElementById('f-desc').value=l.descricao;document.getElementById('f-lance').value=l.lanceInicial;document.getElementById('f-incr').value=l.incremento||0;document.getElementById('f-obs').value=l.obs||'';document.getElementById('f-m2').value=l.m2||'';document.getElementById('f-cx').value=l.qtdCaixas||'';document.getElementById('f-local').value=l.localizacao||'';window.loadFotosParaEditar(l.num);}
+window.editarLote=editarLote;
+
+function updateExpPrev(){const el=document.getElementById('exp-prev');if(!el)return;if(!lotes.length){el.textContent='(nenhum lote cadastrado)';return;}el.innerHTML=lotes.slice(0,3).map(l=>`${l.data}; ${l.hora||''}; ${l.num}; ${l.descricao}; ${l.categoria}; ${l.lanceInicial||0}; ${l.lanceAtual||l.lanceInicial||0}; ${l.arrematante||''}; ${getSt(l)}; ${l.condicional?'Sim':'Nao'}; ${l.retirou?'Sim':'Nao'}; ${l.pago?'Sim':'Nao'}`).join('<br>');}
+
+/* ===== FOTOS DOS LOTES (IndexedDB) ===== */
+window.__fotosBuffer=[];
+window.__dbFotos=null;
+window.openFotosDB=function(){return new Promise((res,rej)=>{if(window.__dbFotos)return res(window.__dbFotos);const rq=indexedDB.open('porcelarte-fotos',1);rq.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('fotos'))db.createObjectStore('fotos',{keyPath:'num'});};rq.onsuccess=e=>{window.__dbFotos=e.target.result;res(window.__dbFotos);};rq.onerror=e=>rej(e.target.error);});};
+window.saveFotos=async function(num,fotos,skipCloud){if(!skipCloud){try{const l=(typeof lotes!=='undefined'?lotes:[]).find(x=>String(x.num)===String(num));if(l&&l.id)await window._upd(window._doc(window._db,'lotes',l.id),{fotos:fotos||[]});}catch(_e){}}try{await Promise.race([(async()=>{const db=await window.openFotosDB();await new Promise((res,rej)=>{const tx=db.transaction('fotos','readwrite');tx.objectStore('fotos').put({num:String(num),fotos:fotos||[]});tx.oncomplete=()=>res();tx.onerror=e=>rej(e.target.error);});})(),new Promise(r=>setTimeout(r,3000))]);}catch(_e){}};
+window.getFotos=async function(num){try{const l=(typeof lotes!=='undefined'?lotes:[]).find(x=>String(x.num)===String(num));if(l&&l.fotos&&l.fotos.length)return l.fotos;}catch(_e){}try{return await Promise.race([(async()=>{const db=await window.openFotosDB();return await new Promise((res)=>{const tx=db.transaction('fotos','readonly');const rq=tx.objectStore('fotos').get(String(num));rq.onsuccess=()=>res(rq.result?rq.result.fotos:[]);rq.onerror=()=>res([]);});})(),new Promise(r=>setTimeout(()=>r([]),3000))]);}catch(_e){return [];}};
+window.renderFotosPrev=function(){const box=document.getElementById('f-fotos-prev');if(!box)return;box.innerHTML='';window.__fotosBuffer.forEach((f,i)=>{const d=document.createElement('div');d.style.cssText='position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid #ddd';const img=document.createElement('img');img.src=f.dataURL;img.style.cssText='width:100%;height:100%;object-fit:cover';const x=document.createElement('button');x.type='button';x.textContent='×';x.style.cssText='position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;line-height:1;font-size:12px';x.onclick=()=>{window.__fotosBuffer.splice(i,1);window.renderFotosPrev();};d.appendChild(img);d.appendChild(x);box.appendChild(d);});};
+window.onFotosSelected=function(ev){const files=Array.from(ev.target.files||[]);files.forEach(file=>{const reader=new FileReader();reader.onload=e=>{window.__fotosBuffer.push({name:file.name,dataURL:e.target.result});window.renderFotosPrev();};reader.readAsDataURL(file);});ev.target.value='';};
+window.clearFotosUI=function(){window.__fotosBuffer=[];window.renderFotosPrev();};
+window.loadFotosParaEditar=async function(num){window.__fotosBuffer=await window.getFotos(num)||[];window.renderFotosPrev();};
+window._dataURLtoBlob=function(durl){const a=durl.split(',');const mime=(a[0].match(/:(.*?);/)||[])[1]||'image/png';if(a.length<2){return null;}const bin=atob(a[1]);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:mime});};
+
+async function baixarPlanilha(){
+  const fc=document.getElementById('exp-cond')?.checked;
+  const fp=document.getElementById('exp-pago')?.checked;
+  let ll=[...lotes];
+  if(fc)ll=ll.filter(x=>x.condicional);
+  if(fp)ll=ll.filter(x=>x.pago);
+  const NCOLS=9;
+  const headers=['Código','Descrição resumida','Condições / Observações','Marca / Modelo','Metragem total','Qtd CX / Paletes','Lance inicial','Localização','Contato'];
+  const aoa=[];
+  aoa.push(['CONTROLE DE LOTES  ●  PORCELARTE']);
+  aoa.push(['Modelo premium para organizar porcelanatos, armários e pendências']);
+  aoa.push(['Preencha a partir da linha 5. Use os filtros no cabeçalho para localizar rapidamente.']);
+  aoa.push(headers);
+  ll.forEach(l=>{ aoa.push([l.num||'',l.descricao||'',l.obs||'',l.categoria||'',(l.m2!=null&&l.m2!==''?l.m2:''),l.qtdCaixas||'',(l.lanceInicial!=null?l.lanceInicial:''),l.localizacao||'',l.arrematante||'']); });
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:NCOLS-1}},{s:{r:1,c:0},e:{r:1,c:NCOLS-1}},{s:{r:2,c:0},e:{r:2,c:NCOLS-1}}];
+  ws['!cols']=[{wch:12},{wch:28},{wch:30},{wch:20},{wch:14},{wch:14},{wch:14},{wch:18},{wch:18}];
+  ws['!rows']=[{hpt:30},{hpt:20},{hpt:20},{hpt:24}];
+  const ESCURO='0F2027',VERDE='0E6B5C',BRANCO='FFFFFF';
+  const set=(rr,cc,s)=>{const a=XLSX.utils.encode_cell({r:rr,c:cc});if(!ws[a])ws[a]={t:'s',v:''};ws[a].s=s;};
+  for(let c=0;c<NCOLS;c++)set(0,c,{fill:{fgColor:{rgb:ESCURO}},font:{bold:true,sz:14,color:{rgb:BRANCO}},alignment:{horizontal:'center',vertical:'center'}});
+  for(let c=0;c<NCOLS;c++)set(1,c,{fill:{fgColor:{rgb:'13313A'}},font:{sz:10,color:{rgb:'D7E3E1'}},alignment:{horizontal:'center',vertical:'center'}});
+  for(let c=0;c<NCOLS;c++)set(2,c,{fill:{fgColor:{rgb:'EAF3F1'}},font:{bold:true,sz:10,color:{rgb:VERDE}},alignment:{horizontal:'center',vertical:'center'}});
+  for(let c=0;c<NCOLS;c++)set(3,c,{fill:{fgColor:{rgb:VERDE}},font:{bold:true,sz:11,color:{rgb:BRANCO}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'0A4A40'}}}});
+  const last=aoa.length;
+  for(let rr=4;rr<last;rr++)for(let c=0;c<NCOLS;c++)set(rr,c,{font:{sz:10,color:{rgb:'1F2933'}},alignment:{vertical:'center',horizontal:(c===6?'right':'left'),wrapText:true},border:{bottom:{style:'thin',color:{rgb:'E0E6E5'}}}});
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Controle de Lotes');
+  const xlsxData=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  const hoje=new Date().toISOString().slice(0,10);
+  if(typeof JSZip==='undefined'){
+    const b=new Blob([xlsxData],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='porcelarte-'+hoje+'.xlsx';a.click();URL.revokeObjectURL(u);
+    toast('Planilha baixada!');return;
+  }
+  const zip=new JSZip();
+  zip.file('planilha-'+hoje+'.xlsx',xlsxData);
+  const fotosFolder=zip.folder('Lotes');
+  let totalFotos=0;
+  for(const l of ll){
+    const fotos=await window.getFotos(l.num);
+    if(fotos&&fotos.length){
+      const safe=('Lote '+(l.num||'sn')+(l.descricao?' - '+l.descricao:'')).replace(/[\\/:*?"<>|]/g,'-').slice(0,80);
+      const pasta=fotosFolder.folder(safe);
+      fotos.forEach((f,i)=>{const ext=(f.name&&f.name.indexOf('.')>-1)?f.name.split('.').pop():'png';const _b=window._dataURLtoBlob(f.dataURL);if(_b){pasta.file(('foto-'+(i+1)+'.'+ext),_b);totalFotos++;}});
+    }
+  }
+  const content=await zip.generateAsync({type:'blob'});
+  const u=URL.createObjectURL(content);const a=document.createElement('a');a.href=u;a.download='porcelarte-'+hoje+'.zip';a.click();URL.revokeObjectURL(u);
+  toast('Pacote .zip gerado ('+totalFotos+' fotos)!');
+}
+window.baixarPlanilha=baixarPlanilha;
+function copiarDados(){const h='data\thorario\tnumero\tdescricao\tcategoria\tlance_ini\tlance_atu\tarrematante\tstatus\tcondicional\tretirou\tpago\n';navigator.clipboard.writeText(h+lotes.map(l=>[l.data,l.hora||'',l.num,l.descricao,l.categoria,l.lanceInicial||0,l.lanceAtual||l.lanceInicial||0,l.arrematante||'',getSt(l),l.condicional?'Sim':'Nao',l.retirou?'Sim':'Nao',l.pago?'Sim':'Nao'].join('\t')).join('\n')).then(()=>toast('Dados copiados! Cole no Excel.','ok'));}
+window.copiarDados=copiarDados;
+async function importCSV(inp){const f=inp.files[0];if(!f)return;document.getElementById('csv-txt').value=await f.text();toast('Arquivo carregado. Clique em Adicionar ao banco.','inf');inp.value='';}
+window.importCSV=importCSV;
+async function importTexto(){const txt=document.getElementById('csv-txt').value.trim();if(!txt){toast('Cole os dados primeiro','er');return;}const linhas=txt.split('\n').filter(l=>l.trim());let ok=0,err=0;for(const ln of linhas){const sep=ln.includes(';')?';':',';const c=ln.split(sep).map(x=>x.trim().replace(/^["']|["']$/g,''));if(c.length<4){err++;continue;}const[data,hora,num,desc,cat,ls,,cd,rt,pg]=c;if(!data||!num||!desc){err++;continue;}const lance=parseFloat((ls||'0').replace(/\./g,'').replace(',','.'))||0;try{await window._add(window._col(window._db,'lotes'),{data:data.trim(),hora:hora||'10:00',num:num||'',descricao:desc||'',categoria:cat||'Outros',lanceInicial:lance,lanceAtual:lance,incremento:0,obs:'',arrematante:'',condicional:(cd||'').toLowerCase()==='sim',retirou:(rt||'').toLowerCase()==='sim',pago:(pg||'').toLowerCase()==='sim',criadoEm:new Date().toISOString()});ok++;}catch(e){err++;}}await loadLotes();initDash();renderLotes();renderCal();updateDocSel();updateExpPrev();document.getElementById('csv-txt').value='';toast(`${ok} lote(s) importado(s)${err?' · '+err+' erro(s)':''}`,ok>0?'ok':'er');}
+window.importTexto=importTexto;
+
+function fillSelVivo(){const s=document.getElementById('sel-vivo');s.innerHTML='<option value="">— Selecione um lote —</option>'+lotes.map(l=>`<option value="${l.id}">${l.num} — ${l.descricao}</option>`).join('');if(loteVivo)s.value=loteVivo.id;}
+function ativarVivo(){const id=document.getElementById('sel-vivo').value;if(!id){document.getElementById('vivo-panel').style.display='none';loteVivo=null;initDash();return;}loteVivo=lotes.find(l=>l.id===id);if(!loteVivo)return;const p=document.getElementById('vivo-panel');p.style.display='flex';p.style.flexDirection='column';p.style.gap='14px';document.getElementById('vp-num').textContent='Lote '+loteVivo.num;document.getElementById('vp-title').textContent=loteVivo.descricao;document.getElementById('vp-meta').innerHTML=`<span>${loteVivo.categoria}</span>`;document.getElementById('vp-val').textContent='R$ '+(loteVivo.lanceAtual||loteVivo.lanceInicial||0).toLocaleString('pt-BR');document.getElementById('vp-lance').value=loteVivo.lanceAtual||loteVivo.lanceInicial||'';document.getElementById('vp-arrem').value=loteVivo.arrematante||'';document.getElementById('vp-cond').checked=loteVivo.condicional||false;document.getElementById('vp-ret').checked=loteVivo.retirou||false;document.getElementById('vp-pago').checked=loteVivo.pago||false;initDash();}
+window.ativarVivo=ativarVivo;
+async function salvarVivo(){if(!loteVivo)return;const lance=parseFloat(document.getElementById('vp-lance').value)||0,arrem=document.getElementById('vp-arrem').value.trim();try{await window._upd(window._doc(window._db,'lotes',loteVivo.id),{lanceAtual:lance,arrematante:arrem});loteVivo.lanceAtual=lance;loteVivo.arrematante=arrem;document.getElementById('vp-val').textContent='R$ '+lance.toLocaleString('pt-BR');await loadLotes();initDash();toast('Lance atualizado!','ok');}catch(e){toast('Erro: '+e.message,'er');}}
+window.salvarVivo=salvarVivo;
+async function salvarStVivo(){if(!loteVivo)return;const cond=document.getElementById('vp-cond').checked,ret=document.getElementById('vp-ret').checked,pago=document.getElementById('vp-pago').checked;try{await window._upd(window._doc(window._db,'lotes',loteVivo.id),{condicional:cond,retirou:ret,pago});loteVivo.condicional=cond;loteVivo.retirou=ret;loteVivo.pago=pago;await loadLotes();initDash();toast('Status salvo!','ok');}catch(e){toast('Erro: '+e.message,'er');}}
+window.salvarStVivo=salvarStVivo;
+
+function renderCond(){const c=lotes.filter(l=>l.condicional);document.getElementById('cond-ct').textContent=c.length+' lote(s)';const el=document.getElementById('cond-list');if(c.length===0){el.innerHTML='<div class="empty"><div class="empty-ic"><i class="ti ti-clipboard-check"></i><div class="empty-badge" style="color:var(--green3)"><i class="ti ti-check"></i></div></div><div class="empty-title">Nenhum lote em condicional</div><div class="empty-sub">Marque "Cond." em um lote para acompanhar retirada e pagamento.</div></div>';return;}el.innerHTML='<div style="padding:0 18px">'+c.map(l=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--gray4);gap:10px"><div><div style="font-weight:600;font-size:12.5px;color:var(--ink)">Lote ${l.num} — ${l.descricao}</div><div style="font-size:11px;color:var(--gray2);margin-top:2px">${l.arrematante||'—'} · R$ ${(l.lanceAtual||0).toLocaleString('pt-BR')}</div><div style="display:flex;gap:10px;margin-top:7px"><label class="chk"><input type="checkbox" ${l.retirou?'checked':''} onchange="toggleL('${l.id}','retirou',this.checked)"><span>Retirou</span></label><label class="chk"><input type="checkbox" ${l.pago?'checked':''} onchange="toggleL('${l.id}','pago',this.checked)"><span>Pago</span></label></div></div>${getBadge(l)}</div>`).join('')+'</div>';}
+async function toggleL(id,campo,val){const u={};u[campo]=val;try{await window._upd(window._doc(window._db,'lotes',id),u);await loadLotes();renderCond();initDash();toast('Atualizado!','ok');}catch(e){toast('Erro: '+e.message,'er');}}
+window.toggleL=toggleL;
+
+function updateDocSel(){const o='<option value="">— Selecione —</option>'+lotes.map(l=>`<option value="${l.id}">Lote ${l.num} — ${l.descricao}</option>`).join('');const s=document.getElementById('sel-doc');if(s)s.innerHTML=o;}
+function getDocL(){return lotes.find(l=>l.id===document.getElementById('sel-doc').value);}
+function showDoc(t){document.getElementById('doc-txt').textContent=t;document.getElementById('doc-prev').style.display='block';}
+function gerarRecibo(){const l=getDocL();if(!l){toast('Selecione um lote','er');return;}showDoc(`RECIBO DE ARREMATAÇÃO\n${'='.repeat(44)}\nLeilão Porcelarte — ${new Date().toLocaleDateString('pt-BR')}\n\nLote Nº: ${l.num}\nDescrição: ${l.descricao}\nCategoria: ${l.categoria}\nArrematante: ${l.arrematante||'A definir'}\nValor: R$ ${(l.lanceAtual||l.lanceInicial||0).toLocaleString('pt-BR')}\nObservações: ${l.obs||'Nenhuma'}\n\n${'_'.repeat(44)}\nAssinatura do Arrematante\n\n${'_'.repeat(44)}\nResponsável pelo leilão`);}
+function gerarTermo(){const l=getDocL();if(!l){toast('Selecione um lote','er');return;}showDoc(`TERMO DE RETIRADA\n${'='.repeat(44)}\nLote Nº: ${l.num}\nDescrição: ${l.descricao}\nArrematante: ${l.arrematante||'A definir'}\nData da retirada: ___/___/______\n\n[ ] RG ou CNH do arrematante\n[ ] Comprovante de pagamento\n\nData: ${new Date().toLocaleDateString('pt-BR')}\n\n${'_'.repeat(44)}\nResponsável pelo leilão`);}
+function gerarRel(){const lm=lotes.filter(l=>{const d=new Date(l.data+'T12:00:00');return d.getMonth()===hoje.getMonth()&&d.getFullYear()===hoje.getFullYear();});const v=lm.filter(l=>l.pago);showDoc(`RELATÓRIO DO LEILÃO\n${'='.repeat(44)}\nPorcelarte — ${new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}\n\nTotal de lotes: ${lm.length}\nLotes vendidos: ${v.length}\nCondicionais pendentes: ${lotes.filter(l=>l.condicional&&!l.pago).length}\nTotal arrecadado: R$ ${v.reduce((s,l)=>s+(l.lanceAtual||0),0).toLocaleString('pt-BR')}\n\n${'—'.repeat(44)}\n${lm.map(l=>`${l.num} | ${l.descricao} | R$ ${(l.lanceAtual||l.lanceInicial||0).toLocaleString('pt-BR')} | ${l.arrematante||'—'} | ${getSt(l)}`).join('\n')}\n\nGerado: ${new Date().toLocaleString('pt-BR')}`);}
+function envDocGmail(){const c=document.getElementById('doc-txt').textContent;document.getElementById('gm-corpo').value=c;document.getElementById('gm-ass').value='Documento — Leilão Porcelarte';ir('gmail');toast('Documento copiado para Gmail','inf');}
+window.gerarRecibo=gerarRecibo;window.gerarTermo=gerarTermo;window.gerarRel=gerarRel;window.envDocGmail=envDocGmail;
+
+function modeloGmail(t){const m={recibo:{a:'Recibo de Arrematação — Porcelarte',b:'Prezado(a),\n\nSegue o recibo de arrematação do seu lote.\n\nAtenciosamente,\nEquipe Porcelarte'},cond:{a:'Lote Condicional — Confirmação Pendente',b:'Prezado(a),\n\nSeu lote está em status condicional e aguarda confirmação.\n\nAtenciosamente,\nEquipe Porcelarte'},rel:{a:'Relatório do Leilão — Porcelarte',b:'Prezado(a),\n\nSegue o relatório completo do leilão.\n\nAtenciosamente,\nEquipe Porcelarte'}};const r=m[t];if(r){document.getElementById('gm-ass').value=r.a;document.getElementById('gm-corpo').value=r.b;}}
+function envEmail(){const p=document.getElementById('gm-para').value.trim(),a=document.getElementById('gm-ass').value.trim(),b=document.getElementById('gm-corpo').value.trim();if(!p||!a||!b){toast('Preencha todos os campos','er');return;}window.open(`mailto:${p}?subject=${encodeURIComponent(a)}&body=${encodeURIComponent(b)}`);}
+window.modeloGmail=modeloGmail;window.envEmail=envEmail;
+
+function ctxAI(){const tv=lotes.filter(l=>l.pago).reduce((s,l)=>s+(l.lanceAtual||0),0);return `Você é Abadias, assistente pessoal de leilões da Porcelarte. Responda sempre em português brasileiro de forma direta e profissional.\n\nDados atuais:\n- Total de lotes: ${lotes.length}\n- Condicionais pendentes: ${lotes.filter(l=>l.condicional&&!l.pago).length}\n- Total arrecadado: R$${tv.toLocaleString('pt-BR')}\n\nLOTES:\n${lotes.map(l=>`Lote ${l.num}: ${l.descricao} | ${l.categoria} | ${l.data} | Lance: R$${l.lanceAtual||l.lanceInicial||0} | Arrematante: ${l.arrematante||'nenhum'} | Status: ${getSt(l)} | Condicional: ${l.condicional?'sim':'não'} | Pago: ${l.pago?'sim':'não'}`).join('\n')||'Nenhum lote cadastrado.'}`;}
+
+async function envMsg(){const inp=document.getElementById('chat-in'),msg=inp.value.trim();if(!msg)return;inp.value='';addMsg('me',msg);chatHist.push({role:'user',content:msg});const th=addMsg('ab','Digitando...',true);document.getElementById('btn-send').disabled=true;try{await new Promise(r=>setTimeout(r,250));const resp=window.respostaAbadias(msg);th.remove();addMsg('ab',resp);chatHist.push({role:'assistant',content:resp});if(chatHist.length>20)chatHist=chatHist.slice(-20);}catch(e){th.remove();addMsg('ab','Tive um problema ao analisar os dados. Tente novamente.');}document.getElementById('btn-send').disabled=false;}
+window.envMsg=envMsg;
+
+function addMsg(tipo,txt,th=false){const c=document.getElementById('chat-msgs');const d=document.createElement('div');d.className=tipo==='me'?'msg-me':'msg-ab';d.innerHTML=`<div class="msg-av">${tipo==='me'?'IS':'AB'}</div><div><div class="msg-bub${th?' msg-th':''}">${txt.replace(/\n/g,'<br>')}</div><div class="msg-time">${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div></div>`;c.appendChild(d);c.scrollTop=c.scrollHeight;return d;}
+
+/* ===== ABADIAS — assistente inteligente (local, sem IA externa) ===== */
+window._fmtBRL=function(v){return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});};
+window._hojeISO=function(){return new Date().toISOString().slice(0,10);};
+window._stLote=function(l){if(l.pago)return'pago';if(l.arrematante)return'arrematado';if(l.condicional)return'condicional';return'aberto';};
+window._resumoNums=function(){
+  const ll=Array.isArray(lotes)?lotes:[];
+  const hoje=window._hojeISO();
+  const doDia=ll.filter(l=>l.data===hoje);
+  const arrecadado=ll.filter(l=>l.pago).reduce((s,l)=>s+(l.lanceAtual||l.lanceInicial||0),0);
+  const previsto=ll.reduce((s,l)=>s+(l.lanceAtual||l.lanceInicial||0),0);
+  const condicionais=ll.filter(l=>l.condicional&&!l.pago);
+  const naoPagos=ll.filter(l=>l.arrematante&&!l.pago);
+  const naoRetirados=ll.filter(l=>l.pago&&!l.retirou);
+  return {ll,hoje,doDia,arrecadado,previsto,condicionais,naoPagos,naoRetirados};
+};
+window.respostaAbadias=function(msg){
+  const q=(msg||'').toLowerCase();
+  const R=window._resumoNums();
+  const L=window._fmtBRL;
+  const linhaLote=l=>'• Lote '+(l.num||'?')+(l.descricao?' — '+l.descricao:'')+(l.lanceAtual||l.lanceInicial?' ('+L(l.lanceAtual||l.lanceInicial)+')':'');
+  const has=(...ks)=>ks.some(k=>q.includes(k));
+  if(!R.ll.length) return 'Ainda não há lotes cadastrados. Clique em "Novo lote" para começar e eu passo a te dar resumos e alertas automaticamente.';
+  if(has('arrecad','faturad','recebi','quanto') && has('mes','mês','total')||q.includes('total arrecad')){
+    return 'Total arrecadado (lotes pagos): '+L(R.arrecadado)+'.\nValor previsto somando todos os lances atuais: '+L(R.previsto)+'.';
+  }
+  if(has('condicional')){
+    if(!R.condicionais.length) return 'Não há lotes em condicional pendentes de pagamento no momento.';
+    return 'Lotes em condicional e ainda não pagos ('+R.condicionais.length+'):\n'+R.condicionais.map(linhaLote).join('\n');
+  }
+  if(has('retir','entrega') && has('nao','não','pend','falta')){
+    if(!R.naoRetirados.length) return 'Tudo certo! Não há lotes pagos aguardando retirada.';
+    return 'Lotes pagos aguardando retirada ('+R.naoRetirados.length+'):\n'+R.naoRetirados.map(linhaLote).join('\n');
+  }
+  if(has('nao pag','não pag','pendente de pag','falta pagar','inadimpl')){
+    if(!R.naoPagos.length) return 'Não há pagamentos pendentes. Todos os lotes arrematados estão pagos.';
+    return 'Lotes arrematados ainda não pagos ('+R.naoPagos.length+'):\n'+R.naoPagos.map(linhaLote).join('\n');
+  }
+  if(has('hoje','do dia','agora')){
+    if(!R.doDia.length) return 'Não há lotes com leilão agendado para hoje ('+R.hoje.split('-').reverse().join('/')+').';
+    return 'Hoje ('+R.hoje.split('-').reverse().join('/')+') temos '+R.doDia.length+' lote(s) em leilão:\n'+R.doDia.map(l=>linhaLote(l)+(l.hora?' às '+l.hora:'')).join('\n');
+  }
+  if(has('relat','resumo','panorama','visao','visão','status')){
+    return 'Relatório do leilão:\n'
+      +'• Total de lotes: '+R.ll.length+'\n'
+      +'• Em leilão hoje: '+R.doDia.length+'\n'
+      +'• Arrecadado (pagos): '+L(R.arrecadado)+'\n'
+      +'• Previsto (todos os lances): '+L(R.previsto)+'\n'
+      +'• Condicionais pendentes: '+R.condicionais.length+'\n'
+      +'• Pagamentos pendentes: '+R.naoPagos.length+'\n'
+      +'• Aguardando retirada: '+R.naoRetirados.length;
+  }
+  if(has('quantos lote','quantidade de lote','numero de lote','número de lote') || (has('lote')&&has('quant'))){
+    return 'Você tem '+R.ll.length+' lote(s) cadastrado(s) no total, sendo '+R.doDia.length+' com leilão hoje.';
+  }
+  if(has('maior lance','lance mais alto','lote mais caro','maior valor')){
+    const top=[...R.ll].sort((a,b)=>(b.lanceAtual||b.lanceInicial||0)-(a.lanceAtual||a.lanceInicial||0))[0];
+    return 'O maior lance é do '+linhaLote(top)+'.';
+  }
+  if(has('lista','todos os lote','mostrar lote')){
+    return 'Lotes cadastrados ('+R.ll.length+'):\n'+R.ll.slice(0,15).map(linhaLote).join('\n')+(R.ll.length>15?'\n…e mais '+(R.ll.length-15)+'.':'');
+  }
+  if(has('ola','olá','oi','bom dia','boa tarde','boa noite','tudo bem')){
+    return 'Olá, Isaque! '+window.abadiasProativo(true);
+  }
+  if(has('ajuda','o que voce faz','o que você faz','pode fazer','comandos')){
+    return 'Posso te ajudar com: resumo do leilão, lotes em leilão hoje, total arrecadado, lotes em condicional, pagamentos pendentes e retiradas pendentes. É só perguntar — ou usar os botões de atalho acima.';
+  }
+  // fallback inteligente: dá um panorama útil
+  return 'Não tenho certeza do que você precisa, mas aqui vai um resumo rápido:\n'
+    +'• '+R.doDia.length+' lote(s) em leilão hoje\n'
+    +'• Arrecadado: '+L(R.arrecadado)+'\n'
+    +'• '+R.naoPagos.length+' pagamento(s) pendente(s) · '+R.naoRetirados.length+' retirada(s) pendente(s).\n'
+    +'Pergunte por exemplo: "lotes de hoje", "total arrecadado", "condicionais" ou "retiradas pendentes".';
+};
+window.abadiasProativo=function(inline){
+  const R=window._resumoNums();
+  if(!R.ll.length) return inline?'Ainda não há lotes cadastrados — cadastre o primeiro para eu começar a te ajudar.':'';
+  const partes=[];
+  if(R.doDia.length) partes.push('temos '+R.doDia.length+' lote(s) em leilão hoje');
+  if(R.naoPagos.length) partes.push(R.naoPagos.length+' pagamento(s) pendente(s)');
+  if(R.naoRetirados.length) partes.push(R.naoRetirados.length+' retirada(s) pendente(s)');
+  if(R.condicionais.length) partes.push(R.condicionais.length+' condicional(is)');
+  const corpo = partes.length ? ('Isaque, '+partes.join(', ')+'. Quer que eu detalhe algum?') : 'Isaque, está tudo em dia: sem pagamentos, retiradas ou condicionais pendentes.';
+  return corpo;
+};
+window.__abadiasJaSaudou=false;
+window.abadiasAoAbrir=function(){
+  if(window.__abadiasJaSaudou) return;
+  window.__abadiasJaSaudou=true;
+  try{ const msg=window.abadiasProativo(false); if(msg) addMsg('ab',msg); }catch(e){}
+};
+
+function pergunta(t){ir('abadias');document.getElementById('chat-in').value=t;envMsg();}
+function limparChat(){chatHist=[];document.getElementById('chat-msgs').innerHTML='<div class="msg-ab"><div class="msg-av">AB</div><div><div class="msg-bub">Conversa reiniciada! 🎯</div></div></div>';}
+window.pergunta=pergunta;window.limparChat=limparChat;
+
+function openModal(){document.getElementById('edit-id').value='';document.getElementById('m-title').textContent='Cadastrar novo lote';window.clearFotosUI();['f-num','f-desc','f-lance','f-incr','f-obs','f-m2','f-cx','f-local'].forEach(x=>document.getElementById(x).value='');document.getElementById('f-data').value=hoje.toISOString().slice(0,10);document.getElementById('f-hora').value='10:00';document.getElementById('modal-overlay').classList.add('open');}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+window.openModal=openModal;window.closeModal=closeModal;
+document.getElementById('modal-overlay').onclick=function(e){if(e.target===this)closeModal();};
+
+function getSt(l){if(l.pago)return'pago';if(l.retirou)return'retirou';if(l.condicional)return'condicional';return'livre';}
+function getBadge(l){const m={livre:'<span class="badge b-free">Livre</span>',condicional:'<span class="badge b-cond">Condicional</span>',pago:'<span class="badge b-pago">Pago</span>',retirou:'<span class="badge b-ret">Retirou</span>'};return m[getSt(l)]||'';}
+function fmtD(s){if(!s)return'—';return new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});}
+function toast(msg,tipo='inf'){const e=document.createElement('div');const ic={ok:'ti-circle-check',er:'ti-circle-x',inf:'ti-info-circle'};const cc={ok:'var(--green)',er:'var(--red)',inf:'var(--blue3)'};e.className='toast '+tipo;e.innerHTML=`<i class="ti ${ic[tipo]}" style="font-size:16px;color:${cc[tipo]}"></i>${msg}`;document.getElementById('toasts').appendChild(e);setTimeout(()=>e.remove(),4000);}
+</script>
+
+  <!-- Botao hamburguer mobile e overlay da gaveta lateral -->
+  <button class="menu-toggle mobile-only" id="mobileMenuBtn" aria-label="Abrir menu" onclick="(function(){var s=document.querySelector('.sb');var o=document.getElementById('sbOverlay');s.classList.add('open');o.classList.add('open');})()"><i class="ti ti-menu-2"></i></button>
+  <div class="sb-overlay" id="sbOverlay" onclick="(function(){document.querySelector('.sb').classList.remove('open');this.classList.remove('open');}).call(this)"></div>
+  <script>
+  (function(){
+    function closeDrawer(){var s=document.querySelector('.sb');var o=document.getElementById('sbOverlay');if(s)s.classList.remove('open');if(o)o.classList.remove('open');}
+    // mover o botao para dentro da topbar (antes do bloco de titulo)
+    function place(){
+      var btn=document.getElementById('mobileMenuBtn');var top=document.querySelector('.top');
+      if(btn&&top&&btn.parentElement!==top){top.insertBefore(btn,top.firstChild);}
+    }
+    if(document.readyState!=='loading'){place();}else{document.addEventListener('DOMContentLoaded',place);}
+    // fechar gaveta ao clicar em um item de navegacao (mobile)
+    document.addEventListener('click',function(e){
+      if(window.innerWidth<=768&&e.target.closest&&e.target.closest('.sb .nav')){closeDrawer();}
+    });
+    window.addEventListener('resize',function(){if(window.innerWidth>768)closeDrawer();});
+  })();
+  </script>
+
+
+  <!-- design: charts + bottom nav -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+(function(){var CH="\n    <div class=\"card\" id=\"overview-sec\">\n      <div class=\"ch\">\n        <div class=\"ch-l\">\n          <div class=\"ch-ico\"><i class=\"ti ti-trending-up\"></i></div>\n          <div><div class=\"ch-title\">Visão geral do mês</div><div class=\"ch-sub\">Atividade de lotes e desempenho financeiro</div></div>\n        </div>\n        <div class=\"legend-row\">\n          <div class=\"lg-item\"><span class=\"lg-dot\" style=\"background:#2563EB\"></span>Criados</div>\n          <div class=\"lg-item\"><span class=\"lg-dot\" style=\"background:#10B981\"></span>Vendidos</div>\n        </div>\n      </div>\n      <div class=\"cb ov-grid\">\n        <div class=\"ov-left\">\n          <div>\n            <div class=\"ov-cap\">Atividade de lotes</div>\n            <div class=\"ov-big\" id=\"ov-total\">0</div>\n            <div class=\"ov-cap2\">lotes criados este mês</div>\n            <div class=\"ov-trend\"><i class=\"ti ti-trending-up\"></i><span id=\"ov-trend\">0%</span> vs mês anterior</div>\n          </div>\n          <div class=\"chart-box\"><canvas id=\"ovChart\"></canvas></div>\n        </div>\n        <div class=\"ov-right\">\n          <div class=\"ov-rtitle\">Resumo financeiro</div>\n          <div class=\"fin-row\"><span class=\"fin-lbl\">Lance inicial total</span><span class=\"fin-val\" style=\"color:#7C3AED\" id=\"fin-lance\">R$ 0</span></div>\n          <div class=\"fin-row\"><span class=\"fin-lbl\">Total vendido</span><span class=\"fin-val\" style=\"color:#10B981\" id=\"fin-vendido\">R$ 0</span></div>\n          <div class=\"fin-row\" style=\"border-bottom:none\"><span class=\"fin-lbl\">Pagamentos pendentes</span><span class=\"fin-val\" style=\"color:#EA580C\" id=\"fin-pend\">R$ 0</span></div>\n          <div class=\"donut-wrap\"><canvas id=\"finDonut\"></canvas><div class=\"donut-center\"><div style=\"font-size:21px;font-weight:800;color:var(--ink)\" id=\"fin-conv\">0%</div><div style=\"font-size:10px;color:var(--gray2);font-weight:600\">Conversão</div></div></div>\n        </div>\n      </div>\n    </div>";var ovChart=null, finDonut=null;function parseMoney(t){if(!t)return 0;var s=(t+"").replace(/[^0-9,.-]/g,"");s=s.replace(/\./g,"").replace(",",".");var f=parseFloat(s);return isNaN(f)?0:f;}function fmtBR(v){try{return "R$ "+v.toLocaleString("pt-BR",{minimumFractionDigits:0,maximumFractionDigits:0});}catch(e){return "R$ "+v;}}function ensureSection(){var d=document.getElementById("pg-dashboard");if(!d)return null;if(!document.getElementById("overview-sec")){var tmp=document.createElement("div");tmp.innerHTML=CH.trim();d.appendChild(tmp.firstElementChild);}return document.getElementById("overview-sec");}function g(id){var e=document.getElementById(id);return e?e.textContent.trim():"";}function refresh(){var sec=ensureSection();if(!sec)return;var lance=parseMoney(g("k-total")),vend=parseMoney(g("k-vend")),pend=parseMoney(g("k-pend"));var conv=lance>0?Math.round((vend/lance)*100):0;var el;if(el=document.getElementById("fin-lance"))el.textContent=fmtBR(lance);if(el=document.getElementById("fin-vendido"))el.textContent=fmtBR(vend);if(el=document.getElementById("fin-pend"))el.textContent=fmtBR(pend);if(el=document.getElementById("fin-conv"))el.textContent=conv+"%";if(el=document.getElementById("ov-total"))el.textContent=g("k-lotes")||"0";if(typeof Chart!=="undefined"){var days=["01","04","07","10","13","16","19","22","25","28"];var oc=document.getElementById("ovChart");if(oc&&!ovChart){ovChart=new Chart(oc,{type:"line",data:{labels:days,datasets:[{label:"Lotes criados",data:days.map(function(){return 0;}),borderColor:"#2563EB",backgroundColor:"rgba(37,99,235,.08)",tension:.35,fill:true,pointRadius:0,borderWidth:2},{label:"Lotes vendidos",data:days.map(function(){return 0;}),borderColor:"#10B981",backgroundColor:"rgba(16,185,129,.06)",tension:.35,fill:true,pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,suggestedMax:10,grid:{color:"#F1F4F7"},ticks:{color:"#94A3B8",font:{size:10}}},x:{grid:{display:false},ticks:{color:"#94A3B8",font:{size:10}}}}}});}var dc=document.getElementById("finDonut");if(dc){if(finDonut)finDonut.destroy();finDonut=new Chart(dc,{type:"doughnut",data:{labels:["Vendido","Restante"],datasets:[{data:[conv,Math.max(0,100-conv)],backgroundColor:["#2563EB","#EEF1F4"],borderWidth:0}]},options:{cutout:"72%",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}}}});}}}function buildBotNav(){if(document.querySelector(".botnav"))return;var navs=[].slice.call(document.querySelectorAll(".sb .nav")).slice(0,5);if(!navs.length)return;var bn=document.createElement("nav");bn.className="botnav";navs.forEach(function(n){var a=document.createElement("a");a.href="javascript:void(0)";var ic=n.querySelector("i");var icCls=ic?ic.className:"ti ti-square";var label=(n.textContent||"").trim();a.innerHTML='<i class="'+icCls+'"></i><span>'+label+'</span>';if(n.classList.contains("on"))a.classList.add("on");a.addEventListener("click",function(){n.click();document.querySelectorAll(".botnav a").forEach(function(x){x.classList.remove("on");});a.classList.add("on");setTimeout(refresh,80);});bn.appendChild(a);});document.body.appendChild(bn);}function build(){ensureSection();refresh();buildBotNav();var ids=["k-total","k-vend","k-pend","k-lotes"];var mo=new MutationObserver(function(){refresh();});ids.forEach(function(id){var e=document.getElementById(id);if(e)mo.observe(e,{childList:true,characterData:true,subtree:true});});}function boot(){if(typeof Chart==="undefined"){setTimeout(boot,120);return;}build();}if(document.readyState!=="loading")setTimeout(boot,250);else document.addEventListener("DOMContentLoaded",function(){setTimeout(boot,250);});document.addEventListener("click",function(e){if(e.target.closest&&e.target.closest(".sb .nav")){setTimeout(function(){var d=document.getElementById("pg-dashboard");if(d&&d.classList.contains("on"))refresh();},150);}});})();
+  </script>
+
+<script>
+(function(){
+  function apply(t){
+    document.body.classList.toggle('theme-light', t==='light');
+    var b=document.getElementById('themeTg');
+    if(b)b.innerHTML = t==='light' ? '<i class="ti ti-moon"></i>' : '<i class="ti ti-sun"></i>';
+  }
+  var saved=localStorage.getItem('porcelarte-theme')||'dark';
+  apply(saved);
+  document.addEventListener('click',function(e){
+    var b=e.target.closest && e.target.closest('#themeTg');
+    if(!b)return;
+    var cur=document.body.classList.contains('theme-light')?'light':'dark';
+    var nx=cur==='light'?'dark':'light';
+    localStorage.setItem('porcelarte-theme',nx);
+    apply(nx);
+  });
+})();
+</script>
+</body>
+</html>
