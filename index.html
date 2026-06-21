@@ -802,7 +802,7 @@ async function baixarPlanilha(){
   const fp=document.getElementById('exp-pago')?.checked;
   let ll=[...lotes];
   if(fc)ll=ll.filter(x=>x.condicional);
-  if(fp)ll=ll.filter(x=>x.pago);
+  if(fp)ll=ll.filter(x=>x.pago);ll.sort((a,b)=>((parseInt(a.num,10)||0)-(parseInt(b.num,10)||0))||String(a.num).localeCompare(String(b.num)));
   const NCOLS=9;
   const headers=['Código','Descrição resumida','Condições / Observações','Marca / Modelo','Metragem total','Qtd CX / Paletes','Lance inicial','Localização','Contato'];
   const aoa=[];
