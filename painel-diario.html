@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel diário · Porcelarte Leilões</title>
+<style>
+:root{--ink:#12202F;--ink-2:#4A5B6E;--line:#DEE5EC;--bg:#F5F8FA;--card:#FFFFFF;--blue:#1B4E8C;--blue-soft:#E7EEF7;--green:#0E7A54;--amber:#B26A05;--rose:#A32B3F}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:78rem;margin:0 auto;padding:2rem 1.5rem 4rem}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem}
+h1{font-size:1.55rem;margin:0;letter-spacing:-.02em;font-weight:650}
+.hoje{color:var(--ink-2);font-size:.9rem;margin:.15rem 0 0}
+.status{font-size:.85rem;color:var(--ink-2)}.status b{color:var(--green)}
+.controls{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;margin-bottom:1.5rem}
+.seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:.55rem 1.05rem;font:inherit;font-size:.9rem;color:var(--ink-2);cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--blue);color:#fff;font-weight:600}
+.recarregar{margin-left:auto;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:.55rem 1rem;font:inherit;font-size:.9rem;cursor:pointer;color:var(--ink-2)}
+.kpis{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:1.5rem}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem}
+.kpi .rot{font-size:.82rem;color:var(--ink-2);margin-bottom:.35rem}
+.kpi .val{font-size:1.65rem;font-weight:650;letter-spacing:-.02em;line-height:1.15}
+.kpi .sub{font-size:.8rem;color:var(--ink-2);margin-top:.2rem}
+.kpi.destaque .val{color:var(--blue)}
+.painel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1.25rem;margin-bottom:1.5rem}
+.painel h2{font-size:1rem;margin:0 0 1rem;font-weight:650}
+.dias{display:flex;gap:.85rem;align-items:flex-end;overflow-x:auto;padding-bottom:.35rem;min-height:8.5rem}
+.dia{flex:0 0 4.2rem;text-align:center}
+.barra{background:var(--blue-soft);border-radius:4px 4px 0 0;position:relative;margin:0 auto .4rem;width:2.4rem}
+.barra i{position:absolute;left:0;right:0;bottom:0;background:var(--blue);border-radius:4px 4px 0 0;display:block}
+.dia .d{font-size:.78rem;color:var(--ink-2)}.dia .q{font-size:.85rem;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{text-align:left;font-weight:600;color:var(--ink-2);font-size:.8rem;padding:.5rem .6rem;border-bottom:1px solid var(--line)}
+td{padding:.55rem .6rem;border-bottom:1px solid var(--line)}tr:last-child td{border-bottom:0}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font-size:.75rem;padding:.1rem .45rem;border-radius:4px;background:var(--blue-soft);color:var(--blue)}
+.tag.livre{background:#EFF2F5;color:var(--ink-2)}.tag.pago{background:#E4F3EC;color:var(--green)}.tag.cond{background:#FBF0DD;color:var(--amber)}
+.vazio{color:var(--ink-2);padding:2rem 0;text-align:center}
+.erro{background:#FBEAED;border:1px solid #F0C6CE;color:var(--rose);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1.5rem}
+</style>
+</head>
+<body>
+<div class="wrap"><header><div><h1>Painel diário</h1><p class="hoje" id="hoje"></p></div><div class="status" id="status">Carregando lotes…</div></header><div class="controls"><div class="seg" id="periodo"><button data-d="0" aria-pressed="true">Hoje</button><button data-d="7" aria-pressed="false">7 dias</button><button data-d="15" aria-pressed="false">15 dias</button><button data-d="30" aria-pressed="false">30 dias</button></div><div class="seg" id="direcao"><button data-dir="fwd" aria-pressed="true">A partir de hoje</button><button data-dir="back" aria-pressed="false">Até hoje</button></div><button class="recarregar" id="recarregar">Atualizar dados</button></div><div id="erro"></div><div class="kpis" id="kpis"></div><div class="painel"><h2>Lotes por dia de pregão</h2><div class="dias" id="dias"></div></div><div class="painel"><h2 id="tituloTabela">Lotes do período</h2><div id="tabela"></div></div></div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+const app = initializeApp({apiKey:"AIzaSyCk5wE8UUvUGOTjEGzEGecCBFjRd4Am0ro",authDomain:"porcelarte-leiloes.firebaseapp.com",projectId:"porcelarte-leiloes",storageBucket:"porcelarte-leiloes.firebasestorage.app",messagingSenderId:"1022628888843",appId:"1:1022628888843:web:fe1ade18896ae2696d220e"});
+const db = getFirestore(app);
+let LOTES=[],dias=0,dir="fwd";
+const brl=v=>(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const nm=v=>(Number(v)||0).toLocaleString('pt-BR',{maximumFractionDigits:2});
+const iso=d=>d.toISOString().slice(0,10);
+const ptbr=s=>{const p=String(s||'').split('-');return p.length===3?p[2]+'/'+p[1]:'—'};
+document.getElementById('hoje').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+async function carregar(){const st=document.getElementById('status');st.textContent='Carregando lotes…';
+ try{const snap=await getDocs(collection(db,'lotes'));LOTES=snap.docs.map(d=>({id:d.id,...d.data()}));
+  st.innerHTML='<b>'+LOTES.length+' lotes</b> no banco · atualizado '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('erro').innerHTML='';}
+ catch(e){st.textContent='';document.getElementById('erro').innerHTML='<div class="erro"><strong>Não deu para ler os lotes.</strong><br>Verifique a conexão e as regras do Firestore. Detalhe técnico: '+String(e.message||e)+'</div>'}
+ render();}
+function janela(){const h=new Date();h.setHours(0,0,0,0);if(dias===0)return[iso(h),iso(h)];const o=new Date(h);
+ if(dir==='fwd'){o.setDate(o.getDate()+dias);return[iso(h),iso(o)]}o.setDate(o.getDate()-dias);return[iso(o),iso(h)]}
+function render(){const w=janela(),ini=w[0],fim=w[1];
+ const sel=LOTES.filter(l=>l.data&&l.data>=ini&&l.data<=fim);
+ const comLance=sel.filter(l=>(l.lanceAtual||0)>(l.lanceInicial||0)||(l.arrematante||'').trim()!=='');
+ const vAtual=sel.reduce((s,l)=>s+(Number(l.lanceAtual)||0),0);
+ const vIni=sel.reduce((s,l)=>s+(Number(l.lanceInicial)||0),0);
+ const metros=sel.reduce((s,l)=>s+(Number(l.m2)||0),0);
+ const conds=sel.filter(l=>l.condicional).length;
+ const pagos=sel.filter(l=>l.pago);
+ const vPago=pagos.reduce((s,l)=>s+(Number(l.lanceAtual)||0),0);
+ const conv=sel.length?Math.round(comLance.length/sel.length*100):0;
+ const rot=dias===0?'hoje':(dir==='fwd'?'nos próximos '+dias+' dias':'nos últimos '+dias+' dias');
+ document.getElementById('kpis').innerHTML=[kpi('Lotes em pregão',sel.length,rot,true),kpi('Com lance',comLance.length,conv+'% dos lotes'),kpi('Valor em lance',brl(vAtual),'partida: '+brl(vIni)),kpi('Metragem',nm(metros)+' m²','em pregão'),kpi('Condicionais',conds,'aguardando definição'),kpi('Pago',brl(vPago),pagos.length+' lote(s) quitado(s)')].join('');
+ document.getElementById('tituloTabela').textContent='Lotes '+(dias===0?'de hoje':rot);
+ const porDia={};sel.forEach(l=>{porDia[l.data]=porDia[l.data]||[];porDia[l.data].push(l)});
+ const ch=Object.keys(porDia).sort();const maior=Math.max(1,...ch.map(k=>porDia[k].length));
+ document.getElementById('dias').innerHTML=ch.length?ch.map(k=>{const q=porDia[k].length;const alt=Math.round(q/maior*90)+10;
+  return '<div class="dia"><div class="q">'+q+'</div><div class="barra" style="height:90px"><i style="height:'+alt+'%"></i></div><div class="d">'+ptbr(k)+'</div></div>'}).join(''):'<div class="vazio">Nenhum pregão neste período.</div>';
+ document.getElementById('tabela').innerHTML=sel.length?'<table><thead><tr><th>Lote</th><th>Descrição</th><th>Pregão</th><th style="text-align:right">Partida</th><th style="text-align:right">Atual</th><th>Situação</th></tr></thead><tbody>'+
+  sel.sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora)).map(l=>{const tem=(l.lanceAtual||0)>(l.lanceInicial||0)||(l.arrematante||'').trim()!=='';
+   const sit=l.pago?'<span class="tag pago">Pago</span>':l.condicional?'<span class="tag cond">Condicional</span>':tem?'<span class="tag">Com lance</span>':'<span class="tag livre">Sem lance</span>';
+   return '<tr><td>'+(l.num||'—')+'</td><td>'+(l.descricao||'')+'</td><td>'+ptbr(l.data)+' '+(l.hora||'')+'</td><td class="n">'+((l.lanceInicial||0)?brl(l.lanceInicial):'—')+'</td><td class="n">'+brl(l.lanceAtual)+'</td><td>'+sit+'</td></tr>'}).join('')+'</tbody></table>':'<div class="vazio">Nenhum lote com pregão neste período.</div>';}
+function kpi(rot,val,sub,dest){return '<div class="kpi'+(dest?' destaque':'')+'"><div class="rot">'+rot+'</div><div class="val">'+val+'</div><div class="sub">'+(sub||'')+'</div></div>'}
+document.getElementById('periodo').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;dias=Number(b.dataset.d);[...e.currentTarget.children].forEach(x=>x.setAttribute('aria-pressed',x===b));render()});
+document.getElementById('direcao').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;dir=b.dataset.dir;[...e.currentTarget.children].forEach(x=>x.setAttribute('aria-pressed',x===b));render()});
+document.getElementById('recarregar').addEventListener('click',carregar);
+carregar();
+</script>
+</body>
+</html>
