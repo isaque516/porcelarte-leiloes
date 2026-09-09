@@ -1060,26 +1060,29 @@ function curva(vals,w,h){if(!vals.length)return "";var mx=Math.max.apply(null,va
  return "<svg viewBox=\"0 0 "+w+" "+h+"\" preserveAspectRatio=\"none\" style=\"width:100%;height:170px;display:block\">"+
   "<defs><linearGradient id=\"ppg\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#ffffff\" stop-opacity=\".28\"/><stop offset=\"100%\" stop-color=\"#ffffff\" stop-opacity=\"0\"/></linearGradient></defs>"+
   "<path d=\""+area+"\" fill=\"url(#ppg)\"/><path d=\""+d+"\" fill=\"none\" stroke=\"#EAFBF3\" stroke-width=\"3\" stroke-linecap=\"round\"/>"+cir+"</svg>"}
+function temLance(l){return (Number(l.lanceAtual)||0)>(Number(l.lanceInicial)||0)||String(l.arrematante||"").trim()!==""}
+function chave(l){return String(l.num||"")||String(l.descricao||"")+"|"+String(l.data||"")}
 function render(){var w=janela(),ini=w[0],fim=w[1];
  var sel=LT.filter(function(l){return l.data&&l.data>=ini&&l.data<=fim});
- var tem=function(l){return (Number(l.lanceAtual)||0)>(Number(l.lanceInicial)||0)||String(l.arrematante||"").trim()!==""};
- var comLance=sel.filter(tem);
- var vAt=sel.reduce(function(s,l){return s+(Number(l.lanceAtual)||0)},0);
+ var visto={},uniq=[];
+ sel.filter(temLance).forEach(function(l){var k=chave(l);if(visto[k])return;visto[k]=1;uniq.push(l)});
+ var vAt=uniq.reduce(function(s,l){return s+(Number(l.lanceAtual)||0)},0);
  var vIn=sel.reduce(function(s,l){return s+(Number(l.lanceInicial)||0)},0);
- var m2=sel.reduce(function(s,l){return s+(Number(l.m2)||0)},0);
- var pagos=sel.filter(function(l){return l.pago});
- var conv=sel.length?Math.round(comLance.length/sel.length*100):0;
+ var m2=uniq.reduce(function(s,l){return s+(Number(l.m2)||0)},0);
+ var pagos=uniq.filter(function(l){return l.pago});
+ var conv=sel.length?Math.round(uniq.length/sel.length*100):0;
  var rot=dias===0?"Hoje":((dir==="fwd"?"Próximos ":"Últimos ")+dias+" dias");
- document.getElementById("pp-sub").textContent=rot;
+ document.getElementById("pp-sub").textContent=rot+" · só lotes com lance";
  document.getElementById("pp-val").textContent=brl(vAt);
- var pd={};sel.forEach(function(l){pd[l.data]=(pd[l.data]||0)+(Number(l.lanceAtual)||0)});
+ var pd={};uniq.forEach(function(l){pd[l.data]=(pd[l.data]||0)+(Number(l.lanceAtual)||0)});
  var ch=Object.keys(pd).sort();
- document.getElementById("pp-chart").innerHTML=ch.length>1?curva(ch.map(function(k){return pd[k]}),600,170):"<div style=\"height:170px;display:flex;align-items:center;justify-content:center;opacity:.7;font-size:13px\">Sem pregões suficientes para desenhar a curva</div>";
+ document.getElementById("pp-chart").innerHTML=ch.length>1?curva(ch.map(function(k){return pd[k]}),600,170):"<div style=\"height:170px;display:flex;align-items:center;justify-content:center;opacity:.7;font-size:13px\">Ainda não há lances suficientes para desenhar a curva</div>";
  document.getElementById("pp-kpis").innerHTML=
-  k("Lotes em pregão",sel.length)+k("Com lance",comLance.length+" ("+conv+"%)")+k("Valor de partida",brl(vIn))+k("Metragem",nm(m2)+" m²")+k("Pago",brl(pagos.reduce(function(s,l){return s+(Number(l.lanceAtual)||0)},0)));
+  k("Lotes em pregão",sel.length)+k("Com lance",uniq.length+" ("+conv+"%)")+k("Sem lance",(sel.length-uniq.length))+k("Valor de partida",brl(vIn))+k("Metragem com lance",nm(m2)+" m²")+k("Pago",brl(pagos.reduce(function(s,l){return s+(Number(l.lanceAtual)||0)},0)));
  document.getElementById("pp-dias").innerHTML=ch.length?ch.map(function(kk){
-  var ls=sel.filter(function(l){return l.data===kk});
-  return "<div class=\"pp-lin\"><div><strong>"+br(kk)+"</strong> · "+ls.length+" lote(s)</div><div>"+brl(pd[kk])+"</div></div>"}).join(""):"<div style=\"padding:18px 0;color:#64748B;font-size:14px\">Nenhum pregão neste período.</div>"}
+  var q=uniq.filter(function(l){return l.data===kk}).length;
+  var tot=sel.filter(function(l){return l.data===kk}).length;
+  return "<div class=\"pp-lin\"><div><strong>"+br(kk)+"</strong> · "+q+" de "+tot+" lote(s) com lance</div><div>"+brl(pd[kk])+"</div></div>"}).join(""):"<div style=\"padding:18px 0;color:#64748B;font-size:14px\">Nenhum lote com lance neste período.</div>"}
 function k(r,v){return "<div class=\"pp-k\"><div class=\"r\">"+r+"</div><div class=\"v\">"+v+"</div></div>"}
 window.renderPainel=async function(){try{var s=await window._getDocs(window._col(window._db,"lotes"));
   LT=s.docs.map(function(d){return d.data()});}catch(e){}
