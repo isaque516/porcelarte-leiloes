@@ -398,7 +398,7 @@ body{font-family:'Inter',system-ui,sans-serif;font-size:13px;color:var(--ink);ba
   <div class="sb-sec">
     <div class="sb-lbl">Principal</div>
     <div class="nav on" data-p="dashboard"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
-    <div class="nav" data-p="calendario"><i class="ti ti-calendar"></i>Calendário</div>
+    <div class="nav" data-p="painel"><i class="ti ti-chart-line"></i>Painel diário</div><div class="nav" data-p="calendario"><i class="ti ti-calendar"></i>Calendário</div>
     <div class="nav" data-p="lotes"><i class="ti ti-package"></i>Lotes</div>
     <div class="nav" data-p="aovivo"><i class="ti ti-player-play"></i>Leilão ao vivo</div>
   </div>
@@ -637,7 +637,7 @@ body{font-family:'Inter',system-ui,sans-serif;font-size:13px;color:var(--ink);ba
       </div>
     </div>
 
-    <div class="pg" id="pg-integracoes">
+    <div class="pg" id="pg-painel" style="display:none"><style>#pp-per button,#pp-dir button{border:0;background:transparent;color:#fff;font:inherit;font-size:13px;padding:6px 12px;border-radius:8px;cursor:pointer;opacity:.75}#pp-per button[aria-pressed="true"],#pp-dir button[aria-pressed="true"]{background:rgba(255,255,255,.28);opacity:1;font-weight:600}.pp-k{flex:1 1 150px;min-width:150px}.pp-k .r{font-size:12px;color:#64748B}.pp-k .v{font-size:22px;font-weight:650;letter-spacing:-.5px}.pp-lin{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #EEF2F6;font-size:14px}.pp-lin:last-child{border-bottom:0}</style><div class="card" style="padding:0;overflow:hidden"><div style="background:linear-gradient(135deg,#13B49B 0%,#0F86A9 55%,#1B4E8C 100%);color:#fff;padding:22px 24px 0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap"><div><div style="font-size:19px;font-weight:650">Em lance</div><div id="pp-sub" style="opacity:.85;font-size:13px">Carregando…</div></div><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end"><div id="pp-per" style="display:flex;gap:4px;background:rgba(255,255,255,.16);padding:4px;border-radius:10px"><button data-d="0" aria-pressed="false">Hoje</button><button data-d="7" aria-pressed="true">7 dias</button><button data-d="15" aria-pressed="false">15 dias</button><button data-d="30" aria-pressed="false">30 dias</button></div><div id="pp-dir" style="display:flex;gap:4px;background:rgba(255,255,255,.16);padding:4px;border-radius:10px"><button data-dir="fwd" aria-pressed="true">Próximos</button><button data-dir="back" aria-pressed="false">Anteriores</button></div></div></div><div id="pp-val" style="font-size:42px;font-weight:700;letter-spacing:-1.5px;margin:16px 0 4px">R$ 0,00</div><div id="pp-chart" style="margin:0 -24px"></div></div></div><div class="card"><div id="pp-kpis" style="display:flex;flex-wrap:wrap;gap:18px"></div></div><div class="card"><div class="ch"><div class="ch-l"><div class="ch-title">Dias de pregão</div></div></div><div id="pp-dias"></div></div></div><div class="pg" id="pg-integracoes">
       <div class="card">
         <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-plug"></i></div><div><div class="ch-title">APIs externas</div></div></div></div>
         <div>
@@ -1039,6 +1039,64 @@ function toast(msg,tipo='inf'){const e=document.createElement('div');const ic={o
     localStorage.setItem('porcelarte-theme',nx);
     apply(nx);
   });
+})();
+</script>
+<script>
+(function(){
+var dias=7,dir="fwd",LT=[];
+var brl=function(v){return (Number(v)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})};
+var nm=function(v){return (Number(v)||0).toLocaleString("pt-BR",{maximumFractionDigits:2})};
+var iso=function(d){return d.toISOString().slice(0,10)};
+var br=function(s){var p=String(s||"").split("-");return p.length===3?p[2]+"/"+p[1]:"-"};
+function janela(){var h=new Date();h.setHours(0,0,0,0);if(dias===0)return[iso(h),iso(h)];var o=new Date(h);
+ if(dir==="fwd"){o.setDate(o.getDate()+dias);return[iso(h),iso(o)]}o.setDate(o.getDate()-dias);return[iso(o),iso(h)]}
+function curva(vals,w,h){if(!vals.length)return "";var mx=Math.max.apply(null,vals.concat([1]));
+ var pts=vals.map(function(v,i){return[vals.length>1?i*(w/(vals.length-1)):w/2,h-8-(v/mx)*(h-26)]});
+ var d="M"+pts[0][0]+","+pts[0][1];
+ for(var i=0;i<pts.length-1;i++){var p0=pts[i],p1=pts[i+1];var cx=(p0[0]+p1[0])/2;
+  d+=" C"+cx+","+p0[1]+" "+cx+","+p1[1]+" "+p1[0]+","+p1[1]}
+ var area=d+" L"+pts[pts.length-1][0]+","+h+" L"+pts[0][0]+","+h+" Z";
+ var cir=pts.map(function(p){return "<circle cx=\""+p[0]+"\" cy=\""+p[1]+"\" r=\"4\" fill=\"#fff\"/>"}).join("");
+ return "<svg viewBox=\"0 0 "+w+" "+h+"\" preserveAspectRatio=\"none\" style=\"width:100%;height:170px;display:block\">"+
+  "<defs><linearGradient id=\"ppg\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#ffffff\" stop-opacity=\".28\"/><stop offset=\"100%\" stop-color=\"#ffffff\" stop-opacity=\"0\"/></linearGradient></defs>"+
+  "<path d=\""+area+"\" fill=\"url(#ppg)\"/><path d=\""+d+"\" fill=\"none\" stroke=\"#EAFBF3\" stroke-width=\"3\" stroke-linecap=\"round\"/>"+cir+"</svg>"}
+function render(){var w=janela(),ini=w[0],fim=w[1];
+ var sel=LT.filter(function(l){return l.data&&l.data>=ini&&l.data<=fim});
+ var tem=function(l){return (Number(l.lanceAtual)||0)>(Number(l.lanceInicial)||0)||String(l.arrematante||"").trim()!==""};
+ var comLance=sel.filter(tem);
+ var vAt=sel.reduce(function(s,l){return s+(Number(l.lanceAtual)||0)},0);
+ var vIn=sel.reduce(function(s,l){return s+(Number(l.lanceInicial)||0)},0);
+ var m2=sel.reduce(function(s,l){return s+(Number(l.m2)||0)},0);
+ var pagos=sel.filter(function(l){return l.pago});
+ var conv=sel.length?Math.round(comLance.length/sel.length*100):0;
+ var rot=dias===0?"Hoje":((dir==="fwd"?"Próximos ":"Últimos ")+dias+" dias");
+ document.getElementById("pp-sub").textContent=rot;
+ document.getElementById("pp-val").textContent=brl(vAt);
+ var pd={};sel.forEach(function(l){pd[l.data]=(pd[l.data]||0)+(Number(l.lanceAtual)||0)});
+ var ch=Object.keys(pd).sort();
+ document.getElementById("pp-chart").innerHTML=ch.length>1?curva(ch.map(function(k){return pd[k]}),600,170):"<div style=\"height:170px;display:flex;align-items:center;justify-content:center;opacity:.7;font-size:13px\">Sem pregões suficientes para desenhar a curva</div>";
+ document.getElementById("pp-kpis").innerHTML=
+  k("Lotes em pregão",sel.length)+k("Com lance",comLance.length+" ("+conv+"%)")+k("Valor de partida",brl(vIn))+k("Metragem",nm(m2)+" m²")+k("Pago",brl(pagos.reduce(function(s,l){return s+(Number(l.lanceAtual)||0)},0)));
+ document.getElementById("pp-dias").innerHTML=ch.length?ch.map(function(kk){
+  var ls=sel.filter(function(l){return l.data===kk});
+  return "<div class=\"pp-lin\"><div><strong>"+br(kk)+"</strong> · "+ls.length+" lote(s)</div><div>"+brl(pd[kk])+"</div></div>"}).join(""):"<div style=\"padding:18px 0;color:#64748B;font-size:14px\">Nenhum pregão neste período.</div>"}
+function k(r,v){return "<div class=\"pp-k\"><div class=\"r\">"+r+"</div><div class=\"v\">"+v+"</div></div>"}
+window.renderPainel=async function(){try{var s=await window._getDocs(window._col(window._db,"lotes"));
+  LT=s.docs.map(function(d){return d.data()});}catch(e){}
+ render()};
+document.addEventListener("click",function(e){var b=e.target.closest("#pp-per button");if(b){dias=Number(b.dataset.d);
+  [].forEach.call(b.parentElement.children,function(x){x.setAttribute("aria-pressed",x===b)});render();return}
+ var c=e.target.closest("#pp-dir button");if(c){dir=c.dataset.dir;
+  [].forEach.call(c.parentElement.children,function(x){x.setAttribute("aria-pressed",x===c)});render()}});
+var _ir=window.ir;
+window.ir=function(p){if(p==="painel"){
+  document.querySelectorAll(".nav").forEach(function(x){x.classList.toggle("on",x.dataset.p==="painel")});
+  document.querySelectorAll(".pg").forEach(function(el){el.style.display="none"});
+  var el=document.getElementById("pg-painel");el.style.display="flex";el.style.flexDirection="column";el.style.gap="16px";
+  document.getElementById("pg-title").textContent="Painel diário";
+  document.getElementById("pg-sub").textContent="Movimento dos lotes por período";
+  window.renderPainel();return}
+ var pp=document.getElementById("pg-painel");if(pp)pp.style.display="none";_ir(p)};
 })();
 </script>
 </body>
