@@ -792,8 +792,8 @@ function updateExpPrev(){const el=document.getElementById('exp-prev');if(!el)ret
 window.__fotosBuffer=[];
 window.__dbFotos=null;
 window.openFotosDB=function(){return new Promise((res,rej)=>{if(window.__dbFotos)return res(window.__dbFotos);const rq=indexedDB.open('porcelarte-fotos',1);rq.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('fotos'))db.createObjectStore('fotos',{keyPath:'num'});};rq.onsuccess=e=>{window.__dbFotos=e.target.result;res(window.__dbFotos);};rq.onerror=e=>rej(e.target.error);});};
-window.__shrink=function(durl,budget){return new Promise(res=>{const im=new Image();im.onload=()=>{let w=im.naturalWidth,h=im.naturalHeight;const dims=[1200,1000,860,720,600,500,420];const qs=[0.7,0.6,0.5,0.42];let best=durl;for(const dim of dims){const sc=Math.min(1,dim/Math.max(w,h));const cw=Math.max(1,Math.round(w*sc)),ch=Math.max(1,Math.round(h*sc));const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;cv.getContext('2d').drawImage(im,0,0,cw,ch);for(const q of qs){const u=cv.toDataURL('image/jpeg',q);best=u;if(u.length<=budget){res(u);return;}}}res(best);};im.onerror=()=>res(durl);im.src=durl;});};window.__fitFotos=async function(fotos){if(!fotos||!fotos.length)return fotos||[];const budget=Math.floor(880000/fotos.length);const out=[];for(const f of fotos){let d=(f&&f.dataURL)||'';if(typeof d==='string'&&d.indexOf('data:image')===0&&d.length>budget){try{d=await window.__shrink(d,budget);}catch(_e){}}out.push({name:(f&&f.name)||'foto.jpg',dataURL:d});}return out;};window.saveFotos=async function(num,fotos,skipCloud){fotos=await window.__fitFotos(fotos||[]);if(!skipCloud){try{const l=(typeof lotes!=='undefined'?lotes:[]).find(x=>String(x.num)===String(num));if(l&&l.id)await window._upd(window._doc(window._db,'lotes',l.id),{fotos:fotos||[]});}catch(_e){}}try{await Promise.race([(async()=>{const db=await window.openFotosDB();await new Promise((res,rej)=>{const tx=db.transaction('fotos','readwrite');tx.objectStore('fotos').put({num:String(num),fotos:fotos||[]});tx.oncomplete=()=>res();tx.onerror=e=>rej(e.target.error);});})(),new Promise(r=>setTimeout(r,3000))]);}catch(_e){}};
-window.getFotos=async function(num){try{const l=(typeof lotes!=='undefined'?lotes:[]).find(x=>String(x.num)===String(num));if(l&&l.fotos&&l.fotos.length)return l.fotos;}catch(_e){}try{return await Promise.race([(async()=>{const db=await window.openFotosDB();return await new Promise((res)=>{const tx=db.transaction('fotos','readonly');const rq=tx.objectStore('fotos').get(String(num));rq.onsuccess=()=>res(rq.result?rq.result.fotos:[]);rq.onerror=()=>res([]);});})(),new Promise(r=>setTimeout(()=>r([]),3000))]);}catch(_e){return [];}};
+window.__shrink=function(durl,budget){return new Promise(res=>{const im=new Image();im.onload=()=>{let w=im.naturalWidth,h=im.naturalHeight;const dims=[1200,1000,860,720,600,500,420];const qs=[0.7,0.6,0.5,0.42];let best=durl;for(const dim of dims){const sc=Math.min(1,dim/Math.max(w,h));const cw=Math.max(1,Math.round(w*sc)),ch=Math.max(1,Math.round(h*sc));const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;cv.getContext('2d').drawImage(im,0,0,cw,ch);for(const q of qs){const u=cv.toDataURL('image/jpeg',q);best=u;if(u.length<=budget){res(u);return;}}}res(best);};im.onerror=()=>res(durl);im.src=durl;});};window.__fitFotos=async function(fotos){if(!fotos||!fotos.length)return fotos||[];const budget=Math.floor(880000/fotos.length);const out=[];for(const f of fotos){let d=(f&&f.dataURL)||'';if(typeof d==='string'&&d.indexOf('data:image')===0&&d.length>budget){try{d=await window.__shrink(d,budget);}catch(_e){}}out.push({name:(f&&f.name)||'foto.jpg',dataURL:d});}return out;};window.saveFotos=async function(num,fotos,skipCloud){fotos=await window.__fitFotos(fotos||[]);if(!skipCloud){try{const cfg=window._db.app.options;const url='https://firestore.googleapis.com/v1/projects/'+cfg.projectId+'/databases/(default)/documents/fotos_lotes/'+encodeURIComponent(String(num))+'?key='+cfg.apiKey;const body={fields:{num:{stringValue:String(num)},fotos:{arrayValue:{values:(fotos||[]).map(f=>({mapValue:{fields:{name:{stringValue:String(f.name||'foto.jpg')},dataURL:{stringValue:String(f.dataURL||'')}}}}))}}}};await fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}catch(_e){}}try{await Promise.race([(async()=>{const db=await window.openFotosDB();await new Promise((res,rej)=>{const tx=db.transaction('fotos','readwrite');tx.objectStore('fotos').put({num:String(num),fotos:fotos||[]});tx.oncomplete=()=>res();tx.onerror=e=>rej(e.target.error);});})(),new Promise(r=>setTimeout(r,3000))]);}catch(_e){}};
+window.getFotos=async function(num){try{const cfg=window._db.app.options;const r=await fetch('https://firestore.googleapis.com/v1/projects/'+cfg.projectId+'/databases/(default)/documents/fotos_lotes/'+encodeURIComponent(String(num))+'?key='+cfg.apiKey);if(r.ok){const j=await r.json();const v=(j.fields&&j.fields.fotos&&j.fields.fotos.arrayValue&&j.fields.fotos.arrayValue.values)||[];if(v.length)return v.map(x=>({name:((x.mapValue||{}).fields||{}).name?x.mapValue.fields.name.stringValue:'foto.jpg',dataURL:((x.mapValue||{}).fields||{}).dataURL?x.mapValue.fields.dataURL.stringValue:''}));}}catch(_e){}try{const l=(typeof lotes!=='undefined'?lotes:[]).find(x=>String(x.num)===String(num));if(l&&l.fotos&&l.fotos.length)return l.fotos;}catch(_e){}try{return await Promise.race([(async()=>{const db=await window.openFotosDB();return await new Promise((res)=>{const tx=db.transaction('fotos','readonly');const rq=tx.objectStore('fotos').get(String(num));rq.onsuccess=()=>res(rq.result?rq.result.fotos:[]);rq.onerror=()=>res([]);});})(),new Promise(r=>setTimeout(()=>r([]),3000))]);}catch(_e){return [];}};
 window.renderFotosPrev=function(){const box=document.getElementById('f-fotos-prev');if(!box)return;box.innerHTML='';window.__fotosBuffer.forEach((f,i)=>{const d=document.createElement('div');d.style.cssText='position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid #ddd';const img=document.createElement('img');img.src=f.dataURL;img.style.cssText='width:100%;height:100%;object-fit:cover';const x=document.createElement('button');x.type='button';x.textContent='×';x.style.cssText='position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;line-height:1;font-size:12px';x.onclick=()=>{window.__fotosBuffer.splice(i,1);window.renderFotosPrev();};d.appendChild(img);d.appendChild(x);box.appendChild(d);});};
 window.onFotosSelected=function(ev){const files=Array.from(ev.target.files||[]);files.forEach(file=>{const reader=new FileReader();reader.onload=e=>{const _im=new Image();_im.onload=()=>{let w=_im.naturalWidth,h=_im.naturalHeight;const sc=Math.min(1,1100/Math.max(w,h));w=Math.max(1,Math.round(w*sc));h=Math.max(1,Math.round(h*sc));const cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(_im,0,0,w,h);let q=0.62,d=cv.toDataURL('image/jpeg',q);while(d.length>500000&&q>0.4){q-=0.1;d=cv.toDataURL('image/jpeg',q);}window.__fotosBuffer.push({name:file.name,dataURL:d});window.renderFotosPrev();};_im.onerror=()=>{window.__fotosBuffer.push({name:file.name,dataURL:e.target.result});window.renderFotosPrev();};_im.src=e.target.result;};reader.readAsDataURL(file);});ev.target.value='';};
 window.clearFotosUI=function(){window.__fotosBuffer=[];window.renderFotosPrev();};
@@ -1108,7 +1108,18 @@ window.ir=function(p){if(p==="painel"){
  var pp=document.getElementById("pg-painel");if(pp)pp.style.display="none";_ir(p)};
 })();
 </script>
-<!-- ===== MODULO LEILOES (fundacao consignante) ===== -->
+<!-- ===== MODULO LEILOES v2 (fundacao consignante · visual refinado) ===== -->
+<style>
+.lei-card{border:1px solid #E2E8F0;border-left:4px solid #2563EB;border-radius:14px;padding:16px 18px;margin:0 18px 14px;background:#fff;transition:box-shadow .18s,transform .18s}
+.lei-card:hover{box-shadow:0 10px 28px rgba(15,23,42,.09);transform:translateY(-1px)}
+.lei-kpi{background:#F8FAFC;border:1px solid #F1F5F9;border-radius:10px;padding:10px 12px;transition:background .15s}
+.lei-kpi:hover{background:#F1F5F9}
+.lei-kpi .lb{color:#64748B;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:5px}
+.lei-kpi .dt{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}
+.lei-kpi .vl{font-weight:800;font-size:14.5px;margin-top:4px;color:#0F172A}
+.lei-resumo{margin:0 18px 14px;padding:13px 16px;border-radius:12px;background:linear-gradient(135deg,#EFF6FF,#F5F9FF);border:1px solid #DBEAFE;display:flex;gap:26px;flex-wrap:wrap;font-size:13px;color:#1E293B}
+.lei-data{color:#64748B;font-size:12px;background:#F1F5F9;border-radius:999px;padding:3px 10px;margin-left:10px}
+</style>
 <div id="leilao-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1200;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:16px;max-width:440px;width:92%;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -1140,13 +1151,13 @@ window.fillLeilaoSel=function(sel){const el=$('f-leilao');if(!el)return;el.inner
 
 function lotesDoLeilao(num,all){return (all||[]).filter(function(x){return String(x.leilaoNum||'')===String(num)||String(x.num||'').indexOf(String(num)+'-')===0;});}
 
-function kpi(lab,val,cor){return '<div style="background:#F8FAFC;border-radius:10px;padding:10px 12px"><div style="color:#64748B;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px">'+lab+'</div><div style="font-weight:800;font-size:14px;margin-top:3px'+(cor?';color:'+cor:'')+'">'+val+'</div></div>';}
+function kpi(lab,val,cor){return '<div class="lei-kpi"><div class="lb"><span class="dt" style="background:'+(cor||'#94A3B8')+'"></span>'+lab+'</div><div class="vl"'+(cor?' style="color:'+cor+'"':'')+'>'+val+'</div></div>';}
 
 window.renderLeiloes=async function(){const box=$('leiloes-list');if(!box)return;box.innerHTML='<div style="padding:26px;color:#64748B;font-size:13px">Carregando leilões...</div>';
 try{
   await window.loadLeiloes();
   const s=await window._getDocs(window._col(window._db,'lotes'));const all=[];s.forEach(function(d){all.push(Object.assign({id:d.id},d.data()));});
-  if(!LE.length){box.innerHTML='<div style="padding:32px;text-align:center;color:#64748B"><div style="font-size:15px;font-weight:700;margin-bottom:6px">Nenhum leilão cadastrado</div><div style="font-size:12px">Clique em "Novo leilão" e informe o nº da Sodré (ex.: 29029).<br>Lotes numerados como <b>29029-001</b> entram no leilão automaticamente.</div></div>';return;}
+  if(!LE.length){box.innerHTML='<div style="padding:34px;text-align:center;color:#64748B"><div style="font-size:15px;font-weight:700;margin-bottom:6px">Nenhum leilão cadastrado</div><div style="font-size:12px">Clique em "Novo leilão" e informe o nº da Sodré (ex.: 29029).<br>Lotes numerados como <b>29029-001</b> entram no leilão automaticamente.</div></div>';return;}
   let totV=0,totM=0;
   const cards=LE.map(function(le){
     const ls=lotesDoLeilao(le.numero,all);
@@ -1157,24 +1168,24 @@ try{
     totV+=vendas;totM+=margem;
     const cond=ls.filter(function(x){return x.condicional&&!x.pago;}).length;
     const dt=le.data?new Date(le.data+'T12:00:00').toLocaleDateString('pt-BR'):'sem data';
-    return '<div style="border:1px solid #E2E8F0;border-radius:14px;padding:16px 18px;margin:0 18px 14px">'
+    return '<div class="lei-card">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
-      +'<div><span style="font-weight:800;font-size:16px;color:#0F172A">Leilão '+le.numero+'</span><span style="color:#94A3B8;font-size:12px;margin-left:10px">'+dt+'</span></div>'
+      +'<div style="display:flex;align-items:center"><i class="ti ti-gavel" style="color:#2563EB;margin-right:8px"></i><span style="font-weight:800;font-size:16px;color:#0F172A">Leilão '+le.numero+'</span><span class="lei-data">'+dt+'</span></div>'
       +'<div style="display:flex;gap:6px">'
       +'<button class="btn-o" style="font-size:11px" onclick="window.editarLeilao(\''+le.id+'\')"><i class="ti ti-edit"></i> Editar</button>'
       +'<button class="btn-o" style="font-size:11px;color:#DC2626" onclick="window.excluirLeilao(\''+le.id+'\')"><i class="ti ti-trash"></i></button>'
       +'</div></div>'
-      +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:12px">'
-      +kpi('Lotes',ls.length+' · '+vend.length+' vendido(s)'+(cond?' · '+cond+' cond.':''),'')
-      +kpi('Vendas',money(vendas),'')
-      +kpi('Comissão Sodré (5%)','− '+money(com),'#D97706')
-      +kpi('Líquido a receber',money(liq),'#2563EB')
-      +kpi('Edital / publicidade','− '+money(custo),'#D97706')
-      +kpi('Margem do leilão',money(margem),margem>=0?'#059669':'#DC2626')
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin-top:13px">'
+      +kpi('Lotes',ls.length+' · '+vend.length+' vendido(s)'+(cond?' · '+cond+' cond.':''),'#2563EB')
+      +kpi('Vendas',money(vendas),'#0F172A')
+      +kpi('Comissão 5%','− '+money(com),'#D97706')
+      +kpi('Líquido',money(liq),'#2563EB')
+      +kpi('Edital','− '+money(custo),'#D97706')
+      +kpi('Margem',money(margem),margem>=0?'#059669':'#DC2626')
       +'</div></div>';
   }).join('');
-  const resumo='<div style="margin:0 18px 14px;padding:12px 16px;border-radius:12px;background:#EFF6FF;display:flex;gap:24px;flex-wrap:wrap;font-size:13px">'
-    +'<div><b>'+LE.length+'</b> leilão(ões)</div>'
+  const resumo='<div class="lei-resumo">'
+    +'<div><i class="ti ti-gavel" style="color:#2563EB"></i> <b>'+LE.length+'</b> leilão(ões)</div>'
     +'<div>Vendas totais: <b>'+money(totV)+'</b></div>'
     +'<div>Margem total: <b style="color:'+(totM>=0?'#059669':'#DC2626')+'">'+money(totM)+'</b></div></div>';
   box.innerHTML=resumo+cards;
@@ -1203,7 +1214,19 @@ setTimeout(async function(){try{await window.loadLeiloes();window.fillLeilaoSel(
 })();
 </script>
 
-<!-- ===== MODULO CONTROLE (ciclo do lote) ===== -->
+<!-- ===== MODULO CONTROLE v2 (ciclo do lote · visual refinado) ===== -->
+<style>
+.ctl-chip{border:1.5px solid #E2E8F0;background:#fff;border-radius:999px;padding:7px 13px;cursor:pointer;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:7px;transition:all .15s}
+.ctl-chip .dt{width:8px;height:8px;border-radius:50%;flex:none}
+.ctl-chip .ct{background:#F1F5F9;border-radius:999px;padding:1px 8px;font-size:11px}
+.ctl-chip:hover{border-color:#94A3B8;transform:translateY(-1px)}
+.ctl-chip.on{color:#fff !important;border-color:transparent}
+.ctl-chip.on .ct{background:rgba(255,255,255,.25);color:#fff}
+.ctl-row{border-top:1px solid #F1F5F9;transition:background .12s}
+.ctl-row:hover{background:#F8FAFC}
+.ctl-st{border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:800;white-space:nowrap}
+.ctl-resumo{margin:0 18px 12px;padding:12px 16px;border-radius:12px;background:linear-gradient(135deg,#F8FAFC,#F1F5F9);border:1px solid #E2E8F0;display:flex;gap:24px;flex-wrap:wrap;font-size:12.5px;color:#334155}
+</style>
 <script>
 (function(){
 const $=function(id){return document.getElementById(id);};
@@ -1230,35 +1253,35 @@ let valVendido=0, valFalta=0;
 all.forEach(function(l){const k=classifica(l);const v=Number(l.valorVenda)||l.lanceAtual||0;
   if(k.livre)c.livre++; if(k.cond)c.cond++; if(k.vendido){c.vendido++;valVendido+=v;}
   if(k.faltaRetirar){c.faltaRetirar++;valFalta+=v;} if(k.retirado)c.retirado++; if(k.pago)c.pago++;});
-const defs=[['todos','Todos',c.todos,'#334155'],['livre','Cadastrados (livres)',c.livre,'#2563EB'],['cond','Condicional',c.cond,'#D97706'],['vendido','Vendidos',c.vendido,'#059669'],['faltaRetirar','Falta retirar',c.faltaRetirar,'#EA580C'],['retirado','Retirados',c.retirado,'#7C3AED'],['pago','Pagos',c.pago,'#059669']];
+const defs=[['todos','Todos',c.todos,'#334155'],['livre','Cadastrados',c.livre,'#2563EB'],['cond','Condicional',c.cond,'#D97706'],['vendido','Vendidos',c.vendido,'#059669'],['faltaRetirar','Falta retirar',c.faltaRetirar,'#EA580C'],['retirado','Retirados',c.retirado,'#7C3AED'],['pago','Pagos',c.pago,'#059669']];
 const chips=defs.map(function(d){const on=FILTRO===d[0];
-  return '<button onclick="setFiltroCtl(\''+d[0]+'\')" style="border:1.5px solid '+(on?d[3]:'#E2E8F0')+';background:'+(on?d[3]:'#fff')+';color:'+(on?'#fff':d[3])+';border-radius:999px;padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700">'+d[1]+' · '+d[2]+'</button>';}).join('');
-const resumo='<div style="margin:0 18px 12px;padding:11px 15px;border-radius:12px;background:#F8FAFC;display:flex;gap:22px;flex-wrap:wrap;font-size:12.5px;color:#334155">'
-  +'<div>Vendido (bruto): <b>'+money(valVendido)+'</b></div>'
-  +'<div>Aguardando retirada: <b style="color:#EA580C">'+money(valFalta)+'</b> em '+c.faltaRetirar+' lote(s)</div></div>';
+  return '<button class="ctl-chip'+(on?' on':'')+'" style="color:'+d[3]+(on?';background:'+d[3]:'')+'" onclick="setFiltroCtl(\''+d[0]+'\')"><span class="dt" style="background:'+(on?'#fff':d[3])+'"></span>'+d[1]+'<span class="ct">'+d[2]+'</span></button>';}).join('');
+const resumo='<div class="ctl-resumo">'
+  +'<div><i class="ti ti-cash" style="color:#059669"></i> Vendido (bruto): <b>'+money(valVendido)+'</b></div>'
+  +'<div><i class="ti ti-truck" style="color:#EA580C"></i> Aguardando retirada: <b style="color:#EA580C">'+money(valFalta)+'</b> em '+c.faltaRetirar+' lote(s)</div></div>';
 const fl=all.filter(function(l){const k=classifica(l);return FILTRO==='todos'||k[FILTRO];});
-const TD='padding:9px 6px;vertical-align:middle;';
+const TD='padding:10px 8px;vertical-align:middle;';
 const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVenda)||l.lanceAtual||l.lanceInicial||0;
-  const st=k.pago?'<span style="color:#059669;font-weight:700">Pago</span>'
-    :k.retirado?'<span style="color:#7C3AED;font-weight:700">Retirado</span>'
-    :k.faltaRetirar?'<span style="color:#EA580C;font-weight:700">Falta retirar</span>'
-    :k.cond?'<span style="color:#D97706;font-weight:700">Condicional</span>'
-    :'<span style="color:#94A3B8;font-weight:700">Livre</span>';
+  const st=k.pago?'<span class="ctl-st" style="background:#D1FAE5;color:#059669">Pago</span>'
+    :k.retirado?'<span class="ctl-st" style="background:#EDE9FE;color:#7C3AED">Retirado</span>'
+    :k.faltaRetirar?'<span class="ctl-st" style="background:#FEF0E7;color:#EA580C">Falta retirar</span>'
+    :k.cond?'<span class="ctl-st" style="background:#FEF3C7;color:#D97706">Condicional</span>'
+    :'<span class="ctl-st" style="background:#F1F5F9;color:#64748B">Livre</span>';
   const toggles=k.vendido
-    ?('<label style="display:flex;gap:4px;align-items:center;font-size:11px;cursor:pointer"><input type="checkbox" '+(l.retirou?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'retirou\',this.checked)">Retirou</label>'
-     +'<label style="display:flex;gap:4px;align-items:center;font-size:11px;cursor:pointer"><input type="checkbox" '+(l.pago?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'pago\',this.checked)">Pago</label>')
+    ?('<label style="display:flex;gap:5px;align-items:center;font-size:11px;cursor:pointer;font-weight:600;color:#334155"><input type="checkbox" style="width:15px;height:15px;accent-color:#7C3AED" '+(l.retirou?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'retirou\',this.checked)">Retirou</label>'
+     +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;cursor:pointer;font-weight:600;color:#334155"><input type="checkbox" style="width:15px;height:15px;accent-color:#059669" '+(l.pago?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'pago\',this.checked)">Pago</label>')
     :'<span style="font-size:11px;color:#CBD5E1">—</span>';
-  return '<tr style="border-top:1px solid #F1F5F9">'
-    +'<td style="'+TD+'font-weight:700;white-space:nowrap">'+l.num+'</td>'
-    +'<td style="'+TD+'font-size:12px;max-width:400px">'+((l.descricao||'').slice(0,90))+'</td>'
-    +'<td style="'+TD+'font-size:12px">'+(l.arrematante||'—')+'</td>'
-    +'<td style="'+TD+'font-weight:700;white-space:nowrap">'+money(val)+'</td>'
+  return '<tr class="ctl-row">'
+    +'<td style="'+TD+'font-weight:800;white-space:nowrap;color:#0F172A">'+l.num+'</td>'
+    +'<td style="'+TD+'font-size:12px;max-width:400px;color:#334155">'+((l.descricao||'').slice(0,90))+'</td>'
+    +'<td style="'+TD+'font-size:12px;color:#64748B">'+(l.arrematante||'—')+'</td>'
+    +'<td style="'+TD+'font-weight:800;white-space:nowrap;color:#0F172A">'+money(val)+'</td>'
     +'<td style="'+TD+'">'+st+'</td>'
-    +'<td style="'+TD+'"><div style="display:flex;gap:12px">'+toggles+'</div></td></tr>';}).join('');
+    +'<td style="'+TD+'"><div style="display:flex;gap:14px">'+toggles+'</div></td></tr>';}).join('');
 box.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 12px">'+chips+'</div>'+resumo
   +(fl.length
-    ?'<div style="padding:0 18px 16px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="text-align:left;color:#64748B;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px"><th style="padding:8px 6px">Lote</th><th style="padding:8px 6px">Descrição</th><th style="padding:8px 6px">Arrematante</th><th style="padding:8px 6px">Valor</th><th style="padding:8px 6px">Status</th><th style="padding:8px 6px">Ações</th></tr></thead><tbody>'+linhas+'</tbody></table></div>'
-    :'<div style="padding:26px;text-align:center;color:#64748B;font-size:13px">Nenhum lote nesse status.</div>');
+    ?'<div style="padding:0 18px 16px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="text-align:left;color:#94A3B8;font-size:10px;text-transform:uppercase;letter-spacing:.5px"><th style="padding:8px">Lote</th><th style="padding:8px">Descrição</th><th style="padding:8px">Arrematante</th><th style="padding:8px">Valor</th><th style="padding:8px">Status</th><th style="padding:8px">Ações</th></tr></thead><tbody>'+linhas+'</tbody></table></div>'
+    :'<div style="padding:28px;text-align:center;color:#64748B;font-size:13px">Nenhum lote nesse status.</div>');
 }catch(e){box.innerHTML='<div style="padding:24px;color:#DC2626;font-size:13px">Erro: '+e.message+'</div>';}};
 })();
 </script>
