@@ -400,6 +400,7 @@ body{font-family:'Inter',system-ui,sans-serif;font-size:13px;color:var(--ink);ba
     <div class="nav on" data-p="dashboard"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
     <div class="nav" data-p="painel"><i class="ti ti-chart-line"></i>Painel diário</div><div class="nav" data-p="calendario"><i class="ti ti-calendar"></i>Calendário</div>
     <div class="nav" data-p="leiloes"><i class="ti ti-gavel"></i>Leilões</div>
+    <div class="nav" data-p="controle"><i class="ti ti-checklist"></i>Controle</div>
     <div class="nav" data-p="lotes"><i class="ti ti-package"></i>Lotes</div>
   </div>
   <div class="sb-div"></div>
@@ -559,6 +560,13 @@ body{font-family:'Inter',system-ui,sans-serif;font-size:13px;color:var(--ink);ba
       </div>
     </div>
 
+    <div class="pg" id="pg-controle">
+      <div class="card">
+        <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-checklist"></i></div><div><div class="ch-title">Controle de lotes</div></div></div></div>
+        <div id="ctl-body" style="padding-bottom:6px"></div>
+      </div>
+    </div>
+
     <div class="pg" id="pg-condicionais">
       <div class="card">
         <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-clock-pause"></i></div><div><div class="ch-title">Lotes em condicional</div></div></div><span id="cond-ct" style="font-size:11px;color:var(--gray2);font-weight:600"></span></div>
@@ -684,9 +692,9 @@ window.dispatchEvent(new Event('fb-ok'));
 let lotes=[],loteVivo=null,chatHist=[],calM=new Date().getMonth(),calY=new Date().getFullYear(),selDay=null;
 const hoje=new Date();
 const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const pgs=['dashboard','calendario','leiloes','lotes','condicionais','documentos','gmail'];
-const titles={dashboard:'Olá, Abadias! 👋',calendario:'Calendário',leiloes:'Leilões',lotes:'Lotes',aovivo:'Leilão ao vivo',condicionais:'Condicionais',documentos:'Documentos',gmail:'Gmail',abadias:'Abadias AI 🤖',integracoes:'Integrações'};
-const subs={dashboard:'Aqui está o resumo do seu sistema de leilões.',leiloes:'Financeiro por leilão · Sodré Santoro',calendario:`${meses[new Date().getMonth()]} de ${new Date().getFullYear()} · Porcelarte`,lotes:`${meses[new Date().getMonth()]} de ${new Date().getFullYear()} · Porcelarte`,aovivo:'Controle o leilão em tempo real',condicionais:'Acompanhe pagamentos e retiradas',documentos:'Gere recibos, termos e relatórios',gmail:'Envie emails para arrematantes',abadias:'Seu assistente pessoal de leilões',integracoes:'Conecte plataformas externas'};
+const pgs=['dashboard','calendario','leiloes','lotes','controle','condicionais','documentos','gmail'];
+const titles={dashboard:'Olá, Abadias! 👋',calendario:'Calendário',leiloes:'Leilões',lotes:'Lotes',controle:'Controle',aovivo:'Leilão ao vivo',condicionais:'Condicionais',documentos:'Documentos',gmail:'Gmail',abadias:'Abadias AI 🤖',integracoes:'Integrações'};
+const subs={dashboard:'Aqui está o resumo do seu sistema de leilões.',leiloes:'Financeiro por leilão · Sodré Santoro',controle:'Cadastrados, vendidos, retiradas e pagamentos',calendario:`${meses[new Date().getMonth()]} de ${new Date().getFullYear()} · Porcelarte`,lotes:`${meses[new Date().getMonth()]} de ${new Date().getFullYear()} · Porcelarte`,aovivo:'Controle o leilão em tempo real',condicionais:'Acompanhe pagamentos e retiradas',documentos:'Gere recibos, termos e relatórios',gmail:'Envie emails para arrematantes',abadias:'Seu assistente pessoal de leilões',integracoes:'Conecte plataformas externas'};
 
 document.getElementById('date-txt').textContent=hoje.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
 document.getElementById('f-data').value=hoje.toISOString().slice(0,10);
@@ -710,7 +718,7 @@ function ir(p){
   });
   if(titles[p])document.getElementById('pg-title').textContent=titles[p];
   if(subs[p])document.getElementById('pg-sub').textContent=subs[p];
-  if(p==='leiloes'&&window.renderLeiloes)window.renderLeiloes();if(p==='lotes')renderLotes();
+  if(p==='leiloes'&&window.renderLeiloes)window.renderLeiloes();if(p==='controle'&&window.renderControle)window.renderControle();if(p==='lotes')renderLotes();
   if(p==='condicionais')renderCond();
   if(p==='dashboard')initDash();
   }
@@ -1192,6 +1200,66 @@ if(!confirm('Excluir o leilão '+le.numero+'? Os lotes NÃO serão apagados.'))r
 try{await db();await window._del(window._doc(window._db,'leiloes',id));nz('Leilão excluído','inf');window.renderLeiloes();}catch(e){nz('Erro: '+e.message,'er');}};
 
 setTimeout(async function(){try{await window.loadLeiloes();window.fillLeilaoSel('');}catch(e){}},1800);
+})();
+</script>
+
+<!-- ===== MODULO CONTROLE (ciclo do lote) ===== -->
+<script>
+(function(){
+const $=function(id){return document.getElementById(id);};
+const money=function(v){return 'R$ '+(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});};
+let FILTRO='todos';
+async function db(){for(let i=0;i<40;i++){if(window._db&&window._getDocs)return;await new Promise(function(r){setTimeout(r,250);});}throw new Error('Firebase não inicializou');}
+async function fetchLotes(){await db();const s=await window._getDocs(window._col(window._db,'lotes'));const a=[];s.forEach(function(d){a.push(Object.assign({id:d.id},d.data()));});a.sort(function(x,y){return ((parseInt(x.num,10)||0)-(parseInt(y.num,10)||0))||String(x.num).localeCompare(String(y.num));});return a;}
+function classifica(l){return {
+  livre: !l.vendido && !l.condicional && !l.pago,
+  cond: !!l.condicional && !l.pago,
+  vendido: !!(l.vendido || l.pago),
+  faltaRetirar: !!(l.vendido || l.pago) && !l.retirou,
+  retirado: !!l.retirou,
+  pago: !!l.pago
+};}
+window.setFiltroCtl=function(f){FILTRO=f;window.renderControle();};
+window.toggleCtl=async function(id,campo,val){try{await db();const u={};u[campo]=val;await window._upd(window._doc(window._db,'lotes',id),u);if(typeof window.toast==='function')window.toast('Atualizado!','ok');window.renderControle();}catch(e){if(typeof window.toast==='function')window.toast('Erro: '+e.message,'er');else alert('Erro: '+e.message);}};
+window.renderControle=async function(){const box=$('ctl-body');if(!box)return;
+box.innerHTML='<div style="padding:24px;color:#64748B;font-size:13px">Carregando...</div>';
+try{
+const all=await fetchLotes();
+const c={todos:all.length,livre:0,cond:0,vendido:0,faltaRetirar:0,retirado:0,pago:0};
+let valVendido=0, valFalta=0;
+all.forEach(function(l){const k=classifica(l);const v=Number(l.valorVenda)||l.lanceAtual||0;
+  if(k.livre)c.livre++; if(k.cond)c.cond++; if(k.vendido){c.vendido++;valVendido+=v;}
+  if(k.faltaRetirar){c.faltaRetirar++;valFalta+=v;} if(k.retirado)c.retirado++; if(k.pago)c.pago++;});
+const defs=[['todos','Todos',c.todos,'#334155'],['livre','Cadastrados (livres)',c.livre,'#2563EB'],['cond','Condicional',c.cond,'#D97706'],['vendido','Vendidos',c.vendido,'#059669'],['faltaRetirar','Falta retirar',c.faltaRetirar,'#EA580C'],['retirado','Retirados',c.retirado,'#7C3AED'],['pago','Pagos',c.pago,'#059669']];
+const chips=defs.map(function(d){const on=FILTRO===d[0];
+  return '<button onclick="setFiltroCtl(\''+d[0]+'\')" style="border:1.5px solid '+(on?d[3]:'#E2E8F0')+';background:'+(on?d[3]:'#fff')+';color:'+(on?'#fff':d[3])+';border-radius:999px;padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700">'+d[1]+' · '+d[2]+'</button>';}).join('');
+const resumo='<div style="margin:0 18px 12px;padding:11px 15px;border-radius:12px;background:#F8FAFC;display:flex;gap:22px;flex-wrap:wrap;font-size:12.5px;color:#334155">'
+  +'<div>Vendido (bruto): <b>'+money(valVendido)+'</b></div>'
+  +'<div>Aguardando retirada: <b style="color:#EA580C">'+money(valFalta)+'</b> em '+c.faltaRetirar+' lote(s)</div></div>';
+const fl=all.filter(function(l){const k=classifica(l);return FILTRO==='todos'||k[FILTRO];});
+const TD='padding:9px 6px;vertical-align:middle;';
+const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVenda)||l.lanceAtual||l.lanceInicial||0;
+  const st=k.pago?'<span style="color:#059669;font-weight:700">Pago</span>'
+    :k.retirado?'<span style="color:#7C3AED;font-weight:700">Retirado</span>'
+    :k.faltaRetirar?'<span style="color:#EA580C;font-weight:700">Falta retirar</span>'
+    :k.cond?'<span style="color:#D97706;font-weight:700">Condicional</span>'
+    :'<span style="color:#94A3B8;font-weight:700">Livre</span>';
+  const toggles=k.vendido
+    ?('<label style="display:flex;gap:4px;align-items:center;font-size:11px;cursor:pointer"><input type="checkbox" '+(l.retirou?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'retirou\',this.checked)">Retirou</label>'
+     +'<label style="display:flex;gap:4px;align-items:center;font-size:11px;cursor:pointer"><input type="checkbox" '+(l.pago?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'pago\',this.checked)">Pago</label>')
+    :'<span style="font-size:11px;color:#CBD5E1">—</span>';
+  return '<tr style="border-top:1px solid #F1F5F9">'
+    +'<td style="'+TD+'font-weight:700;white-space:nowrap">'+l.num+'</td>'
+    +'<td style="'+TD+'font-size:12px;max-width:400px">'+((l.descricao||'').slice(0,90))+'</td>'
+    +'<td style="'+TD+'font-size:12px">'+(l.arrematante||'—')+'</td>'
+    +'<td style="'+TD+'font-weight:700;white-space:nowrap">'+money(val)+'</td>'
+    +'<td style="'+TD+'">'+st+'</td>'
+    +'<td style="'+TD+'"><div style="display:flex;gap:12px">'+toggles+'</div></td></tr>';}).join('');
+box.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 12px">'+chips+'</div>'+resumo
+  +(fl.length
+    ?'<div style="padding:0 18px 16px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="text-align:left;color:#64748B;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px"><th style="padding:8px 6px">Lote</th><th style="padding:8px 6px">Descrição</th><th style="padding:8px 6px">Arrematante</th><th style="padding:8px 6px">Valor</th><th style="padding:8px 6px">Status</th><th style="padding:8px 6px">Ações</th></tr></thead><tbody>'+linhas+'</tbody></table></div>'
+    :'<div style="padding:26px;text-align:center;color:#64748B;font-size:13px">Nenhum lote nesse status.</div>');
+}catch(e){box.innerHTML='<div style="padding:24px;color:#DC2626;font-size:13px">Erro: '+e.message+'</div>';}};
 })();
 </script>
 
