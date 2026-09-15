@@ -1252,13 +1252,77 @@ function updSelBtn(){var b=document.getElementById('btn-exp-sel');if(b){b.style.
 window.toggleSel=function(id,ck){if(ck)SEL.add(id);else SEL.delete(id);updSelBtn();};
 window.toggleSelAll=function(ck){document.querySelectorAll('#ctl-body input[data-selid]').forEach(function(c){c.checked=ck;var id=c.getAttribute('data-selid');if(ck)SEL.add(id);else SEL.delete(id);});updSelBtn();};
 window.exportSelecionados=async function(){try{const all=await fetchLotes();const fl=all.filter(function(l){return SEL.has(l.id);});if(!fl.length){if(typeof window.toast==='function')window.toast('Nenhum lote selecionado','inf');return;}if(typeof window.baixarPlanilha==='function'){await window.baixarPlanilha(fl);}else{alert('Exportador indisponível');}}catch(e){alert('Erro: '+e.message);}};
+let TERMOS=new Set();
+function tBase(){const cfg=window._db.app.options;return ['https://firestore.googleapis.com/v1/projects/'+cfg.projectId+'/databases/(default)/documents','?key='+cfg.apiKey];}
+async function carregarTermosSet(){const p=tBase();let tk='',st=new Set();do{const r=await fetch(p[0]+'/termos_retirada'+p[1]+'&pageSize=300&mask.fieldPaths=num'+(tk?'&pageToken='+tk:''));if(!r.ok)break;const j=await r.json();(j.documents||[]).forEach(function(d){st.add(decodeURIComponent(d.name.split('/').pop()));});tk=j.nextPageToken||'';}while(tk);return st;}
+window.abrirTermo=async function(num){
+ let ov=document.getElementById('termo-overlay');
+ if(!ov){ov=document.createElement('div');ov.id='termo-overlay';ov.style.cssText='display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1300;align-items:center;justify-content:center';
+ ov.innerHTML='<div style="background:#fff;border-radius:16px;max-width:480px;width:92%;padding:22px;max-height:80vh;overflow:auto">'
+ +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div id="termo-title" style="font-weight:800;font-size:16px;color:#0F172A"></div>'
+ +'<button onclick="document.getElementById(&quot;termo-overlay&quot;).style.display=&quot;none&quot;" style="border:none;background:none;cursor:pointer;font-size:16px"><i class="ti ti-x"></i></button></div>'
+ +'<div id="termo-lista" style="margin-bottom:14px"></div>'
+ +'<div style="border:2px dashed #CBD5E1;border-radius:12px;padding:14px;text-align:center">'
+ +'<input type="file" id="termo-file" multiple accept="application/pdf,image/*" style="font-size:12px;max-width:100%">'
+ +'<div style="font-size:11px;color:#64748B;margin-top:6px">PDF ou foto do termo assinado (at\u00e9 15MB)</div>'
+ +'<button class="btn-p" style="margin-top:10px;font-size:12px" onclick="enviarTermo()"><i class="ti ti-upload"></i> Anexar termo</button>'
+ +'<div id="termo-status" style="font-size:11px;color:#2563EB;margin-top:8px"></div></div></div>';
+ document.body.appendChild(ov);ov.addEventListener('click',function(e){if(e.target===ov)ov.style.display='none';});}
+ ov.dataset.num=num;document.getElementById('termo-title').textContent='Termo de retirada \u00b7 Lote '+num;
+ document.getElementById('termo-file').value='';document.getElementById('termo-status').textContent='';
+ ov.style.display='flex';await renderListaTermo(num);};
+async function renderListaTermo(num){const box=document.getElementById('termo-lista');if(!box)return;box.innerHTML='<div style="font-size:12px;color:#64748B">Carregando...</div>';
+ try{const p=tBase();const r=await fetch(p[0]+'/termos_retirada/'+encodeURIComponent(num)+p[1]);
+ if(!r.ok){box.innerHTML='<div style="font-size:12px;color:#94A3B8">Nenhum termo anexado ainda.</div>';return;}
+ const j=await r.json();const arr=(j.fields&&j.fields.arquivos&&j.fields.arquivos.arrayValue&&j.fields.arquivos.arrayValue.values)||[];
+ const dt=(j.fields&&j.fields.dataRetirada&&j.fields.dataRetirada.stringValue)||'';
+ const arrem=(j.fields&&j.fields.arrematante&&j.fields.arrematante.stringValue)||'';
+ box.innerHTML=(dt?'<div style="font-size:11.5px;color:#64748B;margin-bottom:8px">Retirado em '+dt.split('-').reverse().join('/')+(arrem?' \u00b7 '+arrem:'')+'</div>':'')
+ +(arr.length?arr.map(function(v,i){const f=v.mapValue.fields;
+   return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border:1px solid #E2E8F0;border-radius:10px;margin-bottom:6px">'
+   +'<div style="font-size:12px;font-weight:600;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ti-file-text" style="color:#2563EB"></i> '+f.name.stringValue+'</div>'
+   +'<button class="btn-o" style="font-size:11px;flex:none" onclick="verTermo(this,\''+num+'\','+i+')"><i class="ti ti-eye"></i> Ver</button></div>';}).join('')
+ :'<div style="font-size:12px;color:#94A3B8">Nenhum termo anexado ainda.</div>');}catch(e){box.innerHTML='<div style="font-size:12px;color:#DC2626">Erro: '+e.message+'</div>';}}
+window.verTermo=async function(btn,num,idx){try{btn.disabled=true;btn.innerHTML='...';
+ const p=tBase();const r=await fetch(p[0]+'/termos_retirada/'+encodeURIComponent(num)+p[1]);const j=await r.json();
+ const f=j.fields.arquivos.arrayValue.values[idx].mapValue.fields;const n=Number((f.chunks&&(f.chunks.integerValue||f.chunks.doubleValue))||0);
+ let du='';for(let i=0;i<n;i++){const rc=await fetch(p[0]+'/termos_chunks/'+encodeURIComponent(num)+'_'+idx+'_'+i+p[1]);const jc=await rc.json();du+=jc.fields.data.stringValue;}
+ const b=window._dataURLtoBlob?window._dataURLtoBlob(du):null;
+ if(b){window.open(URL.createObjectURL(b),'_blank');}else{const w=window.open('','_blank');if(w)w.document.write('<img src="'+du+'" style="max-width:100%">');}
+ btn.disabled=false;btn.innerHTML='<i class="ti ti-eye"></i> Ver';}catch(e){btn.disabled=false;btn.innerHTML='<i class="ti ti-eye"></i> Ver';alert('Erro ao abrir: '+e.message);}};
+window.enviarTermo=async function(){const ov=document.getElementById('termo-overlay');const num=ov.dataset.num;const inp=document.getElementById('termo-file');const stEl=document.getElementById('termo-status');
+ const files=Array.prototype.slice.call(inp.files||[]);if(!files.length){alert('Escolha o arquivo do termo');return;}
+ try{const p=tBase();
+ let metaArr=[],dtExist='';
+ try{const r0=await fetch(p[0]+'/termos_retirada/'+encodeURIComponent(num)+p[1]);if(r0.ok){const j0=await r0.json();metaArr=((j0.fields||{}).arquivos&&j0.fields.arquivos.arrayValue.values)||[];dtExist=(j0.fields&&j0.fields.dataRetirada&&j0.fields.dataRetirada.stringValue)||'';}}catch(_e){}
+ for(let fi=0;fi<files.length;fi++){const file=files[fi];
+  if(file.size>15*1024*1024){alert(file.name+': acima de 15MB, n\u00e3o anexado');continue;}
+  stEl.textContent='Enviando '+file.name+'...';
+  let du=await new Promise(function(res,rej){const fr=new FileReader();fr.onload=function(){res(fr.result);};fr.onerror=rej;fr.readAsDataURL(file);});
+  if(file.type.indexOf('image/')===0&&window.__shrink&&du.length>900000){try{du=await window.__shrink(du,850000);}catch(_e){}}
+  const idx=metaArr.length;const CH=700000;const n=Math.ceil(du.length/CH);
+  for(let i=0;i<n;i++){const rc=await fetch(p[0]+'/termos_chunks/'+encodeURIComponent(num)+'_'+idx+'_'+i+p[1],{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{data:{stringValue:du.slice(i*CH,(i+1)*CH)}}})});
+   if(!rc.ok)throw new Error('falha no upload de '+file.name+' (parte '+(i+1)+'/'+n+')');}
+  metaArr.push({mapValue:{fields:{name:{stringValue:file.name},tipo:{stringValue:file.type||''},chunks:{integerValue:String(n)},anexadoEm:{stringValue:new Date().toISOString()}}}});}
+ let arrem='';
+ try{const all=await fetchLotes();const l=all.find(function(x){return String(x.num)===String(num);});arrem=(l&&l.arrematante)||'';
+  if(l&&l.id&&!l.retirou){await window._upd(window._doc(window._db,'lotes',l.id),{retirou:true,dataRetirada:new Date().toISOString().slice(0,10)});}}catch(_e){}
+ const hoje=dtExist||new Date().toISOString().slice(0,10);
+ const meta={fields:{num:{stringValue:String(num)},arrematante:{stringValue:arrem},dataRetirada:{stringValue:hoje},arquivos:{arrayValue:{values:metaArr}}}};
+ const rm=await fetch(p[0]+'/termos_retirada/'+encodeURIComponent(num)+p[1],{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(meta)});
+ if(!rm.ok)throw new Error('falha ao salvar o registro do termo');
+ TERMOS.add(String(num));stEl.textContent='';inp.value='';
+ if(typeof window.toast==='function')window.toast('Termo anexado! Lote marcado como retirado.','ok');
+ await renderListaTermo(num);window.renderControle();
+ }catch(e){stEl.textContent='';alert('Erro: '+e.message);}};
 window.setFiltroCtl=function(f){FILTRO=f;SEL.clear();window.renderControle();};
-window.toggleCtl=async function(id,campo,val){try{await db();const u={};u[campo]=val;await window._upd(window._doc(window._db,'lotes',id),u);if(typeof window.toast==='function')window.toast('Atualizado!','ok');window.renderControle();}catch(e){if(typeof window.toast==='function')window.toast('Erro: '+e.message,'er');else alert('Erro: '+e.message);}};
+window.toggleCtl=async function(id,campo,val){try{await db();const u={};u[campo]=val;if(campo==='retirou'&&val)u.dataRetirada=new Date().toISOString().slice(0,10);await window._upd(window._doc(window._db,'lotes',id),u);if(typeof window.toast==='function')window.toast('Atualizado!','ok');window.renderControle();}catch(e){if(typeof window.toast==='function')window.toast('Erro: '+e.message,'er');else alert('Erro: '+e.message);}};
 window.exportNaoVendidos=async function(){try{const all=await fetchLotes();const fl=all.filter(function(l){return classifica(l).naoVendido;});if(!fl.length){if(typeof window.toast==='function')window.toast('Nenhum lote não vendido','inf');return;}if(typeof window.baixarPlanilha==='function'){await window.baixarPlanilha(fl);return;}const headers=['Código','Descrição resumida','Condições / Observações','Marca / Modelo','Metragem total','Qtd CX / Paletes','Lance inicial','Localização','Contato'];const aoa=[headers];fl.forEach(function(l){aoa.push([l.num||'',l.descricao||'',l.obs||'',l.categoria||'',(l.m2!=null&&l.m2!==''?l.m2:''),l.qtdCaixas||'',(l.lanceInicial!=null?l.lanceInicial:''),l.localizacao||'','Isaque - (19) 98187-5215']);});const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:12},{wch:34},{wch:30},{wch:20},{wch:14},{wch:14},{wch:14},{wch:18},{wch:22}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Nao vendidos');XLSX.writeFile(wb,'lotes_nao_vendidos_'+HJ+'.xlsx');if(typeof window.toast==='function')window.toast(fl.length+' lote(s) exportado(s)!','ok');}catch(e){alert('Erro: '+e.message);}};
 window.renderControle=async function(){const box=$('ctl-body');if(!box)return;
 box.innerHTML='<div style="padding:24px;color:#64748B;font-size:13px">Carregando...</div>';
 try{
 const all=await fetchLotes();
+try{TERMOS=await carregarTermosSet();}catch(_e){}
 const c={todos:all.length,livre:0,naoVendido:0,cond:0,vendido:0,faltaRetirar:0,retirado:0,pago:0};
 let valVendido=0, valFalta=0;
 all.forEach(function(l){const k=classifica(l);const v=Number(l.valorVenda)||l.lanceAtual||0;
@@ -1281,7 +1345,7 @@ const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVe
     :'<span class="ctl-st" style="background:#F1F5F9;color:#64748B">Livre</span>';
   const toggles=k.vendido
     ?('<label style="display:flex;gap:5px;align-items:center;font-size:11px;cursor:pointer;font-weight:600;color:#334155"><input type="checkbox" style="width:15px;height:15px;accent-color:#7C3AED" '+(l.retirou?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'retirou\',this.checked)">Retirou</label>'
-     +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;cursor:pointer;font-weight:600;color:#334155"><input type="checkbox" style="width:15px;height:15px;accent-color:#059669" '+(l.pago?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'pago\',this.checked)">Pago</label>')
+     +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;cursor:pointer;font-weight:600;color:#334155"><input type="checkbox" style="width:15px;height:15px;accent-color:#059669" '+(l.pago?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'pago\',this.checked)">Pago</label>'+'<button class="btn-o" style="font-size:10.5px;padding:4px 8px;'+(TERMOS.has(String(l.num))?'color:#059669;border-color:#6EE7B7':(l.retirou?'color:#DC2626;border-color:#FCA5A5':''))+'" onclick="abrirTermo(\''+l.num+'\')" title="Termo de retirada"><i class="ti ti-paperclip"></i> '+(TERMOS.has(String(l.num))?'Termo \u2713':'Termo')+'</button>')
     :'<span style="font-size:11px;color:#CBD5E1">—</span>';
   return '<tr class="ctl-row">'
     +'<td style="'+TD+'"><input type="checkbox" data-selid="'+l.id+'" '+(SEL.has(l.id)?'checked':'')+' style="width:15px;height:15px;cursor:pointer;accent-color:#2563EB" onchange="toggleSel(\''+l.id+'\',this.checked)"></td>'
