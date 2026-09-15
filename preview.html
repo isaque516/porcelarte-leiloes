@@ -387,6 +387,42 @@ body{font-family:'Inter',system-ui,sans-serif;font-size:13px;color:var(--ink);ba
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%232563EB'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='36' font-weight='800' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
+<style id="ds2">
+/* ===== Passe de consistencia v2 ===== */
+body{font-variant-numeric:tabular-nums}
+table{font-variant-numeric:tabular-nums}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:#94A3B8}
+::-webkit-scrollbar-track{background:transparent}
+.card{border:1px solid #EEF2F7}
+.fi{transition:box-shadow .15s}
+.fi:focus{box-shadow:0 0 0 3px var(--blue6,#DBEAFE)}
+select.fi{cursor:pointer}
+.btn-p{transition:all .15s}
+.btn-p:hover{filter:brightness(1.07);box-shadow:0 8px 18px -6px rgba(37,99,235,.5)}
+.btn-p:active{transform:translateY(1px)}
+.btn-o{transition:all .15s}
+.btn-o:hover{background:#E2E8F0}
+.lei-card{border:1px solid #EEF2F7;border-left:4px solid var(--blue,#2563EB);border-radius:16px;box-shadow:var(--shadow,0 1px 3px rgba(15,23,42,.06))}
+.lei-card:hover{box-shadow:0 12px 30px rgba(15,23,42,.10)}
+.lei-kpi{border-radius:12px;border:1px solid #EEF2F7}
+.lei-resumo,.ctl-resumo{border-radius:14px}
+.ctl-chip{border-radius:999px;font-family:inherit}
+.ctl-st{letter-spacing:.02em}
+.badge{border-radius:999px}
+.skel{height:12px;border-radius:8px;background:linear-gradient(90deg,#EEF2F7 25%,#F8FAFC 50%,#EEF2F7 75%);background-size:200% 100%;animation:skel 1.2s linear infinite;margin:10px 0}
+@keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-wrap{padding:18px 22px;max-width:520px}
+.tbl tbody tr{transition:background .12s}
+.pg .card{animation:fadein .25s ease}
+@keyframes fadein{from{opacity:.55;transform:translateY(3px)}to{opacity:1;transform:none}}
+</style>
 </head>
 <body>
 
@@ -1164,7 +1200,7 @@ function lotesDoLeilao(num,all){return (all||[]).filter(function(x){return Strin
 
 function kpi(lab,val,cor){return '<div class="lei-kpi"><div class="lb"><span class="dt" style="background:'+(cor||'#94A3B8')+'"></span>'+lab+'</div><div class="vl"'+(cor?' style="color:'+cor+'"':'')+'>'+val+'</div></div>';}
 
-window.renderLeiloes=async function(){const box=$('leiloes-list');if(!box)return;box.innerHTML='<div style="padding:26px;color:#64748B;font-size:13px">Carregando leilões...</div>';
+window.renderLeiloes=async function(){const box=$('leiloes-list');if(!box)return;box.innerHTML='<div class="skel-wrap"><div class="skel" style="width:88%"></div><div class="skel" style="width:64%"></div><div class="skel" style="width:76%"></div></div>';
 try{
   await window.loadLeiloes();
   const s=await window._getDocs(window._col(window._db,'lotes'));const all=[];s.forEach(function(d){all.push(Object.assign({id:d.id},d.data()));});
@@ -1331,7 +1367,7 @@ window.enviarTermo=async function(){const ov=document.getElementById('termo-over
 let TCACHE=null;
 window.renderArquivoTermos=async function(reload){const box=document.getElementById('doc-termos');if(!box)return;
  const q=((document.getElementById('doc-busca')||{}).value||'').trim().toLowerCase();
- if(reload===true||!TCACHE){box.innerHTML='<div style="padding:14px;color:#64748B;font-size:13px">Carregando termos...</div>';
+ if(reload===true||!TCACHE){box.innerHTML='<div class="skel-wrap"><div class="skel" style="width:88%"></div><div class="skel" style="width:64%"></div><div class="skel" style="width:76%"></div></div>';
   const p=tBase();let tk='',arr=[];
   try{do{const r=await fetch(p[0]+'/termos_retirada'+p[1]+'&pageSize=300'+(tk?'&pageToken='+tk:''));if(!r.ok)break;const j=await r.json();
    (j.documents||[]).forEach(function(d){const f=d.fields||{};const gv=function(k){return (f[k]&&f[k].stringValue)||'';};
@@ -1382,7 +1418,7 @@ window.setFiltroCtl=function(f){FILTRO=f;SEL.clear();window.renderControle();};
 window.toggleCtl=async function(id,campo,val){try{await db();const u={};u[campo]=val;if(campo==='retirou'&&val)u.dataRetirada=new Date().toISOString().slice(0,10);await window._upd(window._doc(window._db,'lotes',id),u);if(typeof window.toast==='function')window.toast('Atualizado!','ok');window.renderControle();}catch(e){if(typeof window.toast==='function')window.toast('Erro: '+e.message,'er');else alert('Erro: '+e.message);}};
 window.exportNaoVendidos=async function(){try{const all=await fetchLotes();const fl=all.filter(function(l){return classifica(l).naoVendido;});if(!fl.length){if(typeof window.toast==='function')window.toast('Nenhum lote não vendido','inf');return;}if(typeof window.baixarPlanilha==='function'){await window.baixarPlanilha(fl);return;}const headers=['Código','Descrição resumida','Condições / Observações','Marca / Modelo','Metragem total','Qtd CX / Paletes','Lance inicial','Localização','Contato'];const aoa=[headers];fl.forEach(function(l){aoa.push([l.num||'',l.descricao||'',l.obs||'',l.categoria||'',(l.m2!=null&&l.m2!==''?l.m2:''),l.qtdCaixas||'',(l.lanceInicial!=null?l.lanceInicial:''),l.localizacao||'','Isaque - (19) 98187-5215']);});const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:12},{wch:34},{wch:30},{wch:20},{wch:14},{wch:14},{wch:14},{wch:18},{wch:22}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Nao vendidos');XLSX.writeFile(wb,'lotes_nao_vendidos_'+HJ+'.xlsx');if(typeof window.toast==='function')window.toast(fl.length+' lote(s) exportado(s)!','ok');}catch(e){alert('Erro: '+e.message);}};
 window.renderControle=async function(){const box=$('ctl-body');if(!box)return;
-box.innerHTML='<div style="padding:24px;color:#64748B;font-size:13px">Carregando...</div>';
+box.innerHTML='<div class="skel-wrap"><div class="skel" style="width:88%"></div><div class="skel" style="width:64%"></div><div class="skel" style="width:76%"></div></div>';
 try{
 const all=await fetchLotes();
 try{TERMOS=await carregarTermosSet();}catch(_e){}
