@@ -802,12 +802,13 @@ window.clearFotosUI=function(){window.__fotosBuffer=[];window.renderFotosPrev();
 window.loadFotosParaEditar=async function(num){window.__fotosBuffer=await window.getFotos(num)||[];window.renderFotosPrev();};
 window._dataURLtoBlob=function(durl){const a=durl.split(',');const mime=(a[0].match(/:(.*?);/)||[])[1]||'image/png';if(a.length<2){return null;}const bin=atob(a[1]);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:mime});};
 
-async function baixarPlanilha(){
+async function baixarPlanilha(llOverride){
+  const _ov=(llOverride&&llOverride.length)?llOverride:null;
   const fc=document.getElementById('exp-cond')?.checked;
   const fp=document.getElementById('exp-pago')?.checked;
-  let ll=[...lotes];
-  if(fc)ll=ll.filter(x=>x.condicional);
-  if(fp)ll=ll.filter(x=>x.pago);ll.sort((a,b)=>((parseInt(a.num,10)||0)-(parseInt(b.num,10)||0))||String(a.num).localeCompare(String(b.num)));
+  let ll=_ov?[..._ov]:[...lotes];
+  if(!_ov){if(fc)ll=ll.filter(x=>x.condicional);
+  if(fp)ll=ll.filter(x=>x.pago);}ll.sort((a,b)=>((parseInt(a.num,10)||0)-(parseInt(b.num,10)||0))||String(a.num).localeCompare(String(b.num)));
   const NCOLS=9;
   const headers=['Código','Descrição resumida','Condições / Observações','Marca / Modelo','Metragem total','Qtd CX / Paletes','Lance inicial','Localização','Contato'];
   const aoa=[];
@@ -1246,9 +1247,14 @@ function classifica(l){var pass=!l.vendido&&!l.condicional&&!l.pago&&!!l.data&&S
   retirado: !!l.retirou,
   pago: !!l.pago
 };}
-window.setFiltroCtl=function(f){FILTRO=f;window.renderControle();};
+const SEL=new Set();
+function updSelBtn(){var b=document.getElementById('btn-exp-sel');if(b){b.style.display=SEL.size?'':'none';b.innerHTML='<i class="ti ti-download"></i> Exportar selecionados ('+SEL.size+')';}}
+window.toggleSel=function(id,ck){if(ck)SEL.add(id);else SEL.delete(id);updSelBtn();};
+window.toggleSelAll=function(ck){document.querySelectorAll('#ctl-body input[data-selid]').forEach(function(c){c.checked=ck;var id=c.getAttribute('data-selid');if(ck)SEL.add(id);else SEL.delete(id);});updSelBtn();};
+window.exportSelecionados=async function(){try{const all=await fetchLotes();const fl=all.filter(function(l){return SEL.has(l.id);});if(!fl.length){if(typeof window.toast==='function')window.toast('Nenhum lote selecionado','inf');return;}if(typeof window.baixarPlanilha==='function'){await window.baixarPlanilha(fl);}else{alert('Exportador indisponível');}}catch(e){alert('Erro: '+e.message);}};
+window.setFiltroCtl=function(f){FILTRO=f;SEL.clear();window.renderControle();};
 window.toggleCtl=async function(id,campo,val){try{await db();const u={};u[campo]=val;await window._upd(window._doc(window._db,'lotes',id),u);if(typeof window.toast==='function')window.toast('Atualizado!','ok');window.renderControle();}catch(e){if(typeof window.toast==='function')window.toast('Erro: '+e.message,'er');else alert('Erro: '+e.message);}};
-window.exportNaoVendidos=async function(){try{const all=await fetchLotes();const fl=all.filter(function(l){return classifica(l).naoVendido;});if(!fl.length){if(typeof window.toast==='function')window.toast('Nenhum lote não vendido','inf');return;}const headers=['Código','Descrição resumida','Condições / Observações','Marca / Modelo','Metragem total','Qtd CX / Paletes','Lance inicial','Localização','Contato'];const aoa=[headers];fl.forEach(function(l){aoa.push([l.num||'',l.descricao||'',l.obs||'',l.categoria||'',(l.m2!=null&&l.m2!==''?l.m2:''),l.qtdCaixas||'',(l.lanceInicial!=null?l.lanceInicial:''),l.localizacao||'','Isaque - (19) 98187-5215']);});const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:12},{wch:34},{wch:30},{wch:20},{wch:14},{wch:14},{wch:14},{wch:18},{wch:22}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Nao vendidos');XLSX.writeFile(wb,'lotes_nao_vendidos_'+HJ+'.xlsx');if(typeof window.toast==='function')window.toast(fl.length+' lote(s) exportado(s)!','ok');}catch(e){alert('Erro: '+e.message);}};
+window.exportNaoVendidos=async function(){try{const all=await fetchLotes();const fl=all.filter(function(l){return classifica(l).naoVendido;});if(!fl.length){if(typeof window.toast==='function')window.toast('Nenhum lote não vendido','inf');return;}if(typeof window.baixarPlanilha==='function'){await window.baixarPlanilha(fl);return;}const headers=['Código','Descrição resumida','Condições / Observações','Marca / Modelo','Metragem total','Qtd CX / Paletes','Lance inicial','Localização','Contato'];const aoa=[headers];fl.forEach(function(l){aoa.push([l.num||'',l.descricao||'',l.obs||'',l.categoria||'',(l.m2!=null&&l.m2!==''?l.m2:''),l.qtdCaixas||'',(l.lanceInicial!=null?l.lanceInicial:''),l.localizacao||'','Isaque - (19) 98187-5215']);});const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:12},{wch:34},{wch:30},{wch:20},{wch:14},{wch:14},{wch:14},{wch:18},{wch:22}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Nao vendidos');XLSX.writeFile(wb,'lotes_nao_vendidos_'+HJ+'.xlsx');if(typeof window.toast==='function')window.toast(fl.length+' lote(s) exportado(s)!','ok');}catch(e){alert('Erro: '+e.message);}};
 window.renderControle=async function(){const box=$('ctl-body');if(!box)return;
 box.innerHTML='<div style="padding:24px;color:#64748B;font-size:13px">Carregando...</div>';
 try{
@@ -1278,15 +1284,16 @@ const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVe
      +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;cursor:pointer;font-weight:600;color:#334155"><input type="checkbox" style="width:15px;height:15px;accent-color:#059669" '+(l.pago?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'pago\',this.checked)">Pago</label>')
     :'<span style="font-size:11px;color:#CBD5E1">—</span>';
   return '<tr class="ctl-row">'
+    +'<td style="'+TD+'"><input type="checkbox" data-selid="'+l.id+'" '+(SEL.has(l.id)?'checked':'')+' style="width:15px;height:15px;cursor:pointer;accent-color:#2563EB" onchange="toggleSel(\''+l.id+'\',this.checked)"></td>'
     +'<td style="'+TD+'font-weight:800;white-space:nowrap;color:#0F172A">'+l.num+'</td>'
     +'<td style="'+TD+'font-size:12px;max-width:400px;color:#334155">'+((l.descricao||'').slice(0,90))+'</td>'
     +'<td style="'+TD+'font-size:12px;color:#64748B">'+(l.arrematante||'—')+'</td>'
     +'<td style="'+TD+'font-weight:800;white-space:nowrap;color:#0F172A">'+money(val)+'</td>'
     +'<td style="'+TD+'">'+st+'</td>'
     +'<td style="'+TD+'"><div style="display:flex;gap:14px">'+toggles+'</div></td></tr>';}).join('');
-box.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 18px 12px">'+chips+(FILTRO==='naoVendido'&&fl.length?'<button class="btn-p" style="font-size:11px;padding:7px 13px" onclick="exportNaoVendidos()"><i class="ti ti-download"></i> Exportar Excel p/ repostar</button>':'')+'</div>'+resumo
+box.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 18px 12px">'+chips+(FILTRO==='naoVendido'&&fl.length?'<button class="btn-p" style="font-size:11px;padding:7px 13px" onclick="exportNaoVendidos()"><i class="ti ti-download"></i> Exportar Excel p/ repostar</button>':'')+'<button id="btn-exp-sel" class="btn-p" style="font-size:11px;padding:7px 13px;background:#0F766E;'+(SEL.size?'':'display:none')+'" onclick="exportSelecionados()"><i class="ti ti-download"></i> Exportar selecionados ('+SEL.size+')</button>'+'</div>'+resumo
   +(fl.length
-    ?'<div style="padding:0 18px 16px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="text-align:left;color:#94A3B8;font-size:10px;text-transform:uppercase;letter-spacing:.5px"><th style="padding:8px">Lote</th><th style="padding:8px">Descrição</th><th style="padding:8px">Arrematante</th><th style="padding:8px">Valor</th><th style="padding:8px">Status</th><th style="padding:8px">Ações</th></tr></thead><tbody>'+linhas+'</tbody></table></div>'
+    ?'<div style="padding:0 18px 16px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="text-align:left;color:#94A3B8;font-size:10px;text-transform:uppercase;letter-spacing:.5px"><th style="padding:8px"><input type="checkbox" style="width:14px;height:14px;cursor:pointer" onchange="toggleSelAll(this.checked)" title="Selecionar todos"></th><th style="padding:8px">Lote</th><th style="padding:8px">Descrição</th><th style="padding:8px">Arrematante</th><th style="padding:8px">Valor</th><th style="padding:8px">Status</th><th style="padding:8px">Ações</th></tr></thead><tbody>'+linhas+'</tbody></table></div>'
     :'<div style="padding:28px;text-align:center;color:#64748B;font-size:13px">Nenhum lote nesse status.</div>');
 }catch(e){box.innerHTML='<div style="padding:24px;color:#DC2626;font-size:13px">Erro: '+e.message+'</div>';}};
 })();
