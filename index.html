@@ -578,6 +578,7 @@ body{font-family:'Inter',system-ui,sans-serif;font-size:13px;color:var(--ink);ba
       <div class="card" style="margin-bottom:16px">
         <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-archive"></i></div><div><div class="ch-title">Termos de retirada assinados</div><div style="font-size:11.5px;color:#64748B;margin-top:2px">Comprovação jurídica de que o produto foi retirado · busque por comprador, arrematante ou lote</div></div></div></div>
         <div class="cb">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#F0F9FF;border:1px solid #BAE6FD;border-radius:12px"><div style="font-size:12px;font-weight:800;color:#0369A1"><i class="ti ti-truck-delivery"></i> Registrar nova retirada:</div><select class="fi" id="doc-lote-sel" style="max-width:360px;font-size:12px;padding:8px 10px"><option value="">— Escolha o lote vendido —</option></select><button class="btn-p" style="font-size:12px" onclick="registrarRetirada()"><i class="ti ti-plus"></i> Registrar</button></div>
           <div style="position:relative;max-width:440px;margin-bottom:14px"><i class="ti ti-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94A3B8"></i><input class="fi" id="doc-busca" placeholder="Pesquisar: Rodolfo, 29029-001, c*e..." style="padding-left:34px" oninput="renderArquivoTermos()"></div>
           <div id="doc-termos"></div>
         </div>
@@ -1325,7 +1326,7 @@ window.enviarTermo=async function(){const ov=document.getElementById('termo-over
  if(!rm.ok)throw new Error('falha ao salvar o registro do termo');
  TERMOS.add(String(num));TCACHE=null;stEl.textContent='';inp.value='';
  if(typeof window.toast==='function')window.toast('Termo anexado! Lote marcado como retirado.','ok');
- await renderListaTermo(num);window.renderControle();
+ await renderListaTermo(num);window.renderControle();if(document.getElementById('doc-termos'))window.renderArquivoTermos(true);
  }catch(e){stEl.textContent='';alert('Erro: '+e.message);}};
 let TCACHE=null;
 window.renderArquivoTermos=async function(reload){const box=document.getElementById('doc-termos');if(!box)return;
@@ -1338,7 +1339,7 @@ window.renderArquivoTermos=async function(reload){const box=document.getElementB
     arr.push({num:gv('num'),comprador:gv('comprador'),arrematante:gv('arrematante'),data:gv('dataRetirada'),
      files:files.map(function(v,i){return {name:((v.mapValue||{}).fields||{}).name?v.mapValue.fields.name.stringValue:'arquivo',i:i};})});});
    tk=j.nextPageToken||'';}while(tk);}catch(_e){}
-  TCACHE=arr.sort(function(a,b){return String(b.data).localeCompare(String(a.data));});}
+  TCACHE=arr.sort(function(a,b){return String(b.data).localeCompare(String(a.data));});fillLoteSelDocs();}
  const fl=TCACHE.filter(function(t){if(!q)return true;return (t.comprador+' '+t.arrematante+' '+t.num+' '+t.data).toLowerCase().indexOf(q)>-1;});
  box.innerHTML=fl.length?fl.map(function(t){
   const dt=t.data?t.data.split('-').reverse().join('/'):'';
@@ -1358,6 +1359,16 @@ window.baixarTermoArq=async function(btn,num,idx){try{btn.disabled=true;var old=
  const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=(f.name&&f.name.stringValue)||('termo_'+num);document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},4000);
  btn.disabled=false;btn.innerHTML=old;if(typeof window.toast==='function')window.toast('Termo baixado!','ok');}
  catch(e){btn.disabled=false;btn.innerHTML='<i class="ti ti-download"></i>';alert('Erro: '+e.message);}};
+window.registrarRetirada=function(){var sel=document.getElementById('doc-lote-sel');var v=sel?sel.value:'';
+ if(!v){alert('Escolha o lote vendido na lista');return;}window.abrirTermo(v);};
+async function fillLoteSelDocs(){try{var sel=document.getElementById('doc-lote-sel');if(!sel)return;
+ const all=await fetchLotes();const vend=all.filter(function(l){return l.vendido||l.pago;});
+ vend.sort(function(a,b){return String(a.num).localeCompare(String(b.num),undefined,{numeric:true});});
+ const atual=sel.value;
+ sel.innerHTML='<option value="">— Escolha o lote vendido —</option>'+vend.map(function(l){
+  var tem=(TCACHE||[]).some(function(t){return String(t.num)===String(l.num);});
+  return '<option value="'+l.num+'"'+(String(atual)===String(l.num)?' selected':'')+'>'+l.num+' · '+((l.arrematante||'sem arrematante'))+(tem?' · termo ✓':' · SEM TERMO')+'</option>';}).join('');
+}catch(_e){}}
 window.setFiltroCtl=function(f){FILTRO=f;SEL.clear();window.renderControle();};
 window.toggleCtl=async function(id,campo,val){try{await db();const u={};u[campo]=val;if(campo==='retirou'&&val)u.dataRetirada=new Date().toISOString().slice(0,10);await window._upd(window._doc(window._db,'lotes',id),u);if(typeof window.toast==='function')window.toast('Atualizado!','ok');window.renderControle();}catch(e){if(typeof window.toast==='function')window.toast('Erro: '+e.message,'er');else alert('Erro: '+e.message);}};
 window.exportNaoVendidos=async function(){try{const all=await fetchLotes();const fl=all.filter(function(l){return classifica(l).naoVendido;});if(!fl.length){if(typeof window.toast==='function')window.toast('Nenhum lote não vendido','inf');return;}if(typeof window.baixarPlanilha==='function'){await window.baixarPlanilha(fl);return;}const headers=['Código','Descrição resumida','Condições / Observações','Marca / Modelo','Metragem total','Qtd CX / Paletes','Lance inicial','Localização','Contato'];const aoa=[headers];fl.forEach(function(l){aoa.push([l.num||'',l.descricao||'',l.obs||'',l.categoria||'',(l.m2!=null&&l.m2!==''?l.m2:''),l.qtdCaixas||'',(l.lanceInicial!=null?l.lanceInicial:''),l.localizacao||'','Isaque - (19) 98187-5215']);});const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:12},{wch:34},{wch:30},{wch:20},{wch:14},{wch:14},{wch:14},{wch:18},{wch:22}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Nao vendidos');XLSX.writeFile(wb,'lotes_nao_vendidos_'+HJ+'.xlsx');if(typeof window.toast==='function')window.toast(fl.length+' lote(s) exportado(s)!','ok');}catch(e){alert('Erro: '+e.message);}};
