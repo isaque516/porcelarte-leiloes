@@ -1234,10 +1234,12 @@ setTimeout(async function(){try{await window.loadLeiloes();window.fillLeilaoSel(
 const $=function(id){return document.getElementById(id);};
 const money=function(v){return 'R$ '+(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});};
 let FILTRO='todos';
+const HJ=(function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
 async function db(){for(let i=0;i<40;i++){if(window._db&&window._getDocs)return;await new Promise(function(r){setTimeout(r,250);});}throw new Error('Firebase não inicializou');}
 async function fetchLotes(){await db();const s=await window._getDocs(window._col(window._db,'lotes'));const a=[];s.forEach(function(d){a.push(Object.assign({id:d.id},d.data()));});a.sort(function(x,y){return ((parseInt(x.num,10)||0)-(parseInt(y.num,10)||0))||String(x.num).localeCompare(String(y.num));});return a;}
-function classifica(l){return {
-  livre: !l.vendido && !l.condicional && !l.pago,
+function classifica(l){var pass=!l.vendido&&!l.condicional&&!l.pago&&!!l.data&&String(l.data)<HJ;return {
+  livre: !l.vendido && !l.condicional && !l.pago && !pass,
+  naoVendido: pass,
   cond: !!l.condicional && !l.pago,
   vendido: !!(l.vendido || l.pago),
   faltaRetirar: !!(l.vendido || l.pago) && !l.retirou,
@@ -1246,16 +1248,17 @@ function classifica(l){return {
 };}
 window.setFiltroCtl=function(f){FILTRO=f;window.renderControle();};
 window.toggleCtl=async function(id,campo,val){try{await db();const u={};u[campo]=val;await window._upd(window._doc(window._db,'lotes',id),u);if(typeof window.toast==='function')window.toast('Atualizado!','ok');window.renderControle();}catch(e){if(typeof window.toast==='function')window.toast('Erro: '+e.message,'er');else alert('Erro: '+e.message);}};
+window.exportNaoVendidos=async function(){try{const all=await fetchLotes();const fl=all.filter(function(l){return classifica(l).naoVendido;});if(!fl.length){if(typeof window.toast==='function')window.toast('Nenhum lote não vendido','inf');return;}const headers=['Código','Descrição resumida','Condições / Observações','Marca / Modelo','Metragem total','Qtd CX / Paletes','Lance inicial','Localização','Contato'];const aoa=[headers];fl.forEach(function(l){aoa.push([l.num||'',l.descricao||'',l.obs||'',l.categoria||'',(l.m2!=null&&l.m2!==''?l.m2:''),l.qtdCaixas||'',(l.lanceInicial!=null?l.lanceInicial:''),l.localizacao||'','Isaque - (19) 98187-5215']);});const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:12},{wch:34},{wch:30},{wch:20},{wch:14},{wch:14},{wch:14},{wch:18},{wch:22}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Nao vendidos');XLSX.writeFile(wb,'lotes_nao_vendidos_'+HJ+'.xlsx');if(typeof window.toast==='function')window.toast(fl.length+' lote(s) exportado(s)!','ok');}catch(e){alert('Erro: '+e.message);}};
 window.renderControle=async function(){const box=$('ctl-body');if(!box)return;
 box.innerHTML='<div style="padding:24px;color:#64748B;font-size:13px">Carregando...</div>';
 try{
 const all=await fetchLotes();
-const c={todos:all.length,livre:0,cond:0,vendido:0,faltaRetirar:0,retirado:0,pago:0};
+const c={todos:all.length,livre:0,naoVendido:0,cond:0,vendido:0,faltaRetirar:0,retirado:0,pago:0};
 let valVendido=0, valFalta=0;
 all.forEach(function(l){const k=classifica(l);const v=Number(l.valorVenda)||l.lanceAtual||0;
-  if(k.livre)c.livre++; if(k.cond)c.cond++; if(k.vendido){c.vendido++;valVendido+=v;}
+  if(k.livre)c.livre++; if(k.naoVendido)c.naoVendido++; if(k.cond)c.cond++; if(k.vendido){c.vendido++;valVendido+=v;}
   if(k.faltaRetirar){c.faltaRetirar++;valFalta+=v;} if(k.retirado)c.retirado++; if(k.pago)c.pago++;});
-const defs=[['todos','Todos',c.todos,'#334155'],['livre','Cadastrados',c.livre,'#2563EB'],['cond','Condicional',c.cond,'#D97706'],['vendido','Vendidos',c.vendido,'#059669'],['faltaRetirar','Falta retirar',c.faltaRetirar,'#EA580C'],['retirado','Retirados',c.retirado,'#7C3AED'],['pago','Pagos',c.pago,'#059669']];
+const defs=[['todos','Todos',c.todos,'#334155'],['livre','Cadastrados',c.livre,'#2563EB'],['naoVendido','Não vendidos',c.naoVendido,'#DC2626'],['cond','Condicional',c.cond,'#D97706'],['vendido','Vendidos',c.vendido,'#059669'],['faltaRetirar','Falta retirar',c.faltaRetirar,'#EA580C'],['retirado','Retirados',c.retirado,'#7C3AED'],['pago','Pagos',c.pago,'#059669']];
 const chips=defs.map(function(d){const on=FILTRO===d[0];
   return '<button class="ctl-chip'+(on?' on':'')+'" style="color:'+d[3]+(on?';background:'+d[3]:'')+'" onclick="setFiltroCtl(\''+d[0]+'\')"><span class="dt" style="background:'+(on?'#fff':d[3])+'"></span>'+d[1]+'<span class="ct">'+d[2]+'</span></button>';}).join('');
 const resumo='<div class="ctl-resumo">'
@@ -1268,6 +1271,7 @@ const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVe
     :k.retirado?'<span class="ctl-st" style="background:#EDE9FE;color:#7C3AED">Retirado</span>'
     :k.faltaRetirar?'<span class="ctl-st" style="background:#FEF0E7;color:#EA580C">Falta retirar</span>'
     :k.cond?'<span class="ctl-st" style="background:#FEF3C7;color:#D97706">Condicional</span>'
+    :k.naoVendido?'<span class="ctl-st" style="background:#FEE2E2;color:#DC2626">Não vendido</span>'
     :'<span class="ctl-st" style="background:#F1F5F9;color:#64748B">Livre</span>';
   const toggles=k.vendido
     ?('<label style="display:flex;gap:5px;align-items:center;font-size:11px;cursor:pointer;font-weight:600;color:#334155"><input type="checkbox" style="width:15px;height:15px;accent-color:#7C3AED" '+(l.retirou?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'retirou\',this.checked)">Retirou</label>'
@@ -1280,7 +1284,7 @@ const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVe
     +'<td style="'+TD+'font-weight:800;white-space:nowrap;color:#0F172A">'+money(val)+'</td>'
     +'<td style="'+TD+'">'+st+'</td>'
     +'<td style="'+TD+'"><div style="display:flex;gap:14px">'+toggles+'</div></td></tr>';}).join('');
-box.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 12px">'+chips+'</div>'+resumo
+box.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 18px 12px">'+chips+(FILTRO==='naoVendido'&&fl.length?'<button class="btn-p" style="font-size:11px;padding:7px 13px" onclick="exportNaoVendidos()"><i class="ti ti-download"></i> Exportar Excel p/ repostar</button>':'')+'</div>'+resumo
   +(fl.length
     ?'<div style="padding:0 18px 16px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="text-align:left;color:#94A3B8;font-size:10px;text-transform:uppercase;letter-spacing:.5px"><th style="padding:8px">Lote</th><th style="padding:8px">Descrição</th><th style="padding:8px">Arrematante</th><th style="padding:8px">Valor</th><th style="padding:8px">Status</th><th style="padding:8px">Ações</th></tr></thead><tbody>'+linhas+'</tbody></table></div>'
     :'<div style="padding:28px;text-align:center;color:#64748B;font-size:13px">Nenhum lote nesse status.</div>');
