@@ -1,0 +1,30 @@
+name: Sodre fotos (anexa imagens dos lotes)
+
+on:
+  schedule:
+    - cron: '15 11 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sodre-fotos
+  cancel-in-progress: true
+
+jobs:
+  fotos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instala dependencias
+        run: |
+          npm init -y > /dev/null
+          npm i playwright@1 sharp > /dev/null
+          npx playwright install --with-deps chromium
+      - name: Baixa e anexa fotos
+        run: node scripts/sodre-fotos.mjs
