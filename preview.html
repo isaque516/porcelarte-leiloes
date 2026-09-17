@@ -461,6 +461,25 @@ td{padding:12px 18px}
 .cal-ct.hot{background:#D1FAE5;color:#059669}
 .cal-cell:hover{transform:translateY(-1px)}
 </style>
+<style id="cal3">
+/* ===== Calendario: visual moderno ===== */
+.cal-grid{gap:6px;background:transparent;border-radius:0;overflow:visible;margin-top:4px}
+.cal-hd{background:transparent !important;color:#94A3B8 !important;font-size:10px;font-weight:800;padding:6px 0 8px;letter-spacing:.09em}
+.cal-cell{background:#fff;border:1px solid #EEF2F7;border-radius:12px;min-height:64px;padding:8px 4px 7px;justify-content:flex-start;gap:4px}
+.cal-cell:hover{background:#F5F9FF;border-color:#BFDBFE;transform:translateY(-1px);box-shadow:0 6px 14px -8px rgba(37,99,235,.25)}
+.cal-cell.out{background:transparent;border-color:transparent;box-shadow:none}
+.cal-cell.out:hover{transform:none;box-shadow:none}
+.cal-n{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:999px;font-size:12.5px}
+.cal-cell.today{background:#fff}
+.cal-cell.today .cal-n{background:var(--blue,#2563EB);color:#fff;font-weight:800}
+.cal-cell.today .cal-ct{background:rgba(37,99,235,.12);color:var(--blue,#2563EB)}
+.cal-cell.today .cal-ct.hot{background:#D1FAE5;color:#059669}
+.cal-cell.sel{background:#EFF6FF;box-shadow:inset 0 0 0 2px var(--blue,#2563EB);border-color:transparent}
+.cal-cell.today.sel{box-shadow:inset 0 0 0 2px var(--blue,#2563EB)}
+.cal-cell.sel .cal-n{color:var(--blue,#2563EB);font-weight:800}
+.cal-cell.today.sel .cal-n{background:var(--blue,#2563EB);color:#fff}
+.cal-ct{margin-top:2px;font-size:9.5px;padding:2px 8px}
+</style>
 </head>
 <body>
 
