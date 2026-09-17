@@ -43,14 +43,20 @@ async function listar(col, campos) {
 
 async function main() {
   var browser = await chromium.launch();
-  var page = await browser.newPage();
+  var ctx = await browser.newContext({
+    bypassCSP: true,
+    locale: 'pt-BR',
+    viewport: { width: 1366, height: 900 },
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+  });
+  var page = await ctx.newPage();
   await page.goto(PAGINA, { waitUntil: 'domcontentloaded', timeout: 90000 });
   try {
     await page.waitForFunction(function () {
       return /Leilão\s+\d+\s*-\s*\d+/.test(document.body.innerText) && /Lance (inicial|atual)/.test(document.body.innerText);
     }, { timeout: 150000 });
   } catch (e) {
-    console.log('AVISO: pagina do vendedor nao carregou lotes. Nada alterado.');
+    console.log('AVISO: pagina do vendedor nao carregou lotes. Nada alterado. Detalhe: ' + (e && e.message ? e.message.slice(0, 200) : e));
     await browser.close(); return;
   }
   await page.waitForTimeout(5000);
