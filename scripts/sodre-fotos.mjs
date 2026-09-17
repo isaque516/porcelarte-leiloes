@@ -1,12 +1,14 @@
-// Robo de FOTOS: baixa imagens dos lotes no site da Sodre e anexa no Abadias.
-// So age em lotes que TEM linkSodre e NAO TEM fotos ainda. Nunca sobrescreve fotos existentes.
+// Robo de FOTOS v2: baixa imagens dos lotes no site da Sodre e anexa no Abadias.
+// Age em lotes com linkSodre que nao tem fotos OU cuja captura anterior nao registrou fotosN
+// (recaptura unica: espera a galeria carregar, deduplica por nome de arquivo e so sobrescreve
+// quando encontra MAIS fotos que o banco).
 import { chromium } from 'playwright';
 import sharp from 'sharp';
 
 var PROJECT = 'porcelarte-leiloes';
 var KEY = 'AIzaSyCk5wE8UUvUGOTjEGzEGecCBFjRd4Am0ro';
 var B = 'https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/(default)/documents';
-var MAX_LOTES = 12;
+var MAX_LOTES = 50;
 
 async function listar(col, campos) {
   var tk = '', out = [];
@@ -28,10 +30,14 @@ async function listar(col, campos) {
 
 async function main() {
   var lotes = await listar('lotes', ['num', 'linkSodre']);
-  var comFotos = {};
-  (await listar('fotos_lotes', ['num'])).forEach(function (f) { comFotos[String(f.num)] = true; });
-  var alvos = lotes.filter(function (l) { return l.linkSodre && !comFotos[String(l.num)]; }).slice(0, MAX_LOTES);
-  console.log('Lotes sem fotos com link: ' + alvos.length + (alvos.length ? ' -> ' + alvos.map(function (a) { return a.num; }).join(', ') : ''));
+  var docFotos = {};
+  (await listar('fotos_lotes', ['num', 'fotosN'])).forEach(function (f) { docFotos[String(f.num)] = (f.fotosN === undefined ? -1 : Number(f.fotosN)); });
+  var alvos = lotes.filter(function (l) {
+    if (!l.linkSodre) return false;
+    var n = docFotos[String(l.num)];
+    return n === undefined || n === -1; // sem doc, ou doc antigo sem fotosN (recaptura unica)
+  }).slice(0, MAX_LOTES);
+  console.log('Lotes para capturar/recapturar: ' + alvos.length + (alvos.length ? ' -> ' + alvos.map(function (a) { return a.num; }).join(', ') : ''));
   if (!alvos.length) { console.log('Nada a fazer.'); return; }
 
   var browser = await chromium.launch();
@@ -44,16 +50,21 @@ async function main() {
   for (var l of alvos) {
     try {
       await page.goto(l.linkSodre, { waitUntil: 'domcontentloaded', timeout: 60000 });
-      await page.waitForTimeout(7000);
+      try { await page.waitForSelector('img[src*="photos.sodresantoro"]', { timeout: 30000 }); } catch (eW) { }
+      await page.waitForTimeout(4000);
+      await page.evaluate(function () { window.scrollBy(0, 700); });
+      await page.waitForTimeout(2500);
       var srcs = await page.evaluate(function () {
-        var out = [];
+        var out = {};
         document.querySelectorAll('img').forEach(function (im) {
           var s = im.currentSrc || im.src || '';
           if (!s || s.indexOf('http') !== 0) return;
           if (/logo|icon|favicon|banner|avatar/i.test(s)) return;
-          if (im.naturalWidth >= 350 || /s3|amazonaws|cloudfront|lote|lot_|auction/i.test(s)) out.push(s);
+          if (/photos\.sodresantoro/i.test(s) || im.naturalWidth >= 350 || /s3|amazonaws|cloudfront|lote|lot_|auction/i.test(s)) {
+            out[s.split('/').pop()] = s; // deduplica por nome de arquivo
+          }
         });
-        return Array.from(new Set(out)).slice(0, 8);
+        return Object.keys(out).sort().map(function (k) { return out[k]; }).slice(0, 8);
       });
       if (!srcs.length) { console.log(l.num + ': nenhuma imagem na pagina.'); continue; }
       var fotos = [], totalB = 0;
@@ -71,11 +82,13 @@ async function main() {
         } catch (e2) { }
       }
       if (!fotos.length) { console.log(l.num + ': imagens pequenas/invalidas.'); continue; }
-      var body = { fields: { num: { stringValue: String(l.num) }, fotos: { arrayValue: { values: fotos.map(function (f) { return { mapValue: { fields: { name: { stringValue: f.name }, dataURL: { stringValue: f.dataURL } } } }; }) } } } };
+      var oldN = docFotos[String(l.num)];
+      if (oldN !== undefined && oldN !== -1 && fotos.length <= oldN) { console.log(l.num + ': banco ja tem ' + oldN + ' foto(s), site deu ' + fotos.length + '. Mantido.'); continue; }
+      var body = { fields: { num: { stringValue: String(l.num) }, fotosN: { stringValue: String(fotos.length) }, fotos: { arrayValue: { values: fotos.map(function (f) { return { mapValue: { fields: { name: { stringValue: f.name }, dataURL: { stringValue: f.dataURL } } } }; }) } } } };
       var r = await fetch(B + '/fotos_lotes/' + encodeURIComponent(String(l.num)) + '?key=' + KEY, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
       });
-      console.log((r.ok ? 'FOTOS OK ' : 'ERRO ') + l.num + ': ' + fotos.length + ' foto(s), ' + Math.round(totalB / 1024) + ' KB');
+      console.log((r.ok ? 'FOTOS OK ' : 'ERRO ') + l.num + ': ' + fotos.length + ' foto(s)' + (oldN >= 0 ? ' (antes: ' + (oldN === -1 ? '?' : oldN) + ')' : '') + ', ' + Math.round(totalB / 1024) + ' KB');
     } catch (e) { console.log(l.num + ': erro ' + (e && e.message ? e.message.slice(0, 120) : e)); }
   }
   await browser.close();
