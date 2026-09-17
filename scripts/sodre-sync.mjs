@@ -1,8 +1,10 @@
-// Robo Sodre -> Abadias v4
+// Robo Sodre -> Abadias v5
 // 1) CADASTRA lotes novos da pagina exclusiva do vendedor (com link da pagina do lote).
 // 2) ATUALIZA lanceAtual/arrematante dos existentes.
-// 3) REPOSTAGEM: casa lote novo com lote antigo NAO VENDIDO de mesmo titulo;
-//    antigo ganha repostado:true + repostadoComo; novo ganha repostDe. Sai dos "Nao vendidos".
+// 3) REPOSTAGEM por (REF num): abre a pagina de detalhe dos lotes futuros ainda nao checados
+//    e procura "(REF 29030-002)" na descricao (marca inserida pela exportacao do Abadias).
+//    Achou -> antigo ganha repostado:true + repostadoComo; novo ganha repostDe + refChecado.
+//    Nao achou -> refChecado:true (nao revisita). Sem casamento por descricao (dava falso positivo).
 import { chromium } from 'playwright';
 
 var PROJECT = 'porcelarte-leiloes';
@@ -87,7 +89,7 @@ async function main() {
   console.log('Pagina do vendedor: ' + achados.length + ' lote(s).');
   if (!achados.length) { console.log('AVISO: parser nao encontrou lotes.'); return; }
 
-  var CAMPOS = ['num', 'descricao', 'data', 'lanceAtual', 'lanceInicial', 'arrematante', 'vendido', 'pago', 'condicional', 'repostado', 'repostDe', 'repostadoComo', 'linkSodre', 'm2'];
+  var CAMPOS = ['num', 'descricao', 'data', 'lanceAtual', 'lanceInicial', 'arrematante', 'vendido', 'pago', 'condicional', 'repostado', 'repostDe', 'repostadoComo', 'linkSodre', 'm2', 'refChecado'];
   var lotes = await listar('lotes', CAMPOS);
   var porNum = {}; for (var l of lotes) porNum[String(l.num)] = l;
   var leiloes = await listar('leiloes', ['numero']);
@@ -130,22 +132,41 @@ async function main() {
     if (await patchLote(ex._id, { lanceAtual: D(a.valor), arrematante: S(a.arrem) })) { upd++; console.log('Lance ' + a.num + ': R$ ' + a.valor + (a.arrem ? ' (' + a.arrem + ')' : '')); }
   }
 
-  // 3) CASAMENTO DE REPOSTAGEM (retroativo e continuo)
+  // 3) CASAMENTO DE REPOSTAGEM POR (REF num) na pagina de detalhe
   var hojeS = new Date().toISOString().slice(0, 10);
   lotes = await listar('lotes', CAMPOS);
-  var antigos = lotes.filter(function (l) { return l.data && l.data < hojeS && !l.vendido && !l.pago && !l.condicional && !l.repostado; });
-  var futuros = lotes.filter(function (l) { return l.data && l.data >= hojeS && !l.repostDe; });
-  for (var f of futuros) {
-    var alvo = null;
-    for (var ant of antigos) {
-      if (ant.usado) continue;
-      if (norm(ant.descricao) === norm(f.descricao)) { alvo = ant; break; }
+  var porNumAll = {};
+  lotes.forEach(function (l) { porNumAll[l.num] = l; });
+  var candidatos = lotes.filter(function (l) { return l.data && l.data >= hojeS && !l.repostDe && !l.refChecado && l.linkSodre; }).slice(0, 12);
+  if (candidatos.length) {
+    var b2 = await chromium.launch();
+    var ctx2 = await b2.newContext({
+      bypassCSP: true, locale: 'pt-BR', viewport: { width: 1366, height: 900 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+    });
+    var pg = await ctx2.newPage();
+    for (var c of candidatos) {
+      try {
+        await pg.goto(c.linkSodre, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await pg.waitForTimeout(4000);
+        var txt = await pg.evaluate(function () { return document.body.innerText; });
+        var mm = txt.match(/\(\s*REF\s*[:.]?\s*(\d{4,6}\s*-\s*\d{1,4})\s*\)/i);
+        if (mm) {
+          var pr = mm[1].replace(/\s+/g, '').split('-');
+          var refNum = pr[0] + '-' + ('000' + pr[1]).slice(-3);
+          var antigo = porNumAll[refNum];
+          if (antigo && !antigo.repostado && antigo.num !== c.num) {
+            var ok1 = await patchLote(antigo._id, { repostado: BO(true), repostadoComo: S(c.num) });
+            var ok2 = await patchLote(c._id, { repostDe: S(antigo.num), refChecado: BO(true) });
+            if (ok1 && ok2) { casados++; console.log('REPOSTAGEM (REF): ' + antigo.num + ' -> ' + c.num + ' (' + String(c.descricao).slice(0, 40) + ')'); }
+            continue;
+          }
+          console.log('AVISO: REF ' + refNum + ' no lote ' + c.num + ' sem antigo correspondente' + (antigo && antigo.repostado ? ' (ja repostado)' : ''));
+        }
+        await patchLote(c._id, { refChecado: BO(true) });
+      } catch (e) { console.log('Detalhe falhou ' + c.num + ': ' + String(e && e.message || e).slice(0, 90)); }
     }
-    if (!alvo) continue;
-    alvo.usado = true;
-    var ok1 = await patchLote(alvo._id, { repostado: BO(true), repostadoComo: S(f.num) });
-    var ok2 = await patchLote(f._id, { repostDe: S(alvo.num) });
-    if (ok1 && ok2) { casados++; console.log('REPOSTAGEM: ' + alvo.num + ' -> ' + f.num + ' (' + String(f.descricao).slice(0, 40) + ')'); }
+    await b2.close();
   }
 
   console.log('Fim: ' + criados + ' criado(s), ' + criadosLei + ' leilao(oes), ' + upd + ' lance(s), ' + casados + ' repostagem(ns) casada(s), ' + iguais + ' sem mudanca, ' + skip + ' vendidos.');
