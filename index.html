@@ -1266,6 +1266,7 @@ window.loadLeiloes=async function(){await db();const s=await window._getDocs(win
 
 window.fillLeilaoSel=function(sel){const el=$('f-leilao');if(!el)return;el.innerHTML='<option value="">— Sem leilão —</option>'+LE.map(function(l){const dt=l.data?new Date(l.data+'T12:00:00').toLocaleDateString('pt-BR'):'';return '<option value="'+l.numero+'"'+(String(sel)===String(l.numero)?' selected':'')+'>'+l.numero+(dt?' · '+dt:'')+'</option>';}).join('');};
 
+function prevPag(dataStr){if(!dataStr)return null;var d=new Date(dataStr+'T12:00:00');if(isNaN(d))return null;var n=0;while(n<6){d.setDate(d.getDate()+1);var w=d.getDay();if(w!==0&&w!==6)n++;}return d;}
 function lotesDoLeilao(num,all){return (all||[]).filter(function(x){return String(x.leilaoNum||'')===String(num)||String(x.num||'').indexOf(String(num)+'-')===0;});}
 
 function kpi(lab,val,cor){return '<div class="lei-kpi"><div class="lb"><span class="dt" style="background:'+(cor||'#94A3B8')+'"></span>'+lab+'</div><div class="vl"'+(cor?' style="color:'+cor+'"':'')+'>'+val+'</div></div>';}
@@ -1286,8 +1287,13 @@ try{
     const cond=ls.filter(function(x){return x.condicional&&!x.pago;}).length;
     const jaPago=le.pago===true;
     if(vendas>0&&!jaPago)totAR+=liq;
-    const stPill=jaPago?'<span class="badge" style="background:#D1FAE5;color:#059669;margin-left:8px">PAGO'+(le.pagoEm?' \u00b7 '+le.pagoEm.split('-').reverse().join('/'):'')+'</span>'
-      :(vendas>0?'<span class="badge" style="background:#FEF3C7;color:#D97706;margin-left:8px">A RECEBER '+money(liq)+'</span>':'');
+    var stPill='';
+    if(jaPago){stPill='<span class="badge" style="background:#D1FAE5;color:#059669;margin-left:8px">PAGO'+(le.pagoEm?' \u00b7 '+le.pagoEm.split('-').reverse().join('/'):'')+'</span>';}
+    else if(vendas>0){var pv=prevPag(le.data);var pvTxt=pv?pv.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'';
+      var atrasado=pv&&(new Date())>pv;
+      stPill=atrasado
+        ?'<span class="badge" style="background:#FEE2E2;color:#DC2626;margin-left:8px"><i class="ti ti-alert-triangle"></i> A RECEBER '+money(liq)+' \u00b7 previsto '+pvTxt+' \u00b7 ATRASADO</span>'
+        :'<span class="badge" style="background:#FEF3C7;color:#D97706;margin-left:8px">A RECEBER '+money(liq)+' \u00b7 Pix previsto '+pvTxt+'</span>';}
     const dt=le.data?new Date(le.data+'T12:00:00').toLocaleDateString('pt-BR'):'sem data';
     return '<div class="lei-card">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
