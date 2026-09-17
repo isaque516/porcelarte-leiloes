@@ -1402,8 +1402,9 @@ let FILTRO='todos';
 const HJ=(function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
 async function db(){for(let i=0;i<40;i++){if(window._db&&window._getDocs)return;await new Promise(function(r){setTimeout(r,250);});}throw new Error('Firebase não inicializou');}
 async function fetchLotes(){await db();const s=await window._getDocs(window._col(window._db,'lotes'));const a=[];s.forEach(function(d){a.push(Object.assign({id:d.id},d.data()));});a.sort(function(x,y){return ((parseInt(x.num,10)||0)-(parseInt(y.num,10)||0))||String(x.num).localeCompare(String(y.num));});return a;}
-function classifica(l){var pass=!l.vendido&&!l.condicional&&!l.pago&&!!l.data&&String(l.data)<HJ;return {
-  livre: !l.vendido && !l.condicional && !l.pago && !pass,
+function classifica(l){var pass=!l.vendido&&!l.condicional&&!l.pago&&!l.repostado&&!!l.data&&String(l.data)<HJ;return {
+  livre: !l.vendido && !l.condicional && !l.pago && !l.repostado && !pass,
+  repostado: !!l.repostado,
   naoVendido: pass,
   cond: !!l.condicional && !l.pago,
   vendido: !!(l.vendido || l.pago),
@@ -1560,6 +1561,7 @@ const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVe
     :k.retirado?'<span class="ctl-st" style="background:#EDE9FE;color:#7C3AED">Retirado</span>'
     :k.faltaRetirar?'<span class="ctl-st" style="background:#FEF0E7;color:#EA580C">Falta retirar</span>'
     :k.cond?'<span class="ctl-st" style="background:#FEF3C7;color:#D97706">Condicional</span>'
+    :k.repostado?'<span class="ctl-st" style="background:#E0E7FF;color:#4F46E5">Repostado'+(l.repostadoComo?' \u2192 '+l.repostadoComo:'')+'</span>'
     :k.naoVendido?'<span class="ctl-st" style="background:#FEE2E2;color:#DC2626">Não vendido</span>'
     :'<span class="ctl-st" style="background:#F1F5F9;color:#64748B">Livre</span>';
   const toggles=k.vendido
