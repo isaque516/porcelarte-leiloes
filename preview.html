@@ -492,7 +492,7 @@ td{padding:12px 18px}
     <div class="sb-lbl">Principal</div>
     <div class="nav on" data-p="dashboard"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
     <div class="nav" data-p="painel"><i class="ti ti-chart-line"></i>Painel diário</div><div class="nav" data-p="calendario"><i class="ti ti-calendar"></i>Calendário</div>
-    <div class="nav" data-p="leiloes"><i class="ti ti-gavel"></i>Leilões</div>
+    <div class="nav" data-p="leiloes"><i class="ti ti-cash"></i>Financeiro</div>
     <div class="nav" data-p="controle"><i class="ti ti-checklist"></i>Controle</div>
     <div class="nav" data-p="lotes"><i class="ti ti-package"></i>Lotes</div>
   </div>
@@ -648,7 +648,7 @@ td{padding:12px 18px}
 
     <div class="pg" id="pg-leiloes">
       <div class="card">
-        <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-gavel"></i></div><div><div class="ch-title">Leilões (Sodré)</div></div></div><button class="btn-p" onclick="window.abrirModalLeilao()"><i class="ti ti-plus"></i> Novo leilão</button></div>
+        <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-gavel"></i></div><div><div class="ch-title">Financeiro por leilão</div></div></div><button class="btn-p" onclick="window.abrirModalLeilao()"><i class="ti ti-plus"></i> Novo leilão</button></div>
         <div id="leiloes-list" style="padding-bottom:14px"></div>
       </div>
     </div>
@@ -794,7 +794,7 @@ let lotes=[],loteVivo=null,chatHist=[],calM=new Date().getMonth(),calY=new Date(
 const hoje=new Date();
 const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const pgs=['dashboard','calendario','leiloes','lotes','controle','condicionais','documentos','gmail'];
-const titles={dashboard:'Olá, Abadias! 👋',calendario:'Calendário',leiloes:'Leilões',lotes:'Lotes',controle:'Controle',aovivo:'Leilão ao vivo',condicionais:'Condicionais',documentos:'Documentos',gmail:'Gmail',abadias:'Abadias AI 🤖',integracoes:'Integrações'};
+const titles={dashboard:'Olá, Abadias! 👋',calendario:'Calendário',leiloes:'Financeiro',lotes:'Lotes',controle:'Controle',aovivo:'Leilão ao vivo',condicionais:'Condicionais',documentos:'Documentos',gmail:'Gmail',abadias:'Abadias AI 🤖',integracoes:'Integrações'};
 const subs={dashboard:'Aqui está o resumo do seu sistema de leilões.',leiloes:'Financeiro por leilão · Sodré Santoro',controle:'Cadastrados, vendidos, retiradas e pagamentos',calendario:`${meses[new Date().getMonth()]} de ${new Date().getFullYear()} · Porcelarte`,lotes:`${meses[new Date().getMonth()]} de ${new Date().getFullYear()} · Porcelarte`,aovivo:'Controle o leilão em tempo real',condicionais:'Acompanhe pagamentos e retiradas',documentos:'Gere recibos, termos e relatórios',gmail:'Envie emails para arrematantes',abadias:'Seu assistente pessoal de leilões',integracoes:'Conecte plataformas externas'};
 
 document.getElementById('date-txt').textContent=hoje.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
