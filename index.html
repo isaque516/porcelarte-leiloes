@@ -1276,7 +1276,7 @@ try{
   await window.loadLeiloes();
   const s=await window._getDocs(window._col(window._db,'lotes'));const all=[];s.forEach(function(d){all.push(Object.assign({id:d.id},d.data()));});
   if(!LE.length){box.innerHTML='<div style="padding:34px;text-align:center;color:#64748B"><div style="font-size:15px;font-weight:700;margin-bottom:6px">Nenhum leilão cadastrado</div><div style="font-size:12px">Clique em "Novo leilão" e informe o nº da Sodré (ex.: 29029).<br>Lotes numerados como <b>29029-001</b> entram no leilão automaticamente.</div></div>';return;}
-  let totV=0,totM=0,totAR=0;var REC=[];
+  let totV=0,totM=0,totAR=0;var REC=[];var ocultos=0;
   const cards=LE.map(function(le){
     const ls=lotesDoLeilao(le.numero,all);
     const vend=ls.filter(function(x){return x.vendido||x.pago;});
@@ -1296,6 +1296,7 @@ try{
         ?'<span class="badge" style="background:#FEE2E2;color:#DC2626;margin-left:8px"><i class="ti ti-alert-triangle"></i> A RECEBER '+money(liq)+' \u00b7 previsto '+pvTxt+' \u00b7 ATRASADO</span>'
         :'<span class="badge" style="background:#FEF3C7;color:#D97706;margin-left:8px">A RECEBER '+money(liq)+' \u00b7 Pix previsto '+pvTxt+'</span>';}
     const dt=le.data?new Date(le.data+'T12:00:00').toLocaleDateString('pt-BR'):'sem data';
+    if(vendas===0&&!jaPago&&!window.__leiTodos){ocultos++;return '';}
     return '<div class="lei-card">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
       +'<div style="display:flex;align-items:center"><i class="ti ti-gavel" style="color:#2563EB;margin-right:8px"></i><span style="font-weight:800;font-size:16px;color:#0F172A">Leilão '+le.numero+'</span><span class="lei-data">'+dt+'</span>'+stPill+'</div>'
@@ -1332,9 +1333,11 @@ try{
     +'<div style="display:flex;justify-content:space-between;padding:11px 4px 2px;font-size:13.5px"><span style="color:#64748B">Total recebido ('+rfD+' dias)</span><b style="font-size:15px">'+money(totR)+'</b></div></div>'
     :'<div style="padding:16px;color:#94A3B8;font-size:12.5px">Nenhum pagamento recebido nos \u00faltimos '+rfD+' dias.</div>')
   +'</div>';
-  box.innerHTML=resumo+recHTML+cards;
+  var togHTML=ocultos>0||window.__leiTodos?'<div style="text-align:center;margin:2px 18px 14px"><button class="btn-o" style="font-size:11.5px" onclick="toggleLeiTodos()"><i class="ti ti-eye'+(window.__leiTodos?'-off':'')+'"></i> '+(window.__leiTodos?'Ocultar leil\u00f5es sem venda':'Mostrar leil\u00f5es sem venda ('+ocultos+')')+'</button></div>':'';
+  box.innerHTML=resumo+recHTML+cards+togHTML;
 }catch(e){box.innerHTML='<div style="padding:26px;color:#DC2626;font-size:13px">Erro ao carregar: '+e.message+'</div>';}};
 
+window.toggleLeiTodos=function(){window.__leiTodos=!window.__leiTodos;window.renderLeiloes();};
 window.setRecDias=function(d){window.__recDias=d;window.renderLeiloes();};
 window.exportarRecebimentosPDF=function(){var rfD=window.__recDias||30;var data=window.__recData||[];
 var tot=data.reduce(function(sm,r){return sm+r.liq;},0);
