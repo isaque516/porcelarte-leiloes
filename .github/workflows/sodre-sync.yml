@@ -2,7 +2,8 @@ name: Sodre sync (lances ao vivo)
 
 on:
   schedule:
-    - cron: '*/30 12-18 * * 1-5'
+    - cron: '*/30 9-22 * * 1-5'
+    - cron: '0 23 * * 1-5'
   workflow_dispatch:
 
 permissions:
