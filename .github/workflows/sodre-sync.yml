@@ -1,0 +1,30 @@
+name: Sodre sync (lances ao vivo)
+
+on:
+  schedule:
+    - cron: '*/30 12-18 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sodre-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instala Playwright
+        run: |
+          npm init -y > /dev/null
+          npm i playwright@1 > /dev/null
+          npx playwright install --with-deps chromium
+      - name: Sincroniza lances da Sodre
+        run: node scripts/sodre-sync.mjs
