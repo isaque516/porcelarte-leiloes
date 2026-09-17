@@ -89,7 +89,7 @@ async function main() {
   console.log('Pagina do vendedor: ' + achados.length + ' lote(s).');
   if (!achados.length) { console.log('AVISO: parser nao encontrou lotes.'); return; }
 
-  var CAMPOS = ['num', 'descricao', 'data', 'lanceAtual', 'lanceInicial', 'arrematante', 'vendido', 'pago', 'condicional', 'repostado', 'repostDe', 'repostadoComo', 'linkSodre', 'm2', 'refChecado'];
+  var CAMPOS = ['num', 'descricao', 'data', 'lanceAtual', 'lanceInicial', 'arrematante', 'vendido', 'pago', 'condicional', 'repostado', 'repostDe', 'repostadoComo', 'linkSodre', 'm2', 'refChecado', 'qtdCaixas'];
   var lotes = await listar('lotes', CAMPOS);
   var porNum = {}; for (var l of lotes) porNum[String(l.num)] = l;
   var leiloes = await listar('leiloes', ['numero']);
@@ -150,6 +150,8 @@ async function main() {
         await pg.goto(c.linkSodre, { waitUntil: 'domcontentloaded', timeout: 60000 });
         await pg.waitForTimeout(4000);
         var txt = await pg.evaluate(function () { return document.body.innerText; });
+        var pm = txt.match(/\((\d+)\s*Pallets?\)/i) || txt.match(/(\d+)\s*paletes?\b/i);
+        if (pm && !c.qtdCaixas) { await patchLote(c._id, { qtdCaixas: S(pm[1] + (pm[1] === '1' ? ' palete' : ' paletes')) }); }
         var mm = txt.match(/\(\s*REF\s*[:.]?\s*(\d{4,6}\s*-\s*\d{1,4})\s*\)/i);
         if (mm) {
           var pr = mm[1].replace(/\s+/g, '').split('-');
