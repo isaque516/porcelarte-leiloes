@@ -452,6 +452,15 @@ td{padding:12px 18px}
 .doc-c:hover{border-color:#93C5FD;transform:translateY(-2px);box-shadow:0 10px 24px -12px rgba(37,99,235,.25)}
 .toast{border-radius:14px}
 </style>
+<style id="cal2">
+.cal-cell{border-radius:10px}
+.cal-cell.sel{background:var(--blue5,#EFF6FF);box-shadow:inset 0 0 0 2px var(--blue,#2563EB)}
+.cal-cell.sel .cal-n{font-weight:800;color:var(--blue,#2563EB)}
+.cal-cell.today.sel{box-shadow:inset 0 0 0 2px #fff}
+.cal-ct{border-radius:999px;font-weight:800;padding:2px 8px}
+.cal-ct.hot{background:#D1FAE5;color:#059669}
+.cal-cell:hover{transform:translateY(-1px)}
+</style>
 </head>
 <body>
 
@@ -560,7 +569,7 @@ td{padding:12px 18px}
         </div>
         <div class="card">
           <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-package"></i></div><div><div class="ch-title">Lotes do dia</div><div class="ch-sub" id="cal-day-lbl">Selecione uma data</div></div></div><span id="cal-day-ct" style="font-size:11px;color:var(--gray2);font-weight:600"></span></div>
-          <div id="cal-day-lotes"><div class="empty"><div class="empty-ic"><i class="ti ti-calendar-off"></i><div class="empty-badge" style="color:var(--red)"><i class="ti ti-x"></i></div></div><div class="empty-title">Nenhum lote neste dia</div><div class="empty-sub">Não há lotes agendados para esta data.</div></div></div>
+          <div id="cal-day-lotes"><div class="empty"><div class="empty-ic"><i class="ti ti-hand-click"></i></div><div class="empty-title">Selecione um dia</div><div class="empty-sub">Clique em um dia do calendário para ver os lotes agendados.</div></div></div>
         </div>
       </div>
       <div class="info-bar"><i class="ti ti-info-circle"></i><span><strong>Dica:</strong> selecione uma data no calendário para visualizar os lotes agendados para o dia.</span></div>
@@ -792,6 +801,7 @@ function ir(p){
   if(titles[p])document.getElementById('pg-title').textContent=titles[p];
   if(subs[p])document.getElementById('pg-sub').textContent=subs[p];
   if(p==='leiloes'&&window.renderLeiloes)window.renderLeiloes();if(p==='controle'&&window.renderControle)window.renderControle();if(p==='documentos'&&window.renderArquivoTermos)window.renderArquivoTermos(true);if(p==='lotes')renderLotes();
+  if(p==='calendario'){renderCal();if(!selDay){try{selDia(hoje.toISOString().slice(0,10));}catch(_e){}}}
   if(p==='condicionais')renderCond();
   if(p==='dashboard')initDash();
   }
@@ -841,14 +851,14 @@ function renderCal(){
   const todayS=hoje.toISOString().slice(0,10);
   let h='<div class="cal-hd">DOM</div><div class="cal-hd">SEG</div><div class="cal-hd">TER</div><div class="cal-hd">QUA</div><div class="cal-hd">QUI</div><div class="cal-hd">SEX</div><div class="cal-hd">SÁB</div>';
   for(let i=0;i<first;i++)h+=`<div class="cal-cell out"><div class="cal-n" style="opacity:.3">${prevD-first+i+1}</div></div>`;
-  for(let d=1;d<=daysM;d++){const ds=`${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const isT=ds===todayS,isS=ds===selDay,hasL=lpd[ds]?.length>0,ct=lpd[ds]?.length||0;let cls='cal-cell';if(isT)cls+=' today';if(isS)cls+=' sel';h+=`<div class="${cls}" onclick="selDia('${ds}')"><div class="cal-n">${d}</div>${ct?'<span class="cal-ct">'+ct+(ct>1?' lotes':' lote')+'</span>':''}</div>`;}
+  for(let d=1;d<=daysM;d++){const ds=`${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const isT=ds===todayS,isS=ds===selDay,hasL=lpd[ds]?.length>0,ct=lpd[ds]?.length||0;const hot=!!(lpd[ds]&&lpd[ds].some(l=>String(l.arrematante||'').trim()||((Number(l.lanceAtual)||0)>(Number(l.lanceInicial)||0))));let cls='cal-cell';if(isT)cls+=' today';if(isS)cls+=' sel';h+=`<div class="${cls}" onclick="selDia('${ds}')"><div class="cal-n">${d}</div>${ct?'<span class="cal-ct'+(hot?' hot':'')+'">'+ct+(ct>1?' lotes':' lote')+'</span>':''}</div>`;}
   const total=first+daysM;const rem=total%7===0?0:7-total%7;
   for(let d=1;d<=rem;d++)h+=`<div class="cal-cell out"><div class="cal-n" style="opacity:.3">${d}</div></div>`;
   document.getElementById('cal-grid').innerHTML=h;
 }
 function mudaMes(dir){calM+=dir;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCal();}
 window.mudaMes=mudaMes;
-function selDia(ds){selDay=ds;renderCal();const d=new Date(ds+'T12:00:00');document.getElementById('cal-day-lbl').textContent=d.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});const dl=lotes.filter(l=>l.data===ds);document.getElementById('cal-day-ct').textContent=dl.length+' lote(s)';const el=document.getElementById('cal-day-lotes');if(dl.length===0){el.innerHTML='<div class="empty"><div class="empty-ic"><i class="ti ti-calendar-off"></i><div class="empty-badge" style="color:var(--red)"><i class="ti ti-x"></i></div></div><div class="empty-title">Nenhum lote neste dia</div><div class="empty-sub">Não há lotes agendados para esta data.</div></div>';return;}el.innerHTML='<table class="tbl"><thead><tr><th>Lote</th><th>Descrição</th><th>Horário</th><th>Lance</th><th>Status</th></tr></thead><tbody>'+dl.map(l=>`<tr><td class="n">${l.num}</td><td class="d">${l.descricao}</td><td>${l.hora||'—'}</td><td style="font-weight:700">R$ ${(Number(l.valorVenda)||l.lanceAtual||l.lanceInicial||0).toLocaleString('pt-BR')}</td><td>${getBadge(l)}</td></tr>`).join('')+'</tbody></table>';}
+function selDia(ds){selDay=ds;renderCal();const d=new Date(ds+'T12:00:00');document.getElementById('cal-day-lbl').textContent=d.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});const dl=lotes.filter(l=>l.data===ds);document.getElementById('cal-day-ct').textContent=dl.length+' lote(s)';const el=document.getElementById('cal-day-lotes');if(dl.length===0){el.innerHTML='<div class="empty"><div class="empty-ic"><i class="ti ti-calendar-off"></i><div class="empty-badge" style="color:var(--red)"><i class="ti ti-x"></i></div></div><div class="empty-title">Nenhum lote neste dia</div><div class="empty-sub">Não há lotes agendados para esta data.</div></div>';return;}el.innerHTML='<table class="tbl"><thead><tr><th>Lote</th><th>Descrição</th><th>Horário</th><th>Lance</th><th>Status</th></tr></thead><tbody>'+dl.map(l=>`<tr><td class="n">${l.num}</td><td class="d">${l.descricao}</td><td>${l.hora||'—'}</td><td style="font-weight:700">R$ ${(Number(l.valorVenda)||l.lanceAtual||l.lanceInicial||0).toLocaleString('pt-BR')}</td><td>${getBadge(l)}</td></tr>`).join('')+'</tbody></table>'+'<div style="padding:12px 18px;border-top:1px solid #EEF2F7;display:flex;justify-content:space-between;align-items:center;font-size:12.5px"><span style="color:#64748B">Total do dia ('+dl.length+' lote'+(dl.length>1?'s':'')+')</span><b style="font-size:14px">R$ '+dl.reduce((s2,l)=>s2+(Number(l.valorVenda)||l.lanceAtual||l.lanceInicial||0),0).toLocaleString('pt-BR')+'</b></div>';}
 window.selDia=selDia;
 
 function renderLotes(){const s=(document.getElementById('s-lote')?.value||'').toLowerCase();const st=document.getElementById('f-st')?.value||'';const ct=document.getElementById('f-ct')?.value||'';const fl=lotes.filter(l=>(!s||l.descricao?.toLowerCase().includes(s)||l.num?.toLowerCase().includes(s)||l.arrematante?.toLowerCase().includes(s))&&(!st||getSt(l)===st)&&(!ct||l.categoria===ct));fl.sort((a,b)=>((parseInt(a.num,10)||0)-(parseInt(b.num,10)||0))||String(a.num).localeCompare(String(b.num)));const el=document.getElementById('lotes-wrap');if(fl.length===0){el.innerHTML='<div class="empty"><div class="empty-ic"><i class="ti ti-package-off"></i><div class="empty-badge" style="color:var(--gray2)"><i class="ti ti-search"></i></div></div><div class="empty-title">Nenhum lote encontrado</div><div class="empty-sub">Ainda não há lotes cadastrados ou os filtros não retornaram resultados.</div></div>';return;}el.innerHTML='<table class="tbl"><thead><tr><th>Lote</th><th>Descrição</th><th>Categoria</th><th>Data</th><th>Hora</th><th>Lance inicial</th><th>Lance atual</th><th>Arrematante</th><th>Status</th><th></th></tr></thead><tbody>'+fl.map(l=>`<tr><td class="n">${l.num}</td><td class="d">${l.descricao}</td><td style="font-size:10px;color:var(--gray)">${l.categoria||'—'}</td><td style="font-size:11px;white-space:nowrap">${fmtD(l.data)}</td><td style="font-size:11px">${l.hora||'—'}</td><td style="font-weight:700">R$ ${(l.lanceInicial||0).toLocaleString('pt-BR')}</td><td style="font-weight:700">R$ ${(Number(l.valorVenda)||l.lanceAtual||l.lanceInicial||0).toLocaleString('pt-BR')}</td><td style="font-size:11px;color:var(--gray)">${l.arrematante||'—'}</td><td>${getBadge(l)}</td><td><div style="display:flex;gap:4px"><button class="ic-btn" onclick="editarLote('${l.id}')"><i class="ti ti-edit" style="font-size:12px"></i></button><button class="ic-btn del" onclick="deletarLote('${l.id}')"><i class="ti ti-trash" style="font-size:12px"></i></button></div></td></tr>`).join('')+'</tbody></table>';}
