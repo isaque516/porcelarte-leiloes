@@ -923,7 +923,8 @@ async function baixarPlanilha(llOverride){
   aoa.push(['Modelo premium para organizar porcelanatos, armários e pendências']);
   aoa.push(['Preencha a partir da linha 5. Use os filtros no cabeçalho para localizar rapidamente.']);
   aoa.push(headers);
-  ll.forEach(l=>{ aoa.push([l.num||'',l.descricao||'',l.obs||'',l.categoria||'',(l.m2!=null&&l.m2!==''?l.m2:''),l.qtdCaixas||'',(l.lanceInicial!=null?l.lanceInicial:''),l.localizacao||'',l.arrematante||'']); });
+  const _refDesc=l=>{var d=l.descricao||'';if(l.num&&d.indexOf('(REF ')===-1)d=d+' (REF '+l.num+')';return d;};
+  ll.forEach(l=>{ aoa.push([l.num||'',_refDesc(l),l.obs||'',l.categoria||'',(l.m2!=null&&l.m2!==''?l.m2:''),l.qtdCaixas||'',(l.lanceInicial!=null?l.lanceInicial:''),l.localizacao||'',l.arrematante||'']); });
   const ws=XLSX.utils.aoa_to_sheet(aoa);
   ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:NCOLS-1}},{s:{r:1,c:0},e:{r:1,c:NCOLS-1}},{s:{r:2,c:0},e:{r:2,c:NCOLS-1}}];
   ws['!cols']=[{wch:12},{wch:28},{wch:30},{wch:20},{wch:14},{wch:14},{wch:14},{wch:18},{wch:18}];
@@ -1401,9 +1402,8 @@ let FILTRO='todos';
 const HJ=(function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
 async function db(){for(let i=0;i<40;i++){if(window._db&&window._getDocs)return;await new Promise(function(r){setTimeout(r,250);});}throw new Error('Firebase não inicializou');}
 async function fetchLotes(){await db();const s=await window._getDocs(window._col(window._db,'lotes'));const a=[];s.forEach(function(d){a.push(Object.assign({id:d.id},d.data()));});a.sort(function(x,y){return ((parseInt(x.num,10)||0)-(parseInt(y.num,10)||0))||String(x.num).localeCompare(String(y.num));});return a;}
-function classifica(l){var pass=!l.vendido&&!l.condicional&&!l.pago&&!l.repostado&&!!l.data&&String(l.data)<HJ;return {
-  livre: !l.vendido && !l.condicional && !l.pago && !l.repostado && !pass,
-  repostado: !!l.repostado,
+function classifica(l){var pass=!l.vendido&&!l.condicional&&!l.pago&&!!l.data&&String(l.data)<HJ;return {
+  livre: !l.vendido && !l.condicional && !l.pago && !pass,
   naoVendido: pass,
   cond: !!l.condicional && !l.pago,
   vendido: !!(l.vendido || l.pago),
@@ -1536,7 +1536,7 @@ async function renderPendentesDocs(){try{var box=document.getElementById('doc-pe
 }catch(_e){}}
 window.setFiltroCtl=function(f){FILTRO=f;SEL.clear();window.renderControle();};
 window.toggleCtl=async function(id,campo,val){try{await db();const u={};u[campo]=val;if(campo==='retirou'&&val)u.dataRetirada=new Date().toISOString().slice(0,10);await window._upd(window._doc(window._db,'lotes',id),u);if(typeof window.toast==='function')window.toast('Atualizado!','ok');window.renderControle();}catch(e){if(typeof window.toast==='function')window.toast('Erro: '+e.message,'er');else alert('Erro: '+e.message);}};
-window.exportNaoVendidos=async function(){try{const all=await fetchLotes();const fl=all.filter(function(l){return classifica(l).naoVendido;});if(!fl.length){if(typeof window.toast==='function')window.toast('Nenhum lote não vendido','inf');return;}if(typeof window.baixarPlanilha==='function'){await window.baixarPlanilha(fl);return;}const headers=['Código','Descrição resumida','Condições / Observações','Marca / Modelo','Metragem total','Qtd CX / Paletes','Lance inicial','Localização','Contato'];const aoa=[headers];fl.forEach(function(l){aoa.push([l.num||'',l.descricao||'',l.obs||'',l.categoria||'',(l.m2!=null&&l.m2!==''?l.m2:''),l.qtdCaixas||'',(l.lanceInicial!=null?l.lanceInicial:''),l.localizacao||'','Isaque - (19) 98187-5215']);});const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:12},{wch:34},{wch:30},{wch:20},{wch:14},{wch:14},{wch:14},{wch:18},{wch:22}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Nao vendidos');XLSX.writeFile(wb,'lotes_nao_vendidos_'+HJ+'.xlsx');if(typeof window.toast==='function')window.toast(fl.length+' lote(s) exportado(s)!','ok');}catch(e){alert('Erro: '+e.message);}};
+window.exportNaoVendidos=async function(){try{const all=await fetchLotes();const fl=all.filter(function(l){return classifica(l).naoVendido;});if(!fl.length){if(typeof window.toast==='function')window.toast('Nenhum lote não vendido','inf');return;}if(typeof window.baixarPlanilha==='function'){await window.baixarPlanilha(fl);return;}const headers=['Código','Descrição resumida','Condições / Observações','Marca / Modelo','Metragem total','Qtd CX / Paletes','Lance inicial','Localização','Contato'];const aoa=[headers];fl.forEach(function(l){var _d=l.descricao||'';if(l.num&&_d.indexOf('(REF ')===-1)_d=_d+' (REF '+l.num+')';aoa.push([l.num||'',_d,l.obs||'',l.categoria||'',(l.m2!=null&&l.m2!==''?l.m2:''),l.qtdCaixas||'',(l.lanceInicial!=null?l.lanceInicial:''),l.localizacao||'','Isaque - (19) 98187-5215']);});const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:12},{wch:34},{wch:30},{wch:20},{wch:14},{wch:14},{wch:14},{wch:18},{wch:22}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Nao vendidos');XLSX.writeFile(wb,'lotes_nao_vendidos_'+HJ+'.xlsx');if(typeof window.toast==='function')window.toast(fl.length+' lote(s) exportado(s)!','ok');}catch(e){alert('Erro: '+e.message);}};
 window.renderControle=async function(){const box=$('ctl-body');if(!box)return;
 box.innerHTML='<div class="skel-wrap"><div class="skel" style="width:88%"></div><div class="skel" style="width:64%"></div><div class="skel" style="width:76%"></div></div>';
 try{
@@ -1560,7 +1560,6 @@ const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVe
     :k.retirado?'<span class="ctl-st" style="background:#EDE9FE;color:#7C3AED">Retirado</span>'
     :k.faltaRetirar?'<span class="ctl-st" style="background:#FEF0E7;color:#EA580C">Falta retirar</span>'
     :k.cond?'<span class="ctl-st" style="background:#FEF3C7;color:#D97706">Condicional</span>'
-    :k.repostado?'<span class="ctl-st" style="background:#E0E7FF;color:#4F46E5">Repostado'+(l.repostadoComo?' → '+l.repostadoComo:'')+'</span>'
     :k.naoVendido?'<span class="ctl-st" style="background:#FEE2E2;color:#DC2626">Não vendido</span>'
     :'<span class="ctl-st" style="background:#F1F5F9;color:#64748B">Livre</span>';
   const toggles=k.vendido
