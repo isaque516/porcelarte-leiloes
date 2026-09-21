@@ -25,7 +25,13 @@ function criarGatilho() {
 
 // ---------- Firestore ----------
 function fsGet_(path) {
-  var r = UrlFetchApp.fetch(FS_BASE + '/' + path + '?key=' + FS_KEY, { muteHttpExceptions: true });
+  var r = null;
+  for (var tent = 0; tent < 3; tent++) {
+    r = UrlFetchApp.fetch(FS_BASE + '/' + path + '?key=' + FS_KEY, { muteHttpExceptions: true });
+    var c = r.getResponseCode();
+    if (c == 200 || c == 404) break;
+    Utilities.sleep(1500);
+  }
   return { code: r.getResponseCode(), json: r.getResponseCode() == 200 ? JSON.parse(r.getContentText()) : null };
 }
 function fsPatch_(path, fields, mask) {
@@ -127,7 +133,7 @@ function main_() {
   var porNum = {};
   for (var i = 0; i < lotes.length; i++) {
     var d = lotes[i];
-    porNum[String(gv_(d, 'num'))] = { id: d.name.split('/').pop(), vendido: gv_(d, 'vendido') === true, pago: gv_(d, 'pago') === true };
+    porNum[String(gv_(d, 'num'))] = { id: d.name.split('/').pop(), vendido: gv_(d, 'vendido') === true, pago: gv_(d, 'pago') === true, cancelado: gv_(d, 'cancelado') === true };
   }
   var leiloes = fsList_('leiloes');
 
@@ -140,6 +146,7 @@ function main_() {
     var m = subj.match(/(\d{5})/); if (!m) continue;
     var leilao = m[1];
     var st = fsGet_('emails_processados/resultado-' + leilao);
+    if (st.code !== 200 && st.code !== 404) { log.push('Resultado ' + leilao + ': status ilegivel (' + st.code + '), pulei por seguranca.'); continue; }
     var estado = st.json ? gv_(st.json, 'status') : '';
     if (estado === 'finalizado') continue;
     var msgs = th.getMessages();
@@ -171,7 +178,7 @@ function main_() {
       var num = leilao + '-' + ('000' + lt).slice(-3);
       var ex = porNum[num];
       if (!ex) { log.push('Aviso: lote ' + num + ' da planilha nao existe no app.'); continue; }
-      if (ex.pago) continue;
+      if (ex.pago || ex.cancelado) continue;
       var stx = String(vals[r1][cSt] || '').toLowerCase();
       var vv = parseVenda_(vals[r1][cVenda]);
       var fields = null;
@@ -200,7 +207,9 @@ function main_() {
     if (!/presta/i.test(subj2) || !/contas/i.test(subj2)) continue;
     var m2 = subj2.match(/(\d{5})/); if (!m2) continue;
     var leilao2 = m2[1];
-    if (fsGet_('emails_processados/baixa-' + leilao2).code === 200) continue;
+    var stB = fsGet_('emails_processados/baixa-' + leilao2);
+    if (stB.code === 200) continue;
+    if (stB.code !== 404) { log.push('Baixa ' + leilao2 + ': status ilegivel (' + stB.code + '), pulei por seguranca.'); continue; }
     var dt = Utilities.formatDate(th2.getLastMessageDate(), 'America/Sao_Paulo', 'yyyy-MM-dd');
     var alvo = null;
     for (var q = 0; q < leiloes.length; q++) if (String(gv_(leiloes[q], 'numero')) === leilao2) alvo = leiloes[q];
