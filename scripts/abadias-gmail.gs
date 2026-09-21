@@ -2,7 +2,9 @@
 // ABADIAS x SODRE - Robo do Gmail (roda nos servidores Google)
 // - Resultados: marca vendidos/nao vendidos com valores oficiais;
 //   condicionais viram vendidos quando detecta SUA resposta "aprovado".
-// - Prestacao de contas (Ricardo): BAIXA automatica (leilao PAGO + lotes pagos).
+// - Prestacao de contas (Ricardo): BAIXA automatica (leilao PAGO + lotes pagos)
+//   e agora LE O PDF "PC D" (detalhada): lote Cancelado volta para nao vendido,
+//   valores de venda viram os REAIS do acerto.
 // - Nunca envia e-mail para a Sodre; so avisa VOCE por e-mail resumo.
 // ============================================================
 var FS_BASE = 'https://firestore.googleapis.com/v1/projects/porcelarte-leiloes/databases/(default)/documents';
@@ -72,6 +74,45 @@ function xlsParaLinhas_(blob) {
     method: 'delete', headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true });
   return vals;
 }
+function pdfParaTexto_(blob) {
+  var boundary = 'xxABADIASPDFxx';
+  var meta = { name: 'abadias-pdf-tmp', mimeType: 'application/vnd.google-apps.document' };
+  var head = Utilities.newBlob('--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'
+    + JSON.stringify(meta) + '\r\n--' + boundary + '\r\nContent-Type: application/pdf\r\n\r\n').getBytes();
+  var tail = Utilities.newBlob('\r\n--' + boundary + '--').getBytes();
+  var payload = head.concat(blob.getBytes()).concat(tail);
+  var r = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&ocrLanguage=pt', {
+    method: 'post', contentType: 'multipart/related; boundary=' + boundary, payload: payload,
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() } });
+  var id = JSON.parse(r.getContentText()).id;
+  var txt = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + id + '/export?mimeType=text/plain', {
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() } }).getContentText();
+  UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + id, {
+    method: 'delete', headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true });
+  return txt;
+}
+// Le a Prestacao de Contas Detalhada: retorna { '001': {st:'Cancelado'|'SemLicitante'|'Vendido', venda:Number}, ... }
+function parsePrestacao_(txt) {
+  txt = String(txt || '').replace(/[\u200B-\u200D\uFEFF]/g, '');
+  var out = {}, ordem = [];
+  var re = /\b(Cancelado|SemLicitante|Sem Licitante|Vendido|Retirado)(?!\s*[Pp]ara)\b/g, m;
+  while ((m = re.exec(txt))) ordem.push({ st: m[1].replace(/\s+/g, ''), pos: m.index });
+  var tl = txt.match(/Total de Lotes:\s*(\d+)/);
+  if (!tl || ordem.length !== Number(tl[1])) return null; // formato inesperado: nao aplica nada
+  // valores de venda: procura "R$ X" logo apos cada status Vendido
+  for (var i = 0; i < ordem.length; i++) {
+    var num = ('000' + (i + 1)).slice(-3);
+    var venda = 0;
+    if (ordem[i].st === 'Vendido') {
+      var fim = (i + 1 < ordem.length) ? ordem[i + 1].pos : txt.indexOf('Total de Lotes');
+      var trecho = txt.slice(ordem[i].pos, fim > ordem[i].pos ? fim : ordem[i].pos + 900);
+      var mv = trecho.match(/R\$\s*([\d.]+,\d{2})/);
+      if (mv) venda = Number(mv[1].replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    out[num] = { st: ordem[i].st, venda: venda };
+  }
+  return out;
+}
 function parseVenda_(v) {
   if (typeof v === 'number') return v;
   var s = String(v || '').replace(/[^0-9,\.]/g, '').replace(/\./g, '').replace(',', '.');
@@ -91,10 +132,11 @@ function main_() {
   var leiloes = fsList_('leiloes');
 
   // 1) RESULTADOS
-  var ths = GmailApp.search('from:montagem@sodresantoro.com.br subject:resultado newer_than:14d');
+  var ths = GmailApp.search('from:montagem@sodresantoro.com.br newer_than:14d has:attachment');
   for (var t = 0; t < ths.length; t++) {
     var th = ths[t];
-    var subj = th.getFirstMessageSubject();
+    var subj = String(th.getFirstMessageSubject() || '').replace(/[\u200B-\u200D\uFEFF]/g, '');
+    if (!/resultado/i.test(subj)) continue;
     var m = subj.match(/(\d{5})/); if (!m) continue;
     var leilao = m[1];
     var st = fsGet_('emails_processados/resultado-' + leilao);
@@ -163,16 +205,52 @@ function main_() {
     var alvo = null;
     for (var q = 0; q < leiloes.length; q++) if (String(gv_(leiloes[q], 'numero')) === leilao2) alvo = leiloes[q];
     if (!alvo) { log.push('Baixa ' + leilao2 + ': leilao nao existe no app.'); continue; }
-    fsPatch_('leiloes/' + alvo.name.split('/').pop(), { pago: B_(true), pagoEm: S_(dt) }, ['pago', 'pagoEm']);
-    var n = 0;
-    for (var num2 in porNum) {
-      if (num2.indexOf(leilao2 + '-') === 0 && porNum[num2].vendido) {
-        fsPatch_('lotes/' + porNum[num2].id, { pago: B_(true) }, ['pago']); n++;
+    // Le o PDF "PC D" (Prestacao de Contas Detalhada) para saber cancelados e valores REAIS
+    var pcd = null;
+    var msgs2 = th2.getMessages();
+    for (var k2 = 0; k2 < msgs2.length && !pcd; k2++) {
+      var as2 = msgs2[k2].getAttachments();
+      for (var j2 = 0; j2 < as2.length; j2++) {
+        if (/PC\s*D/i.test(as2[j2].getName()) && /\.pdf$/i.test(as2[j2].getName())) { pcd = as2[j2]; break; }
       }
+    }
+    var detalhe = null;
+    if (pcd) { try { detalhe = parsePrestacao_(pdfParaTexto_(pcd.copyBlob())); } catch (ePdf) { detalhe = null; } }
+    fsPatch_('leiloes/' + alvo.name.split('/').pop(), { pago: B_(true), pagoEm: S_(dt) }, ['pago', 'pagoEm']);
+    var n = 0, canc = 0, totReal = 0, detLog = [];
+    if (detalhe) {
+      for (var num3 in detalhe) {
+        var numFull = leilao2 + '-' + num3;
+        var ex3 = porNum[numFull]; if (!ex3) continue;
+        var st3 = detalhe[num3].st;
+        if (st3 === 'Cancelado') {
+          fsPatch_('lotes/' + ex3.id, { vendido: B_(false), condicional: B_(false), pago: B_(false), cancelado: B_(true) },
+            ['vendido', 'condicional', 'pago', 'cancelado', 'valorVenda', 'arrematante']);
+          canc++; detLog.push(numFull + ': CANCELADO (volta para nao vendidos)');
+        } else if (st3 === 'Vendido') {
+          var f3 = { vendido: B_(true), condicional: B_(false), pago: B_(true) };
+          var mk3 = ['vendido', 'condicional', 'pago'];
+          if (detalhe[num3].venda > 0) { f3.valorVenda = D_(detalhe[num3].venda); mk3.push('valorVenda'); totReal += detalhe[num3].venda; }
+          fsPatch_('lotes/' + ex3.id, f3, mk3); n++;
+        } else { // SemLicitante / Retirado: garante nao vendido e nao pago
+          fsPatch_('lotes/' + ex3.id, { vendido: B_(false), condicional: B_(false), pago: B_(false) },
+            ['vendido', 'condicional', 'pago']);
+        }
+      }
+    } else {
+      for (var num2 in porNum) {
+        if (num2.indexOf(leilao2 + '-') === 0 && porNum[num2].vendido) {
+          fsPatch_('lotes/' + porNum[num2].id, { pago: B_(true) }, ['pago']); n++;
+        }
+      }
+      detLog.push('(PDF detalhado nao lido - baixa aplicada no modo simples)');
     }
     fsPatch_('emails_processados/baixa-' + leilao2,
       { tipo: S_('baixa'), leilao: S_(leilao2), pagoEm: S_(dt), atualizadoEm: S_(new Date().toISOString()) }, null);
-    log.push('BAIXA leilao ' + leilao2 + ': pagamento de ' + dt.split('-').reverse().join('/') + ' registrado. ' + n + ' lote(s) marcados como pagos.');
+    log.push('BAIXA leilao ' + leilao2 + ': pagamento de ' + dt.split('-').reverse().join('/') + ' registrado. '
+      + n + ' lote(s) pagos' + (canc ? ', ' + canc + ' CANCELADO(S)' : '')
+      + (totReal ? ' | vendas reais R$ ' + totReal.toFixed(2) + ' (liquido ~R$ ' + (totReal * 0.95).toFixed(2) + ')' : '')
+      + (detLog.length ? '\n  ' + detLog.join('\n  ') : ''));
   }
 
   if (log.length) {
