@@ -1181,7 +1181,7 @@ function curva(vals,w,h){if(!vals.length)return "";var mx=Math.max.apply(null,va
  return "<svg viewBox=\"0 0 "+w+" "+h+"\" preserveAspectRatio=\"none\" style=\"width:100%;height:170px;display:block\">"+
   "<defs><linearGradient id=\"ppg\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#ffffff\" stop-opacity=\".28\"/><stop offset=\"100%\" stop-color=\"#ffffff\" stop-opacity=\"0\"/></linearGradient></defs>"+
   "<path d=\""+area+"\" fill=\"url(#ppg)\"/><path d=\""+d+"\" fill=\"none\" stroke=\"#EAFBF3\" stroke-width=\"3\" stroke-linecap=\"round\"/>"+cir+"</svg>"}
-function temLance(l){return (Number(l.lanceAtual)||0)>(Number(l.lanceInicial)||0)||String(l.arrematante||"").trim()!==""}
+function temLance(l){return (Number(l.lanceAtual)||0)>(Number(l.lanceInicial)||0)||String(l.arrematante||"").trim()!==""||!!l.condicional||!!l.vendido}
 function chave(l){return String(l.num||"")||String(l.descricao||"")+"|"+String(l.data||"")}
 function render(){var w=janela(),ini=w[0],fim=w[1];
  var sel=LT.filter(function(l){return l.data&&l.data>=ini&&l.data<=fim});
