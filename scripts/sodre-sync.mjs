@@ -89,7 +89,7 @@ async function main() {
   console.log('Pagina do vendedor: ' + achados.length + ' lote(s).');
   if (!achados.length) { console.log('AVISO: parser nao encontrou lotes.'); return; }
 
-  var CAMPOS = ['num', 'descricao', 'data', 'lanceAtual', 'lanceInicial', 'arrematante', 'vendido', 'pago', 'condicional', 'repostado', 'repostDe', 'repostadoComo', 'linkSodre', 'm2', 'refChecado', 'qtdCaixas'];
+  var CAMPOS = ['num', 'descricao', 'data', 'lanceAtual', 'lanceInicial', 'arrematante', 'vendido', 'pago', 'condicional', 'repostado', 'repostDe', 'repostadoComo', 'linkSodre', 'm2', 'refChecado', 'qtdCaixas', 'encerradoChecado'];
   var lotes = await listar('lotes', CAMPOS);
   var porNum = {}; for (var l of lotes) porNum[String(l.num)] = l;
   var leiloes = await listar('leiloes', ['numero']);
@@ -169,6 +169,38 @@ async function main() {
       } catch (e) { console.log('Detalhe falhou ' + c.num + ': ' + String(e && e.message || e).slice(0, 90)); }
     }
     await b2.close();
+  }
+
+  // 4) LANCES FINAIS de lotes recem-encerrados (cobre janelas puladas pelo cron do GitHub)
+  //    Depois do pregao o lote sai da pagina do vendedor; o lance final fica na pagina de detalhe.
+  var d2 = new Date(); d2.setDate(d2.getDate() - 2);
+  var lim2 = d2.toISOString().slice(0, 10);
+  var encerrados = lotes.filter(function (l) {
+    return l.data && l.data >= lim2 && l.data <= hojeS && !l.vendido && !l.pago && !l.encerradoChecado && l.linkSodre;
+  }).slice(0, 10);
+  if (encerrados.length) {
+    var b3 = await chromium.launch();
+    var ctx3 = await b3.newContext({
+      bypassCSP: true, locale: 'pt-BR', viewport: { width: 1366, height: 900 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+    });
+    var pg3 = await ctx3.newPage();
+    for (var e3 of encerrados) {
+      try {
+        await pg3.goto(e3.linkSodre, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        try { await pg3.waitForFunction(function () { return /Lance/.test(document.body.innerText) && /Leil\u00e3o\s+\d+/.test(document.body.innerText); }, { timeout: 45000 }); } catch (eW3) { }
+        await pg3.waitForTimeout(3000);
+        var t3 = await pg3.evaluate(function () { return document.body.innerText; });
+        var ml = t3.match(/Lance\s*\n*\s*R\$\s*([\d.]+(?:,\d{2})?)/);
+        var flds = { encerradoChecado: BO(true) };
+        var info = [];
+        if (ml) { var lv = parseBRL(ml[1].indexOf(',') > -1 ? ml[1] : ml[1] + ',00'); if (lv > 0) { flds.lanceAtual = D(lv); info.push('lance final R$ ' + lv); } }
+        if (/CONDICIONAL/.test(t3)) { flds.condicional = BO(true); info.push('CONDICIONAL'); }
+        await patchLote(e3._id, flds);
+        console.log('ENCERRADO ' + e3.num + ': ' + (info.length ? info.join(', ') : 'sem dados na pagina'));
+      } catch (e4) { console.log('Encerrado falhou ' + e3.num + ': ' + String(e4 && e4.message || e4).slice(0, 80)); }
+    }
+    await b3.close();
   }
 
   console.log('Fim: ' + criados + ' criado(s), ' + criadosLei + ' leilao(oes), ' + upd + ' lance(s), ' + casados + ' repostagem(ns) casada(s), ' + iguais + ' sem mudanca, ' + skip + ' vendidos.');
