@@ -1420,7 +1420,17 @@ function classifica(l){var pass=!l.vendido&&!l.condicional&&!l.pago&&!l.repostad
   pago: !!l.pago
 };}
 const SEL=new Set();
-function updSelBtn(){var b=document.getElementById('btn-exp-sel');if(b){b.style.display=SEL.size?'':'none';b.innerHTML='<i class="ti ti-download"></i> Exportar selecionados ('+SEL.size+')';}}
+function updSelBtn(){var b=document.getElementById('btn-exp-sel');if(b){b.style.display=SEL.size?'':'none';b.innerHTML='<i class="ti ti-download"></i> Exportar selecionados ('+SEL.size+')';}
+  var bar=document.getElementById('sel-total');if(!bar)return;
+  if(!SEL.size){bar.style.display='none';return;}
+  var tot=0,tm2=0;
+  document.querySelectorAll('#ctl-body input[data-selid]').forEach(function(c){if(!c.checked)return;tot+=Number(c.getAttribute('data-selval'))||0;tm2+=Number(c.getAttribute('data-selm2'))||0;});
+  bar.style.display='flex';
+  bar.innerHTML='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;border-radius:8px;background:#2563EB;color:#fff;font-weight:800;font-size:12.5px">'+SEL.size+'</span><span style="font-weight:700;color:#0F172A;font-size:13px">lote(s) selecionado(s)</span>'
+    +(tm2>0?'<span style="color:#64748B;font-size:12px">· '+tm2.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' m²</span>':'')
+    +'<button class="btn-o" style="font-size:11px;padding:5px 11px" onclick="limparSel()"><i class="ti ti-x"></i> Limpar</button></div>'
+    +'<div style="text-align:right"><div style="font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.5px;font-weight:700">Valor total</div><div style="font-size:20px;font-weight:800;color:#0F766E;line-height:1.2">'+money(tot)+'</div></div>';}
+window.limparSel=function(){SEL.clear();document.querySelectorAll('#ctl-body input[data-selid]').forEach(function(c){c.checked=false;});var a=document.querySelector('#ctl-body thead input[type=checkbox]');if(a)a.checked=false;updSelBtn();};
 window.toggleSel=function(id,ck){if(ck)SEL.add(id);else SEL.delete(id);updSelBtn();};
 window.toggleSelAll=function(ck){document.querySelectorAll('#ctl-body input[data-selid]').forEach(function(c){c.checked=ck;var id=c.getAttribute('data-selid');if(ck)SEL.add(id);else SEL.delete(id);});updSelBtn();};
 window.exportSelecionados=async function(){try{const all=await fetchLotes();const fl=all.filter(function(l){return SEL.has(l.id);});if(!fl.length){if(typeof window.toast==='function')window.toast('Nenhum lote selecionado','inf');return;}if(typeof window.baixarPlanilha==='function'){await window.baixarPlanilha(fl);}else{alert('Exportador indisponível');}}catch(e){alert('Erro: '+e.message);}};
@@ -1576,7 +1586,7 @@ const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVe
      +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;cursor:pointer;font-weight:600;color:#334155"><input type="checkbox" style="width:15px;height:15px;accent-color:#059669" '+(l.pago?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'pago\',this.checked)">Pago</label>'+'<button class="btn-o" style="font-size:10.5px;padding:4px 8px;'+(TERMOS.has(String(l.num))?'color:#059669;border-color:#6EE7B7':(l.retirou?'color:#DC2626;border-color:#FCA5A5':''))+'" onclick="abrirTermo(\''+l.num+'\')" title="Termo de retirada"><i class="ti ti-paperclip"></i> '+(TERMOS.has(String(l.num))?'Termo \u2713':'Termo')+'</button>')
     :'<span style="font-size:11px;color:#CBD5E1">—</span>';
   return '<tr class="ctl-row">'
-    +'<td style="'+TD+'"><input type="checkbox" data-selid="'+l.id+'" '+(SEL.has(l.id)?'checked':'')+' style="width:15px;height:15px;cursor:pointer;accent-color:#2563EB" onchange="toggleSel(\''+l.id+'\',this.checked)"></td>'
+    +'<td style="'+TD+'"><input type="checkbox" data-selid="'+l.id+'" data-selval="'+(Number(l.valorVenda)||Number(l.lanceAtual)||Number(l.lanceInicial)||0)+'" data-selm2="'+(Number(l.m2)||0)+'" '+(SEL.has(l.id)?'checked':'')+' style="width:15px;height:15px;cursor:pointer;accent-color:#2563EB" onchange="toggleSel(\''+l.id+'\',this.checked)"></td>'
     +'<td style="'+TD+'font-weight:800;white-space:nowrap;color:#0F172A">'+l.num+'</td>'
     +'<td style="'+TD+'font-size:12px;max-width:400px;color:#334155">'+((l.descricao||'').slice(0,90))+'</td>'
     +'<td style="'+TD+'font-size:12px;color:#64748B">'+(l.arrematante||'—')+'</td>'
@@ -1586,7 +1596,9 @@ const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVe
 box.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 18px 12px">'+chips+(FILTRO==='naoVendido'&&fl.length?'<button class="btn-p" style="font-size:11px;padding:7px 13px" onclick="exportNaoVendidos()"><i class="ti ti-download"></i> Exportar Excel p/ repostar</button>':'')+'<button id="btn-exp-sel" class="btn-p" style="font-size:11px;padding:7px 13px;background:#0F766E;'+(SEL.size?'':'display:none')+'" onclick="exportSelecionados()"><i class="ti ti-download"></i> Exportar selecionados ('+SEL.size+')</button>'+'</div>'+resumo
   +(fl.length
     ?'<div style="padding:0 18px 16px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="text-align:left;color:#94A3B8;font-size:10px;text-transform:uppercase;letter-spacing:.5px"><th style="padding:8px"><input type="checkbox" style="width:14px;height:14px;cursor:pointer" onchange="toggleSelAll(this.checked)" title="Selecionar todos"></th><th style="padding:8px">Lote</th><th style="padding:8px">Descrição</th><th style="padding:8px">Arrematante</th><th style="padding:8px">Valor</th><th style="padding:8px">Status</th><th style="padding:8px">Ações</th></tr></thead><tbody>'+linhas+'</tbody></table></div>'
+      +'<div id="sel-total" style="display:none;margin:0 18px 16px;padding:13px 16px;border:1px solid #BFDBFE;border-radius:14px;background:linear-gradient(180deg,#F0F7FF,#E8F2FE);align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap"></div>'
     :'<div style="padding:28px;text-align:center;color:#64748B;font-size:13px">Nenhum lote nesse status.</div>');
+  updSelBtn();
 }catch(e){box.innerHTML='<div style="padding:24px;color:#DC2626;font-size:13px">Erro: '+e.message+'</div>';}};
 })();
 </script>
