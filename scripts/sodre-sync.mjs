@@ -13,6 +13,7 @@ var B = 'https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/
 var PAGINA = 'https://www.sodresantoro.com.br/materiais/lotes?client_name=' +
   encodeURIComponent('francisco alves de oliveira porcelanato (porcelart') + '&sort=auction_date_init_asc';
 var MAX_CRIACOES = 60;
+var OBS_PADRAO = 'Produto Classe C, sujeito a varia\u00e7\u00f5es de tonalidade, calibre, acabamento, imperfei\u00e7\u00f5es e pontas quebradas. Venda no estado, sem garantia. O lote \u00e9 vendido no estado em que se encontra.';
 
 function parseBRL(t) { return Number(String(t).replace(/\./g, '').replace(',', '.')) || 0; }
 function S(v) { return { stringValue: String(v) }; }
@@ -116,7 +117,7 @@ async function main() {
         data: S(a.data), hora: S(a.hora), leilaoNum: S(a.leilao),
         lanceInicial: D(a.valor), lanceAtual: D(a.valor), incremento: D(0), arrematante: S(a.arrem),
         vendido: BO(false), condicional: BO(false), retirou: BO(false), pago: BO(false),
-        obs: S('Produto sem garantia, sem troca e sem devolucao, comprado no estado que se encontra.'),
+        obs: S(OBS_PADRAO),
         localizacao: S('Hortolandia - SP'), criadoEm: S(new Date().toISOString()), origem: S('robo-sodre')
       };
       if (m2m) campos.m2 = D(parseBRL(m2m[1]));
