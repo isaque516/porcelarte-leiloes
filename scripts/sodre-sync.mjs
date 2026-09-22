@@ -91,6 +91,10 @@ async function main() {
 
   var CAMPOS = ['num', 'descricao', 'data', 'lanceAtual', 'lanceInicial', 'arrematante', 'vendido', 'pago', 'condicional', 'repostado', 'repostDe', 'repostadoComo', 'linkSodre', 'm2', 'refChecado', 'qtdCaixas', 'encerradoChecado'];
   var lotes = await listar('lotes', CAMPOS);
+  // Lotes que o Isaque marcou como "nao sao meus" (outro comitente): nunca recriar.
+  var IGN = {};
+  try { (await listar('lotes_ignorados', ['num'])).forEach(function (x) { IGN[String(x.num)] = true; }); } catch (eI) { }
+  if (Object.keys(IGN).length) console.log('Ignorados (nao recriar): ' + Object.keys(IGN).join(', '));
   var porNum = {}; for (var l of lotes) porNum[String(l.num)] = l;
   var leiloes = await listar('leiloes', ['numero']);
   var numerosLeilao = {}; for (var le of leiloes) numerosLeilao[String(le.numero)] = true;
@@ -105,6 +109,7 @@ async function main() {
         var rl = await fetch(B + '/leiloes?key=' + KEY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { numero: S(a.leilao), data: S(a.data), custoEdital: D(0), criadoEm: S(new Date().toISOString()) } }) });
         if (rl.ok) { numerosLeilao[a.leilao] = true; criadosLei++; console.log('Leilao criado: ' + a.leilao); }
       }
+      if (IGN[a.num]) { console.log('PULADO (nao e meu): ' + a.num); continue; }
       var m2m = a.titulo.match(/([\d.,]+)\s*M²/i);
       var campos = {
         num: S(a.num), descricao: S(a.titulo), categoria: S('Outros'),
