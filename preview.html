@@ -1632,9 +1632,8 @@ body{
     radial-gradient(820px 560px at var(--bx2,2%) var(--by2,8%), rgba(16,211,145,.13), transparent 60%),
     radial-gradient(800px 700px at var(--bx3,52%) var(--by3,112%), rgba(37,99,235,.16), transparent 62%),
     linear-gradient(160deg,#F3F6FC 0%,#EEF2F9 50%,#F2F5FC 100%);
-  background-attachment:fixed;
-  animation:meshMove 26s ease-in-out infinite alternate;
-  padding:13px;gap:13px;letter-spacing:-.012em;position:relative;
+  background:#0A0F1D;
+  padding:0;gap:0;letter-spacing:-.012em;position:relative;
 }
 @keyframes meshMove{
   0%  {--bx1:78%;--by1:-10%;--bx2:2%;--by2:8%;--bx3:52%;--by3:112%}
@@ -1651,13 +1650,12 @@ body{
 
 /* =========== SIDEBAR: vidro escuro com brilho interno =========== */
 .sb{
-  width:236px;border-radius:26px;height:100%;overflow:hidden;
+  width:236px;border-radius:0;height:100%;overflow:hidden;
   background:linear-gradient(170deg,rgba(24,28,54,.94) 0%,rgba(9,12,26,.97) 55%,rgba(5,7,16,.99) 100%);
   backdrop-filter:blur(22px) saturate(160%);
   box-shadow:
-    0 40px 90px -30px rgba(8,13,28,.75),
+    0 0 60px -10px rgba(8,13,28,.8),
     0 0 0 1px rgba(255,255,255,.07) inset,
-    0 1px 0 rgba(255,255,255,.14) inset,
     0 0 70px -20px rgba(96,165,250,.5) inset;
 }
 .sb::before{height:420px;background:
@@ -1698,11 +1696,16 @@ body{
 .sb-fb i{filter:drop-shadow(0 0 8px rgba(16,211,145,.9))}
 
 /* =========== PAINEL PRINCIPAL: vidro claro =========== */
-.mn{background:#FFFFFF;border-radius:26px;border:1px solid #E7ECF3;
-  box-shadow:0 40px 90px -38px rgba(8,13,28,.34);overflow:hidden}
+.mn{border-radius:0;border:none;box-shadow:none;overflow:hidden;
+  background:
+    radial-gradient(1100px 620px at var(--bx1,78%) var(--by1,-10%), rgba(96,165,250,.20), transparent 62%),
+    radial-gradient(820px 560px at var(--bx2,2%) var(--by2,8%), rgba(16,211,145,.10), transparent 60%),
+    radial-gradient(800px 700px at var(--bx3,52%) var(--by3,112%), rgba(37,99,235,.13), transparent 62%),
+    linear-gradient(160deg,#F5F8FD 0%,#F0F4FA 50%,#F4F7FD 100%);
+  animation:meshMove 26s ease-in-out infinite alternate}
 
 /* =========== TOPO =========== */
-.top{height:auto;padding:26px 30px 14px;background:transparent;border-bottom:none;align-items:flex-start}
+.top{height:auto;padding:24px 32px 14px;background:transparent;border-bottom:none;align-items:flex-start}
 .top-title{font-size:34px;font-weight:850;letter-spacing:-.048em;line-height:1.04;
   background:linear-gradient(135deg,#0B1226 0%,#1E4FA8 58%,#2563EB 100%);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
@@ -1718,7 +1721,7 @@ body{
 @keyframes dotPulse{0%,100%{box-shadow:0 0 0 3px rgba(16,211,145,.22),0 0 10px 1px rgba(16,211,145,.8)}
   50%{box-shadow:0 0 0 6px rgba(16,211,145,.10),0 0 18px 4px rgba(16,211,145,1)}}
 .date-c{background:#FFFFFF;border:1px solid #E7ECF3;box-shadow:0 6px 16px -10px rgba(8,13,28,.3), var(--glow);font-weight:650}
-.ct{padding:6px 30px 26px;gap:18px}
+.ct{padding:6px 32px 30px;gap:18px}
 
 /* =========== BOTÕES com brilho passando =========== */
 .btn-p{background:linear-gradient(135deg,#60A5FA,#2563EB 55%,#1E3A8A);border-radius:15px;
@@ -1889,9 +1892,9 @@ td{padding:15px 20px;border-bottom:1px solid var(--ln-2);color:var(--ink-2)}
 /* =========== RESPONSIVO =========== */
 @media (max-width:1180px){ .krow{grid-template-columns:repeat(2,minmax(0,1fr))} }
 @media (max-width:900px){
-  body{padding:0;gap:0;animation:none}
-  .sb{border-radius:0;width:200px}
-  .mn{border-radius:0;border:none;box-shadow:none}
+  body{animation:none}
+  .sb{width:200px}
+  .mn{animation:none}
   .top{padding:16px 16px 10px}.top-title{font-size:25px}
   .ct{padding:4px 16px 20px}.krow{grid-template-columns:1fr}
 }
