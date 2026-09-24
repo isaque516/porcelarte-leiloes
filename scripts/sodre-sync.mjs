@@ -58,26 +58,40 @@ async function main() {
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
   });
   var page = await ctx.newPage();
-  await page.goto(PAGINA, { waitUntil: 'domcontentloaded', timeout: 90000 });
-  try {
-    await page.waitForFunction(function () {
-      return /Leilão\s+\d+\s*-\s*\d+/.test(document.body.innerText) && /Lance (inicial|atual)/.test(document.body.innerText);
-    }, { timeout: 150000 });
-  } catch (e) {
-    console.log('AVISO: pagina do vendedor nao carregou lotes. Nada alterado. Detalhe: ' + (e && e.message ? e.message.slice(0, 150) : e));
-    await browser.close(); return;
-  }
-  await page.waitForTimeout(5000);
-  var text = await page.evaluate(function () { return document.body.innerText; });
-  var links = await page.evaluate(function () {
-    var out = {};
-    document.querySelectorAll('a[href]').forEach(function (a) {
-      var t = a.innerText || '';
-      var m = t.match(/Leilão\s+(\d{4,6})\s*-\s*(\d{1,4})/);
-      if (m) out[m[1] + '-' + ('000' + m[2]).slice(-3)] = a.href;
+  // Percorre TODAS as paginas do vendedor (antes lia so a primeira e perdia lotes).
+  var text = '', links = {}, totalPag = 0;
+  for (var pg = 1; pg <= 15; pg++) {
+    try {
+      await page.goto(PAGINA + '&page=' + pg, { waitUntil: 'domcontentloaded', timeout: 90000 });
+      await page.waitForFunction(function () {
+        return /Leil\u00e3o\s+\d+\s*-\s*\d+/.test(document.body.innerText) && /Lance (inicial|atual)/.test(document.body.innerText);
+      }, { timeout: pg === 1 ? 150000 : 45000 });
+    } catch (e) {
+      if (pg === 1) {
+        console.log('AVISO: pagina do vendedor nao carregou lotes. Nada alterado. Detalhe: ' + (e && e.message ? e.message.slice(0, 150) : e));
+        await browser.close(); return;
+      }
+      break;
+    }
+    await page.waitForTimeout(pg === 1 ? 5000 : 3000);
+    var t1 = await page.evaluate(function () { return document.body.innerText; });
+    var nums1 = (t1.match(/Leil\u00e3o\s+\d{4,6}\s*-\s*\d{1,4}/g) || []);
+    var novos1 = nums1.filter(function (x) { return text.indexOf(x) === -1; });
+    if (pg > 1 && novos1.length === 0) break;
+    text += '\n' + t1;
+    totalPag = pg;
+    var l1 = await page.evaluate(function () {
+      var out = {};
+      document.querySelectorAll('a[href]').forEach(function (a) {
+        var t = a.innerText || '';
+        var m = t.match(/Leil\u00e3o\s+(\d{4,6})\s*-\s*(\d{1,4})/);
+        if (m) out[m[1] + '-' + ('000' + m[2]).slice(-3)] = a.href;
+      });
+      return out;
     });
-    return out;
-  });
+    for (var k1 in l1) if (!links[k1]) links[k1] = l1[k1];
+  }
+  console.log('Paginas lidas: ' + totalPag);
   await browser.close();
 
   var re = /Leilão\s+(\d{4,6})\s*-\s*(\d{1,4})\s*\n(?:(\d+)\n)?([^\n]+)\n[^\n]*\n(\d{2}\/\d{2}\/\d{2})\s+(\d{2}:\d{2})[\s\S]*?Lance (atual|inicial)\s*\(R\$\)(?:\s*-\s*([^\n]+))?\s*\n+\s*([\d.]+,\d{2})/g;
