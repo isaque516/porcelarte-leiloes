@@ -97,25 +97,42 @@ function pdfParaTexto_(blob) {
     method: 'delete', headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true });
   return txt;
 }
-// Le a Prestacao de Contas Detalhada: retorna { '001': {st:'Cancelado'|'SemLicitante'|'Vendido', venda:Number}, ... }
+// Le a Prestacao de Contas Detalhada (PDF "PC D") por BLOCO de lote.
+// O texto vem com o status colado na descricao, ex: "...acondicionados eCancelado004 475,20 M2".
+// Por isso localizamos o inicio de cada lote (001, 002, ...) e lemos so o pedaco dele.
 function parsePrestacao_(txt) {
   txt = String(txt || '').replace(/[\u200B-\u200D\uFEFF]/g, '');
-  var out = {}, ordem = [];
-  var re = /\b(Cancelado|SemLicitante|Sem Licitante|Vendido|Retirado)(?!\s*[Pp]ara)\b/g, m;
-  while ((m = re.exec(txt))) ordem.push({ st: m[1].replace(/\s+/g, ''), pos: m.index });
-  var tl = txt.match(/Total de Lotes:\s*(\d+)/);
-  if (!tl || ordem.length !== Number(tl[1])) return null; // formato inesperado: nao aplica nada
-  // valores de venda: procura "R$ X" logo apos cada status Vendido
-  for (var i = 0; i < ordem.length; i++) {
-    var num = ('000' + (i + 1)).slice(-3);
+  var mt = txt.match(/Total de Lotes:\s*(\d+)/);
+  if (!mt) return null;
+  var N = Number(mt[1]);
+  if (!N || N > 400) return null;
+  var fim = txt.indexOf('Total de Lotes');
+  var corpo = txt.slice(0, fim > 0 ? fim : txt.length);
+  var pos = [], busca = 0;
+  for (var i = 1; i <= N; i++) {
+    var alvo = ('000' + i).slice(-3);
+    var re = new RegExp('(?:^|[\\r\\n]|[A-Za-z\\u00C0-\\u017F])(' + alvo + ')[\\s\\u00A0]+\\S', 'g');
+    re.lastIndex = busca;
+    var m = re.exec(corpo);
+    if (!m) return null;
+    var idx = m.index + m[0].indexOf(alvo);
+    pos.push({ num: alvo, ini: idx });
+    busca = idx + 3;
+  }
+  var out = {};
+  for (var k = 0; k < pos.length; k++) {
+    var ini2 = pos[k].ini;
+    var f2 = (k + 1 < pos.length) ? pos[k + 1].ini : corpo.length;
+    var bloco = corpo.slice(ini2, f2);
+    var ms = bloco.match(/(Cancelado|SemLicitante|Sem Licitante|Retirado|Vendido)/g) || [];
+    var st = ms.length ? String(ms[0]).replace(/\s+/g, '') : '';
+    if (!st) return null;
     var venda = 0;
-    if (ordem[i].st === 'Vendido') {
-      var fim = (i + 1 < ordem.length) ? ordem[i + 1].pos : txt.indexOf('Total de Lotes');
-      var trecho = txt.slice(ordem[i].pos, fim > ordem[i].pos ? fim : ordem[i].pos + 900);
-      var mv = trecho.match(/R\$\s*([\d.]+,\d{2})/);
+    if (st === 'Vendido') {
+      var mv = bloco.match(/R\$\s*([\d.]+,\d{2})/);
       if (mv) venda = Number(mv[1].replace(/\./g, '').replace(',', '.')) || 0;
     }
-    out[num] = { st: ordem[i].st, venda: venda };
+    out[pos[k].num] = { st: st, venda: venda };
   }
   return out;
 }
