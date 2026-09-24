@@ -1296,9 +1296,12 @@ try{
     const cond=ls.filter(function(x){return x.condicional&&!x.pago;}).length;
     const jaPago=le.pago===true;
     if(vendas>0&&!jaPago)totAR+=liq;
-    if(jaPago&&vendas>0)REC.push({numero:le.numero,pagoEm:le.pagoEm||'',liq:liq});
+    var vRec=Number(le.valorRecebido)||0;
+    var liqEfetivo=vRec>0?vRec:liq;
+    if(jaPago&&(vendas>0||vRec>0))REC.push({numero:le.numero,pagoEm:le.pagoEm||'',liq:liqEfetivo});
     var stPill='';
-    if(jaPago){stPill='<span class="badge" style="background:#D1FAE5;color:#059669;margin-left:8px">PAGO'+(le.pagoEm?' \u00b7 '+le.pagoEm.split('-').reverse().join('/'):'')+'</span>';}
+    if(jaPago){stPill='<span class="badge" style="background:#D1FAE5;color:#059669;margin-left:8px">PAGO'+(le.pagoEm?' \u00b7 '+le.pagoEm.split('-').reverse().join('/'):'')+(vRec>0?' \u00b7 '+money(vRec):'')+'</span>';
+      if(vRec>0&&Math.abs(vRec-liq)>0.5)stPill+='<span class="badge" style="background:#FEF3C7;color:#B45309;margin-left:6px" title="O valor que caiu \u00e9 diferente do calculado pelos lotes \u2014 confira a presta\u00e7\u00e3o de contas">\u26a0 calculado: '+money(liq)+'</span>';}
     else if(vendas>0){var pv=prevPag(le.data);var pvTxt=pv?pv.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'';
       var atrasado=pv&&(new Date())>pv;
       stPill=atrasado
