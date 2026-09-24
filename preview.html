@@ -2140,16 +2140,17 @@ td{padding:15px 20px;border-bottom:1px solid var(--ln-2);color:var(--ink-2)}
       if(!l.data||l.data>=HJ)return;               // só pregões já realizados
       // repostado CONTA como tentativa que não vendeu — é o dado que importa
       var k=_prod(l.descricao); if(!k)return;
-      var g=gr[k]||(gr[k]={n:0,v:0,m2:0,m2v:0,bruto:0,ini:0,iniM2:0});
-      g.n++; g.m2+=Number(l.m2)||0; g.ini+=Number(l.lanceInicial)||0;
-      if(l.vendido||l.pago){g.v++;g.bruto+=Number(l.valorVenda)||Number(l.lanceAtual)||0;g.m2v+=Number(l.m2)||0;}
+      var g=gr[k]||(gr[k]={n:0,v:0,m2v:0,bruto:0,ini:0,m2i:0});
+      g.n++;
+      var li=Number(l.lanceInicial)||0, m2=Number(l.m2)||0;
+      if(li>0&&m2>0){g.ini+=li;g.m2i+=m2;}          // média de partida só com lance real
+      if(l.vendido||l.pago){var vv=Number(l.valorVenda)||Number(l.lanceAtual)||0;
+        g.v++; if(vv>0&&m2>0){g.bruto+=vv;g.m2v+=m2;}}
     });
     var rank=Object.keys(gr).map(function(k){var g=gr[k];
       return {p:k,n:g.n,v:g.v,tx:g.n?g.v/g.n:0,
-        rm2:g.m2v?g.bruto/g.m2v:0, im2:g.m2?g.ini/g.m2:0, bruto:g.bruto};
-    }).filter(function(r){return r.n>=1;})
-      .sort(function(a,b){return (b.tx-a.tx)||(b.bruto-a.bruto);}).slice(0,7);
-    var maxTx=1;
+        rm2:g.m2v?g.bruto/g.m2v:0, im2:g.m2i?g.ini/g.m2i:0, bruto:g.bruto};
+    }).sort(function(a,b){return (b.n-a.n)||(b.tx-a.tx);}).slice(0,8);   // por volume: mostra bons E encalhados
     var linhas=rank.map(function(r){
       var pc=Math.round(r.tx*100);
       var cor=pc>=60?'ok':(pc>=30?'am':'rd');
