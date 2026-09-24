@@ -2006,7 +2006,7 @@ td{padding:15px 20px;border-bottom:1px solid var(--ln-2);color:var(--ink-2)}
 
 /* ---- ranking por produto ---- */
 .hm-rank{padding:14px 20px 18px;display:flex;flex-direction:column;gap:3px}
-.hm-r{display:grid;grid-template-columns:minmax(120px,1.5fr) 1fr 44px 52px 92px;align-items:center;gap:12px;
+.hm-r{display:grid;grid-template-columns:minmax(150px,1.6fr) 1fr 44px 52px 92px;align-items:center;gap:12px;
   padding:10px 8px;border-radius:12px;transition:background .16s}
 .hm-r:hover{background:rgba(239,240,255,.75)}
 .hm-r-p{font-size:11.5px;font-weight:700;color:#1E2A42;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2021,7 +2021,10 @@ td{padding:15px 20px;border-bottom:1px solid var(--ln-2);color:var(--ink-2)}
 .hm-r-q{font-size:11px;color:#8695AD;font-weight:650;text-align:right}
 .hm-r-m2{font-size:12.5px;font-weight:800;color:#080D1C;text-align:right;letter-spacing:-.03em}
 .hm-r-m2 i{font-size:9.5px;font-weight:650;color:#A9B5C8;font-style:normal}
-.hm-r-im2{display:none}
+.hm-r-sub{font-size:10px;color:#A9B5C8;font-weight:600;margin-top:2px;white-space:nowrap}
+.hm-r-sub b{font-weight:800;margin-left:4px}
+.hm-r-sub b.up{color:#04996A}
+.hm-r-sub b.dn{color:#D92D3C}
 @media(max-width:1500px){.hm-r{grid-template-columns:minmax(100px,1.4fr) 1fr 42px 48px 84px}}
 @media(max-width:760px){.hm-r{grid-template-columns:1fr 60px 70px}.hm-r-bar,.hm-r-q{display:none}}
 
@@ -2135,7 +2138,7 @@ td{padding:15px 20px;border-bottom:1px solid var(--ln-2);color:var(--ink-2)}
     var gr={};
     L.forEach(function(l){
       if(!l.data||l.data>=HJ)return;               // só pregões já realizados
-      if(l.repostado)return;                       // não conta duas vezes
+      // repostado CONTA como tentativa que não vendeu — é o dado que importa
       var k=_prod(l.descricao); if(!k)return;
       var g=gr[k]||(gr[k]={n:0,v:0,m2:0,m2v:0,bruto:0,ini:0,iniM2:0});
       g.n++; g.m2+=Number(l.m2)||0; g.ini+=Number(l.lanceInicial)||0;
@@ -2150,13 +2153,15 @@ td{padding:15px 20px;border-bottom:1px solid var(--ln-2);color:var(--ink-2)}
     var linhas=rank.map(function(r){
       var pc=Math.round(r.tx*100);
       var cor=pc>=60?'ok':(pc>=30?'am':'rd');
+      var dif = (r.rm2&&r.im2)?((r.rm2/r.im2-1)*100):0;
+      var sinal = dif>1?('<b class="up">+'+dif.toFixed(0)+'%</b>'):(dif<-1?('<b class="dn">'+dif.toFixed(0)+'%</b>'):'');
       return '<div class="hm-r">'
-        +'<div class="hm-r-p" title="'+r.p+'">'+r.p+'</div>'
+        +'<div><div class="hm-r-p" title="'+r.p+'">'+r.p+'</div>'
+          +'<div class="hm-r-sub">partiu de R$ '+(r.im2?r.im2.toFixed(2).replace('.',','):'0,00')+'/m² '+sinal+'</div></div>'
         +'<div class="hm-r-bar"><span class="'+cor+'" style="width:'+Math.max(pc,3)+'%"></span></div>'
         +'<div class="hm-r-tx '+cor+'">'+pc+'%</div>'
         +'<div class="hm-r-q">'+r.v+'/'+r.n+'</div>'
         +'<div class="hm-r-m2">'+(r.rm2?('R$ '+r.rm2.toFixed(2).replace('.',',')):'—')+'<i>/m²</i></div>'
-        +'<div class="hm-r-im2">partiu de R$ '+(r.im2?r.im2.toFixed(2).replace('.',','):'0,00')+'</div>'
         +'</div>';
     }).join('');
 
