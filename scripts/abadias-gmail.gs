@@ -127,12 +127,24 @@ function parsePrestacao_(txt) {
     var ms = bloco.match(/(Cancelado|SemLicitante|Sem Licitante|Retirado|Vendido)/g) || [];
     var st = ms.length ? String(ms[0]).replace(/\s+/g, '') : '';
     if (!st) return null;
-    var venda = 0;
+    var venda = 0, comprador = '', doc = '';
     if (st === 'Vendido') {
       var mv = bloco.match(/R\$\s*([\d.]+,\d{2})/);
       if (mv) venda = Number(mv[1].replace(/\./g, '').replace(',', '.')) || 0;
+      // NOME REAL do arrematante (o site so mostra mascarado)
+      var mn = bloco.match(/Vendido\s*Para\s*:?\s*([^\n]+)/i);
+      if (mn) {
+        comprador = mn[1]
+          .replace(/Avalia[c\u00e7][a\u00e3]o.*$/i, '')
+          .replace(/Venda.*$/i, '')
+          .replace(/R\$.*$/, '')
+          .replace(/\s{2,}/g, ' ').trim();
+        if (comprador.length < 3) comprador = '';
+      }
+      var md = bloco.match(/(?:CPF|CGC|CNPJ)\s*:?\s*([\d][\d.\-\/]{9,19})/i);
+      if (md) doc = md[1].trim();
     }
-    out[pos[k].num] = { st: st, venda: venda };
+    out[pos[k].num] = { st: st, venda: venda, comprador: comprador, doc: doc };
   }
   return out;
 }
@@ -261,7 +273,7 @@ function main_() {
     var fL = { pago: B_(true), pagoEm: S_(dt) }, mL = ['pago', 'pagoEm'];
     if (vRec > 0) { fL.valorRecebido = D_(vRec); mL.push('valorRecebido'); }
     fsPatch_('leiloes/' + alvo.name.split('/').pop(), fL, mL);
-    var n = 0, canc = 0, totReal = 0, detLog = [];
+    var n = 0, canc = 0, nomes = 0, totReal = 0, detLog = [];
     if (detalhe) {
       for (var num3 in detalhe) {
         var numFull = leilao2 + '-' + num3;
@@ -275,6 +287,8 @@ function main_() {
           var f3 = { vendido: B_(true), condicional: B_(false), pago: B_(true) };
           var mk3 = ['vendido', 'condicional', 'pago'];
           if (detalhe[num3].venda > 0) { f3.valorVenda = D_(detalhe[num3].venda); mk3.push('valorVenda'); totReal += detalhe[num3].venda; }
+          if (detalhe[num3].comprador) { f3.arrematante = S_(detalhe[num3].comprador); mk3.push('arrematante'); nomes++; }
+          if (detalhe[num3].doc) { f3.arrematanteDoc = S_(detalhe[num3].doc); mk3.push('arrematanteDoc'); }
           fsPatch_('lotes/' + ex3.id, f3, mk3); n++;
         } else { // SemLicitante / Retirado: garante nao vendido e nao pago
           fsPatch_('lotes/' + ex3.id, { vendido: B_(false), condicional: B_(false), pago: B_(false) },
@@ -289,7 +303,7 @@ function main_() {
     fsPatch_('emails_processados/baixa-' + leilao2,
       { tipo: S_('baixa'), leilao: S_(leilao2), pagoEm: S_(dt), atualizadoEm: S_(new Date().toISOString()) }, null);
     log.push('BAIXA leilao ' + leilao2 + ': pagamento de ' + dt.split('-').reverse().join('/') + ' registrado. '
-      + n + ' lote(s) pagos' + (canc ? ', ' + canc + ' CANCELADO(S)' : '')
+      + n + ' lote(s) pagos' + (canc ? ', ' + canc + ' CANCELADO(S)' : '') + (nomes ? ', ' + nomes + ' comprador(es) identificado(s)' : '')
       + (vRec ? ' | RECEBIDO (liquido) R$ ' + vRec.toFixed(2) : '')
       + (totReal ? ' | vendas reais R$ ' + totReal.toFixed(2) : '')
       + (detLog.length ? '\n  ' + detLog.join('\n  ') : ''));
