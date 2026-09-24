@@ -135,9 +135,10 @@ function parsePrestacao_(txt) {
       var mn = bloco.match(/Vendido\s*Para\s*:?\s*([^\n]+)/i);
       if (mn) {
         comprador = mn[1]
-          .replace(/Avalia[c\u00e7][a\u00e3]o.*$/i, '')
-          .replace(/Venda.*$/i, '')
-          .replace(/R\$.*$/, '')
+          .replace(/Avalia.{0,8}?o\s*Venda/gi, ' ')
+          .replace(/Avalia.{0,8}?o/gi, ' ')
+          .replace(/\bVenda\b/gi, ' ')
+          .replace(/R\$[\s\S]*$/, '')
           .replace(/\s{2,}/g, ' ').trim();
         if (comprador.length < 3) comprador = '';
       }
