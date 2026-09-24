@@ -1759,8 +1759,24 @@ td{padding:13px 20px;border-bottom:1px solid var(--ln-2);color:var(--ink-2)}
 #termo-overlay > div,#leilao-overlay > div,.modal-box{border-radius:var(--r-xl);box-shadow:var(--e3)}
 
 /* ---------- painel diário (herói) ---------- */
-#pg-painel .card:first-child > div:first-child{
-  background:linear-gradient(135deg,#6366F1 0%,#4F46E5 45%,#3730A3 100%) !important}
+#pg-painel div[style*="linear-gradient"]{
+  background:linear-gradient(135deg,#6E6BF5 0%,#4F46E5 48%,#312E81 100%) !important}
+#pg-painel #pp-val{font-size:44px;font-weight:800;letter-spacing:-2px}
+#pp-per button[aria-pressed="true"],#pp-dir button[aria-pressed="true"]{
+  background:rgba(255,255,255,.26);font-weight:700}
+.pp-k .v{font-weight:750;letter-spacing:-.04em;color:var(--ink)}
+.pp-k .r{color:var(--mut-2);font-weight:600}
+.pp-lin{border-bottom-color:var(--ln-2)}
+
+/* ---------- calendário: dia de hoje e legenda ---------- */
+.cal-cell.today .cal-n{background:var(--pri);color:#fff}
+.cal-n{font-weight:650}
+
+/* ---------- gráficos ---------- */
+canvas{border-radius:10px}
+
+/* ---------- títulos de página ---------- */
+.ch-l{gap:11px}
 
 /* ---------- barra de seleção ---------- */
 #sel-total{border-color:var(--pri-200) !important;
