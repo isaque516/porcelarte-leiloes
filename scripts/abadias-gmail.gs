@@ -87,7 +87,7 @@ function pdfParaTexto_(blob) {
     + JSON.stringify(meta) + '\r\n--' + boundary + '\r\nContent-Type: application/pdf\r\n\r\n').getBytes();
   var tail = Utilities.newBlob('\r\n--' + boundary + '--').getBytes();
   var payload = head.concat(blob.getBytes()).concat(tail);
-  var r = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&ocrLanguage=pt', {
+  var r = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
     method: 'post', contentType: 'multipart/related; boundary=' + boundary, payload: payload,
     headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() } });
   var id = JSON.parse(r.getContentText()).id;
@@ -223,9 +223,27 @@ function main_() {
         if (/PC\s*D/i.test(as2[j2].getName()) && /\.pdf$/i.test(as2[j2].getName())) { pcd = as2[j2]; break; }
       }
     }
-    var detalhe = null;
-    if (pcd) { try { detalhe = parsePrestacao_(pdfParaTexto_(pcd.copyBlob())); } catch (ePdf) { detalhe = null; } }
-    fsPatch_('leiloes/' + alvo.name.split('/').pop(), { pago: B_(true), pagoEm: S_(dt) }, ['pago', 'pagoEm']);
+    var detalhe = null, motivoFalha = '';
+    if (!pcd) motivoFalha = 'anexo "PC D" nao encontrado no e-mail';
+    if (pcd) {
+      try {
+        var txtPdf = pdfParaTexto_(pcd.copyBlob());
+        detalhe = parsePrestacao_(txtPdf);
+        if (!detalhe) motivoFalha = 'layout do PDF nao reconhecido (status x Total de Lotes nao bateu)';
+      } catch (ePdf) { detalhe = null; motivoFalha = 'erro ao converter o PDF: ' + String(ePdf).slice(0, 120); }
+    }
+    // Valor LIQUIDO realmente recebido: vem do nome do comprovante, ex "3.990,00 FRANCISCO.pdf"
+    var vRec = 0;
+    for (var k3 = 0; k3 < msgs2.length && !vRec; k3++) {
+      var as3 = msgs2[k3].getAttachments();
+      for (var j3 = 0; j3 < as3.length; j3++) {
+        var mv3 = as3[j3].getName().match(/^\s*([\d.]+,\d{2})\s/);
+        if (mv3) { vRec = Number(mv3[1].replace(/\./g, '').replace(',', '.')) || 0; break; }
+      }
+    }
+    var fL = { pago: B_(true), pagoEm: S_(dt) }, mL = ['pago', 'pagoEm'];
+    if (vRec > 0) { fL.valorRecebido = D_(vRec); mL.push('valorRecebido'); }
+    fsPatch_('leiloes/' + alvo.name.split('/').pop(), fL, mL);
     var n = 0, canc = 0, totReal = 0, detLog = [];
     if (detalhe) {
       for (var num3 in detalhe) {
@@ -247,18 +265,16 @@ function main_() {
         }
       }
     } else {
-      for (var num2 in porNum) {
-        if (num2.indexOf(leilao2 + '-') === 0 && porNum[num2].vendido) {
-          fsPatch_('lotes/' + porNum[num2].id, { pago: B_(true) }, ['pago']); n++;
-        }
-      }
-      detLog.push('(PDF detalhado nao lido - baixa aplicada no modo simples)');
+      // Sem o detalhe NAO marcamos lote nenhum: ja deu erro grave assim antes.
+      detLog.push('ATENCAO: os lotes NAO foram marcados como pagos porque ' + motivoFalha + '.');
+      detLog.push('Confira a prestacao de contas no Gmail e ajuste no app.');
     }
     fsPatch_('emails_processados/baixa-' + leilao2,
       { tipo: S_('baixa'), leilao: S_(leilao2), pagoEm: S_(dt), atualizadoEm: S_(new Date().toISOString()) }, null);
     log.push('BAIXA leilao ' + leilao2 + ': pagamento de ' + dt.split('-').reverse().join('/') + ' registrado. '
       + n + ' lote(s) pagos' + (canc ? ', ' + canc + ' CANCELADO(S)' : '')
-      + (totReal ? ' | vendas reais R$ ' + totReal.toFixed(2) + ' (liquido ~R$ ' + (totReal * 0.95).toFixed(2) + ')' : '')
+      + (vRec ? ' | RECEBIDO (liquido) R$ ' + vRec.toFixed(2) : '')
+      + (totReal ? ' | vendas reais R$ ' + totReal.toFixed(2) : '')
       + (detLog.length ? '\n  ' + detLog.join('\n  ') : ''));
   }
 
