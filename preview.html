@@ -685,6 +685,7 @@ td{padding:12px 18px}
         <div class="cb">
           <div id="doc-pendentes" style="margin-bottom:16px"></div>
           <div style="position:relative;max-width:440px;margin-bottom:14px"><i class="ti ti-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94A3B8"></i><input class="fi" id="doc-busca" placeholder="Pesquisar: Rodolfo, 29029-001, c*e..." style="padding-left:34px" oninput="renderArquivoTermos()"></div>
+          <div id="doc-orfaos"></div>
           <div id="doc-termos"></div>
         </div>
       </div>
@@ -1667,15 +1668,27 @@ window.enviarTermo=async function(){const ov=document.getElementById('termo-over
   for(let i=0;i<n;i++){const rc=await fetch(p[0]+'/termos_chunks/'+encodeURIComponent(num)+'_'+idx+'_'+i+p[1],{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{data:{stringValue:du.slice(i*CH,(i+1)*CH)}}})});
    if(!rc.ok)throw new Error('falha no upload de '+file.name+' (parte '+(i+1)+'/'+n+')');}
   metaArr.push({mapValue:{fields:{name:{stringValue:file.name},tipo:{stringValue:file.type||''},chunks:{integerValue:String(n)},anexadoEm:{stringValue:new Date().toISOString()}}}});}
- let arrem='';
+ let arrem='',avisoLote='';
  try{const all=await fetchLotes();const l=all.find(function(x){return String(x.num)===String(num);});arrem=(l&&l.arrematante)||'';
-  if(l&&l.id&&!l.retirou){await window._upd(window._doc(window._db,'lotes',l.id),{retirou:true,dataRetirada:new Date().toISOString().slice(0,10)});}}catch(_e){}
+  if(l&&l.id&&!l.retirou){await window._upd(window._doc(window._db,'lotes',l.id),{retirou:true,dataRetirada:new Date().toISOString().slice(0,10)});}}
+ catch(_e){avisoLote='O arquivo foi salvo, mas não consegui marcar o lote como retirado. Marque à mão em Controle.';}
  const hoje=dtExist||new Date().toISOString().slice(0,10);
  const meta={fields:{num:{stringValue:String(num)},comprador:{stringValue:compNome},arrematante:{stringValue:arrem},dataRetirada:{stringValue:hoje},arquivos:{arrayValue:{values:metaArr}}}};
- const rm=await fetch(p[0]+'/termos_retirada/'+encodeURIComponent(num)+p[1],{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(meta)});
- if(!rm.ok)throw new Error('falha ao salvar o registro do termo');
+ /* 3 tentativas + conferencia de leitura. Sem isso, uma falha passageira de rede
+    exatamente aqui deixava o PDF gravado e o termo invisivel no arquivo de termos,
+    sem ninguem perceber. Ja aconteceu com o 29033-001. */
+ let rm=null;
+ for(let tt=0;tt<3;tt++){
+  try{rm=await fetch(p[0]+'/termos_retirada/'+encodeURIComponent(num)+p[1],{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(meta)});}catch(_e){rm=null;}
+  if(rm&&rm.ok)break;
+  if(tt<2){stEl.textContent='Salvando registro (tentativa '+(tt+2)+' de 3)...';await new Promise(function(r){setTimeout(r,1200*(tt+1));});}
+ }
+ if(!rm||!rm.ok)throw new Error('falha ao salvar o registro do termo (o arquivo subiu, mas o registro não; tente anexar de novo)');
+ const rv=await fetch(p[0]+'/termos_retirada/'+encodeURIComponent(num)+p[1]+'&mask.fieldPaths=num');
+ if(!rv.ok)throw new Error('o registro do termo não apareceu no banco depois de salvar; tente de novo');
  TERMOS.add(String(num));TCACHE=null;stEl.textContent='';inp.value='';
- if(typeof window.toast==='function')window.toast('Termo anexado! Lote marcado como retirado.','ok');
+ if(typeof window.toast==='function')window.toast(avisoLote?'Termo anexado, mas confira o lote.':'Termo anexado! Lote marcado como retirado.',avisoLote?'warn':'ok');
+ if(avisoLote)alert(avisoLote);
  await renderListaTermo(num);window.renderControle();if(document.getElementById('doc-termos'))window.renderArquivoTermos(true);
  }catch(e){stEl.textContent='';alert('Erro: '+e.message);}};
 let TCACHE=null;
@@ -1689,7 +1702,29 @@ window.renderArquivoTermos=async function(reload){const box=document.getElementB
     arr.push({num:gv('num'),comprador:gv('comprador'),arrematante:gv('arrematante'),data:gv('dataRetirada'),
      files:files.map(function(v,i){return {name:((v.mapValue||{}).fields||{}).name?v.mapValue.fields.name.stringValue:'arquivo',i:i};})});});
    tk=j.nextPageToken||'';}while(tk);}catch(_e){}
-  TCACHE=arr.sort(function(a,b){return String(b.data).localeCompare(String(a.data));});renderPendentesDocs();}
+  TCACHE=arr.sort(function(a,b){return String(b.data).localeCompare(String(a.data));});renderPendentesDocs();
+  /* Detector de termo orfao: arquivo gravado em termos_chunks sem o registro
+     correspondente em termos_retirada. Antes isso ficava invisivel para sempre. */
+  try{
+   const temReg={};arr.forEach(function(t){temReg[String(t.num)]=true;});
+   let tk2='',orfaos={};
+   do{const rc=await fetch(p[0]+'/termos_chunks'+p[1]+'&pageSize=300&mask.fieldPaths=_&'+(tk2?'pageToken='+tk2:''));
+    if(!rc.ok)break;const jc=await rc.json();
+    (jc.documents||[]).forEach(function(d){
+     const id=decodeURIComponent(d.name.split('/').pop());
+     const n=id.replace(/_\d+_\d+$/,'');
+     if(n!==id&&!temReg[n])orfaos[n]=true;});
+    tk2=jc.nextPageToken||'';}while(tk2);
+   const lista=Object.keys(orfaos);
+   window.__orfaos=lista;
+   const av=document.getElementById('doc-orfaos');
+   if(av)av.innerHTML=lista.length
+    ?'<div style="padding:11px 14px;border:1px solid #FFD6A5;background:#FFF7ED;border-radius:12px;margin-bottom:10px;font-size:12px;color:#9A3412;font-weight:650">'
+     +'<i class="ti ti-alert-triangle"></i> '+lista.length+' termo(s) com arquivo salvo mas sem registro: <b>'+lista.join(', ')+'</b>. '
+     +'Anexe o termo de novo nesse(s) lote(s) para regularizar.</div>'
+    :'';
+  }catch(_e){}
+ }
  const fl=TCACHE.filter(function(t){if(!q)return true;return (t.comprador+' '+t.arrematante+' '+t.num+' '+t.data).toLowerCase().indexOf(q)>-1;});
  box.innerHTML=fl.length?fl.map(function(t){
   const dt=t.data?t.data.split('-').reverse().join('/'):'';
