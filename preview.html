@@ -481,7 +481,7 @@ td{padding:12px 18px}
 .cal-ct{margin-top:2px;font-size:9.5px;padding:2px 8px}
 </style>
 </head>
-<body class="deslogado">
+<body class="deslogado auth-indef">
 
 <div class="sb">
   <div class="sb-logo">
@@ -819,6 +819,16 @@ body.deslogado #login-tela{display:flex}
 #login-tela .lg-msg{margin-top:14px;font-size:12px;font-weight:650;line-height:1.45;display:none}
 #login-tela .lg-msg.erro{display:block;color:#D92D3C}
 #login-tela .lg-msg.ok{display:block;color:#04996A}
+/* Enquanto o Firebase ainda nao disse se voce ja esta logado, mostra so o fundo
+   com um giro. Sem isso, o formulario de login pisca por um instante para quem
+   ja tem sessao salva. */
+body.auth-indef #login-tela .lg-card{display:none}
+#lg-splash{display:none;position:relative;flex-direction:column;align-items:center;gap:13px;
+  color:#BFDBFE;font-size:11.5px;font-weight:700;letter-spacing:.02em}
+body.auth-indef #lg-splash{display:flex}
+#lg-splash .sp{width:34px;height:34px;border-radius:50%;
+  border:3px solid rgba(191,219,254,.22);border-top-color:#60A5FA;animation:lgSpin .8s linear infinite}
+@keyframes lgSpin{to{transform:rotate(360deg)}}
 #sair-bar{display:none;align-items:center;gap:8px;padding:10px 14px;margin-top:auto;
   font-size:11px;color:rgba(255,255,255,.62);font-weight:600}
 body:not(.deslogado) #sair-bar{display:flex}
@@ -828,6 +838,7 @@ body:not(.deslogado) #sair-bar{display:flex}
 
 <div id="login-tela">
   <div class="lg-aura"></div>
+  <div id="lg-splash"><div class="sp"></div><div>Carregando sua sessão…</div></div>
   <form class="lg-card" id="login-form" autocomplete="on">
     <h2>Porcelarte · Gestão de Leilões</h2>
     <p class="lg-sub">Entre para acessar seus lotes e clientes.</p>
@@ -885,6 +896,7 @@ try{await setPersistence(auth,browserLocalPersistence);}catch(_e){}
 let _booted=false;
 onAuthStateChanged(auth,u=>{
   window._user=u||null;
+  document.body.classList.remove('auth-indef');  /* ja sabemos a resposta: para de segurar a tela */
   if(u){
     document.body.classList.remove('deslogado');
     const e=document.getElementById('sair-email'); if(e)e.textContent=u.email||'';
