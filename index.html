@@ -1611,14 +1611,34 @@ window.abrirTermo=async function(num){
  +'<button onclick="document.getElementById(&quot;termo-overlay&quot;).style.display=&quot;none&quot;" style="border:none;background:none;cursor:pointer;font-size:16px"><i class="ti ti-x"></i></button></div>'
  +'<div id="termo-lista" style="margin-bottom:14px"></div>'
  +'<div class="fg" style="margin-bottom:10px"><div class="fl">Nome completo do comprador (como assinado no termo)</div><input class="fi" id="termo-comprador" placeholder="Ex: Rodolfo Pereira da Silva"></div>'
- +'<div style="border:2px dashed #CBD5E1;border-radius:12px;padding:14px;text-align:center">'
- +'<input type="file" id="termo-file" multiple accept="application/pdf,image/*" style="font-size:12px;max-width:100%">'
- +'<div style="font-size:11px;color:#64748B;margin-top:6px">PDF ou foto do termo assinado (at\u00e9 15MB)</div>'
- +'<button class="btn-p" style="margin-top:10px;font-size:12px" onclick="enviarTermo()"><i class="ti ti-upload"></i> Anexar termo</button>'
- +'<div id="termo-status" style="font-size:11px;color:#2563EB;margin-top:8px"></div></div></div>';
- document.body.appendChild(ov);ov.addEventListener('click',function(e){if(e.target===ov)ov.style.display='none';});}
+ +'<div id="termo-drop" style="border:2px dashed #BFDBFE;border-radius:16px;padding:30px 18px;text-align:center;cursor:pointer;background:#F8FAFF;transition:border-color .2s,background .2s">'
+ +'<input type="file" id="termo-file" multiple accept="application/pdf,image/*" style="display:none">'
+ +'<i class="ti ti-cloud-upload" style="font-size:42px;color:#2563EB;line-height:1"></i>'
+ +'<div style="font-weight:800;font-size:13.5px;color:#0F172A;margin-top:10px">Arraste o termo aqui ou clique para escolher</div>'
+ +'<div style="font-size:11.5px;color:#64748B;margin-top:5px">PDF ou foto do termo assinado \u00b7 at\u00e9 15MB \u00b7 pode soltar mais de um</div>'
+ +'<div id="termo-sel" style="font-size:12px;color:#04996A;font-weight:750;margin-top:12px;line-height:1.5"></div>'
+ +'</div>'
+ +'<button class="btn-p" style="width:100%;margin-top:12px;font-size:13px;padding:11px" onclick="enviarTermo()"><i class="ti ti-upload"></i> Anexar termo</button>'
+ +'<div id="termo-status" style="font-size:11.5px;color:#2563EB;margin-top:8px;text-align:center"></div></div>';
+ document.body.appendChild(ov);ov.addEventListener('click',function(e){if(e.target===ov)ov.style.display='none';});
+ /* area grande de soltar arquivo: o input nativo era pequeno demais para achar */
+ (function(){
+  var dz=document.getElementById('termo-drop'),fi=document.getElementById('termo-file');
+  function pinta(on){dz.style.borderColor=on?'#2563EB':'#BFDBFE';dz.style.background=on?'#EFF6FF':'#F8FAFF';}
+  window.__termoMostraSel=function(){var sel=document.getElementById('termo-sel');if(!sel)return;
+   if(!fi.files||!fi.files.length){sel.innerHTML='';return;}
+   var ns=[];for(var i=0;i<fi.files.length;i++)ns.push('<i class="ti ti-file-check"></i> '+fi.files[i].name+' <span style="color:#8494A8;font-weight:600">('+Math.round(fi.files[i].size/1024)+' KB)</span>');
+   sel.innerHTML=ns.join('<br>');};
+  dz.addEventListener('click',function(){fi.click();});
+  fi.addEventListener('change',window.__termoMostraSel);
+  ['dragenter','dragover'].forEach(function(ev){dz.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();pinta(true);});});
+  ['dragleave','dragend'].forEach(function(ev){dz.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();pinta(false);});});
+  dz.addEventListener('drop',function(e){e.preventDefault();e.stopPropagation();pinta(false);
+   if(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length){try{fi.files=e.dataTransfer.files;}catch(_e){}window.__termoMostraSel();}});
+ })();}
  ov.dataset.num=num;document.getElementById('termo-title').textContent='Termo de retirada \u00b7 Lote '+num;
  document.getElementById('termo-file').value='';document.getElementById('termo-status').textContent='';
+ {var _s=document.getElementById('termo-sel');if(_s)_s.innerHTML='';}
  var _tc=document.getElementById('termo-comprador');
  if(_tc){var _l=(typeof lotes!=='undefined'?lotes:[]).find(function(x){return String(x.num)===String(num);})||{};
    var _nm=String(_l.arrematante||'').trim();
@@ -1700,10 +1720,63 @@ window.enviarTermo=async function(){const ov=document.getElementById('termo-over
   if(l&&l.id&&!l.retirou){await window._upd(window._doc(window._db,'lotes',l.id),{retirou:true,dataRetirada:hoje});}}
  catch(_e){avisoLote='O termo foi salvo, mas não consegui marcar o lote '+num+' como retirado. Marque à mão em Controle.';}
  TERMOS.add(String(num));TCACHE=null;stEl.textContent='';inp.value='';
+ {var _s2=document.getElementById('termo-sel');if(_s2)_s2.innerHTML='';}
  if(typeof window.toast==='function')window.toast(avisoLote?'Termo anexado, mas confira o lote.':'Termo anexado! Lote marcado como retirado.',avisoLote?'warn':'ok');
  if(avisoLote)alert(avisoLote);
  await renderListaTermo(num);window.renderControle();if(document.getElementById('doc-termos'))window.renderArquivoTermos(true);
- }catch(e){stEl.textContent='';alert('Erro: '+e.message);}};
+ }catch(e){stEl.textContent='';
+  /* Guarda o motivo da falha. Sem isso eu so vejo o estrago depois e fico no chute. */
+  try{const p2=tBase();fetch(p2[0]+'/debug_termos/'+encodeURIComponent(num)+'_'+Date.now()+p2[1],{method:'PATCH',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({fields:{num:{stringValue:String(num)},erro:{stringValue:String(e&&e.message||e)},
+    quando:{stringValue:new Date().toISOString()},online:{booleanValue:!!navigator.onLine}}})});}catch(_e){}
+  alert('Erro: '+e.message);}};
+/* Reconstroi o registro de um termo orfao a partir dos arquivos que ficaram
+   guardados. E exatamente o conserto que eu fazia na mao: o PDF esta salvo,
+   so falta o papel que aponta para ele. */
+window.regularizarOrfaos=async function(btn){
+ const lista=(window.__orfaos||[]).slice();
+ if(!lista.length)return;
+ if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Regularizando...';}
+ const p=tBase();let ok=0;const falhou=[];
+ for(let li=0;li<lista.length;li++){
+  const num=lista[li];
+  try{
+   let tk='',partes={};
+   do{const r=await fetch(p[0]+'/termos_chunks'+p[1]+'&pageSize=300&mask.fieldPaths=_'+(tk?'&pageToken='+tk:''));
+    if(!r.ok)break;const j=await r.json();
+    (j.documents||[]).forEach(function(d){const id=decodeURIComponent(d.name.split('/').pop());
+     if(id.indexOf(num+'_')===0){const ix=Number(id.slice(num.length+1).split('_')[0]);
+      if(!isNaN(ix))partes[ix]=(partes[ix]||0)+1;}});
+    tk=j.nextPageToken||'';}while(tk);
+   const idxs=Object.keys(partes).map(Number).sort(function(a,b){return a-b;});
+   if(!idxs.length){falhou.push(num);continue;}
+   const lt=(typeof lotes!=='undefined'?lotes:[]).find(function(x){return String(x.num)===String(num);})||{};
+   const nome=String(lt.arrematante||'');
+   const dt=lt.dataRetirada||new Date().toISOString().slice(0,10);
+   const vals=idxs.map(function(ix){return {mapValue:{fields:{
+     name:{stringValue:'termo-retirada-'+num+(idxs.length>1?'-'+(ix+1):'')+'.pdf'},
+     tipo:{stringValue:'application/pdf'},
+     chunks:{integerValue:String(partes[ix])},
+     anexadoEm:{stringValue:new Date().toISOString()}}}};});
+   const meta={fields:{num:{stringValue:String(num)},comprador:{stringValue:nome},arrematante:{stringValue:nome},
+     dataRetirada:{stringValue:dt},arquivos:{arrayValue:{values:vals}}}};
+   let rm=null;
+   for(let tt=0;tt<3;tt++){
+    try{rm=await fetch(p[0]+'/termos_retirada/'+encodeURIComponent(num)+p[1],{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(meta)});}catch(_e){rm=null;}
+    if(rm&&rm.ok)break;
+    await new Promise(function(r){setTimeout(r,1000*(tt+1));});
+   }
+   if(!rm||!rm.ok){falhou.push(num);continue;}
+   if(lt.id&&!lt.retirou){try{await window._upd(window._doc(window._db,'lotes',lt.id),{retirou:true,dataRetirada:dt});}catch(_e){}}
+   TERMOS.add(String(num));ok++;
+  }catch(_e){falhou.push(num);}
+ }
+ TCACHE=null;
+ alert(ok+' termo(s) regularizado(s).'+(falhou.length?'\nNão consegui: '+falhou.join(', '):'')
+  +'\n\nConfira o nome do comprador nesses termos: usei o nome do arrematante do lote, que pode não ser exatamente o que está assinado no papel.');
+ await window.renderArquivoTermos(true);
+ try{if(window.renderControle)window.renderControle();}catch(_e){}
+};
 let TCACHE=null;
 window.renderArquivoTermos=async function(reload){const box=document.getElementById('doc-termos');if(!box)return;
  const q=((document.getElementById('doc-busca')||{}).value||'').trim().toLowerCase();
@@ -1732,9 +1805,10 @@ window.renderArquivoTermos=async function(reload){const box=document.getElementB
    window.__orfaos=lista;
    const av=document.getElementById('doc-orfaos');
    if(av)av.innerHTML=lista.length
-    ?'<div style="padding:11px 14px;border:1px solid #FFD6A5;background:#FFF7ED;border-radius:12px;margin-bottom:10px;font-size:12px;color:#9A3412;font-weight:650">'
-     +'<i class="ti ti-alert-triangle"></i> '+lista.length+' termo(s) com arquivo salvo mas sem registro: <b>'+lista.join(', ')+'</b>. '
-     +'Anexe o termo de novo nesse(s) lote(s) para regularizar.</div>'
+    ?'<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px;border:1px solid #FFD6A5;background:#FFF7ED;border-radius:12px;margin-bottom:10px;font-size:12px;color:#9A3412;font-weight:650">'
+     +'<div style="flex:1;min-width:240px"><i class="ti ti-alert-triangle"></i> '+lista.length+' termo(s) com arquivo salvo mas sem registro: <b>'+lista.join(', ')+'</b>. '
+     +'O arquivo está guardado — só falta o registro.</div>'
+     +'<button class="btn-p" style="font-size:12px;padding:8px 14px" onclick="regularizarOrfaos(this)"><i class="ti ti-refresh"></i> Regularizar agora</button></div>'
     :'';
   }catch(_e){}
  }
