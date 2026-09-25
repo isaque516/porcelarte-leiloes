@@ -163,7 +163,9 @@ function main_() {
   var porNum = {};
   for (var i = 0; i < lotes.length; i++) {
     var d = lotes[i];
-    porNum[String(gv_(d, 'num'))] = { id: d.name.split('/').pop(), vendido: gv_(d, 'vendido') === true, pago: gv_(d, 'pago') === true, cancelado: gv_(d, 'cancelado') === true };
+    var _arr = String(gv_(d, 'arrematante') || '');
+    porNum[String(gv_(d, 'num'))] = { id: d.name.split('/').pop(), vendido: gv_(d, 'vendido') === true, pago: gv_(d, 'pago') === true, cancelado: gv_(d, 'cancelado') === true,
+      nomeOk: !!_arr && _arr.indexOf('*') === -1 && _arr.length > 3 };
   }
   var leiloes = fsList_('leiloes');
 
@@ -238,8 +240,15 @@ function main_() {
     var m2 = subj2.match(/(\d{5})/); if (!m2) continue;
     var leilao2 = m2[1];
     var stB = fsGet_('emails_processados/baixa-' + leilao2);
-    if (stB.code === 200) continue;
-    if (stB.code !== 404) { log.push('Baixa ' + leilao2 + ': status ilegivel (' + stB.code + '), pulei por seguranca.'); continue; }
+    if (stB.code !== 200 && stB.code !== 404) { log.push('Baixa ' + leilao2 + ': status ilegivel (' + stB.code + '), pulei por seguranca.'); continue; }
+    var jaFeita = (stB.code === 200);
+    // rede de seguranca: se a baixa ja rodou mas algum lote vendido segue sem o nome real, tenta de novo
+    var faltaNome = false;
+    for (var nF in porNum) {
+      if (nF.indexOf(leilao2 + '-') === 0 && porNum[nF].vendido && !porNum[nF].nomeOk) { faltaNome = true; break; }
+    }
+    if (jaFeita && !faltaNome) continue;
+    var soNomes = jaFeita;   // ja processada: mexe SO no nome, nao refaz a baixa
     var dt = Utilities.formatDate(th2.getLastMessageDate(), 'America/Sao_Paulo', 'yyyy-MM-dd');
     var alvo = null;
     for (var q = 0; q < leiloes.length; q++) if (String(gv_(leiloes[q], 'numero')) === leilao2) alvo = leiloes[q];
@@ -271,15 +280,26 @@ function main_() {
         if (mv3) { vRec = Number(mv3[1].replace(/\./g, '').replace(',', '.')) || 0; break; }
       }
     }
-    var fL = { pago: B_(true), pagoEm: S_(dt) }, mL = ['pago', 'pagoEm'];
-    if (vRec > 0) { fL.valorRecebido = D_(vRec); mL.push('valorRecebido'); }
-    fsPatch_('leiloes/' + alvo.name.split('/').pop(), fL, mL);
+    if (!soNomes) {
+      var fL = { pago: B_(true), pagoEm: S_(dt) }, mL = ['pago', 'pagoEm'];
+      if (vRec > 0) { fL.valorRecebido = D_(vRec); mL.push('valorRecebido'); }
+      fsPatch_('leiloes/' + alvo.name.split('/').pop(), fL, mL);
+    }
     var n = 0, canc = 0, nomes = 0, totReal = 0, detLog = [];
     if (detalhe) {
       for (var num3 in detalhe) {
         var numFull = leilao2 + '-' + num3;
         var ex3 = porNum[numFull]; if (!ex3) continue;
         var st3 = detalhe[num3].st;
+        if (soNomes) {                      // baixa ja feita: so completa o comprador que faltou
+          if (st3 === 'Vendido' && !ex3.nomeOk && detalhe[num3].comprador) {
+            var fN = { arrematante: S_(detalhe[num3].comprador) }, mN = ['arrematante'];
+            if (detalhe[num3].doc) { fN.arrematanteDoc = S_(detalhe[num3].doc); mN.push('arrematanteDoc'); }
+            fsPatch_('lotes/' + ex3.id, fN, mN); nomes++;
+            detLog.push(numFull + ': comprador preenchido (' + detalhe[num3].comprador + ')');
+          }
+          continue;
+        }
         if (st3 === 'Cancelado') {
           fsPatch_('lotes/' + ex3.id, { vendido: B_(false), condicional: B_(false), pago: B_(false), cancelado: B_(true) },
             ['vendido', 'condicional', 'pago', 'cancelado', 'valorVenda', 'arrematante']);
@@ -303,6 +323,10 @@ function main_() {
     }
     fsPatch_('emails_processados/baixa-' + leilao2,
       { tipo: S_('baixa'), leilao: S_(leilao2), pagoEm: S_(dt), atualizadoEm: S_(new Date().toISOString()) }, null);
+    if (soNomes) {
+      if (nomes) log.push('Leilao ' + leilao2 + ': ' + nomes + ' comprador(es) preenchido(s) na 2a tentativa.\n  ' + detLog.join('\n  '));
+      continue;
+    }
     log.push('BAIXA leilao ' + leilao2 + ': pagamento de ' + dt.split('-').reverse().join('/') + ' registrado. '
       + n + ' lote(s) pagos' + (canc ? ', ' + canc + ' CANCELADO(S)' : '') + (nomes ? ', ' + nomes + ' comprador(es) identificado(s)' : '')
       + (vRec ? ' | RECEBIDO (liquido) R$ ' + vRec.toFixed(2) : '')
