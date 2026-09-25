@@ -535,7 +535,17 @@ td{padding:12px 18px}
   <div class="ct">
 
     <div class="pg on" id="pg-dashboard">
-      <div id="home-blocks"></div>
+      <!-- Esqueleto: e o que aparece enquanto os dados nao chegaram. Sem ele, o
+           layout antigo la de baixo aparecia sozinho por ~1,5s e parecia que o app
+           tinha voltado para a versao velha. -->
+      <div id="home-blocks">
+        <div class="sk sk-hero"></div>
+        <div class="sk sk-card" style="height:150px"></div>
+        <div class="hm-2col">
+          <div class="sk sk-card" style="height:210px"></div>
+          <div class="sk sk-card" style="height:210px"></div>
+        </div>
+      </div>
       <div class="krow">
         <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Lotes no mês</div><div class="kpi-ic blue"><i class="ti ti-gavel"></i></div></div><div class="kpi-val" id="k-lotes">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
         <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Dias com leilão</div><div class="kpi-ic purple"><i class="ti ti-calendar-event"></i></div></div><div class="kpi-val" id="k-dias">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
@@ -941,7 +951,10 @@ window.addEventListener('fb-ok',async()=>{
   document.getElementById('fb-st').textContent='Conectado';
   document.getElementById('fb-dot').style.background='#22C55E';
   await loadLotes();
-  initDash();try{if(window.renderHome)window.renderHome();}catch(_e){console.warn("home",_e);}renderCal();updateDocSel();updateExpPrev();
+  initDash();
+  try{if(window.renderHome)window.renderHome();}catch(_e){console.warn("home",_e);}
+  finally{document.body.classList.add('dash-pronto');}  /* mesmo se falhar, libera o resto: melhor conteudo antigo que tela vazia */
+  renderCal();updateDocSel();updateExpPrev();
   {const _c=document.getElementById('csv-ct');if(_c)_c.textContent=lotes.length+' lote(s) cadastrados';}
 });
 
@@ -2042,6 +2055,22 @@ td{padding:15px 20px;border-bottom:1px solid var(--ln-2);color:var(--ink-2)}
 <style id="homecss">
 /* ===== Dashboard · blocos de ação ===== */
 #home-blocks{display:flex;flex-direction:column;gap:18px}
+
+/* ---- esqueleto de carregamento ----
+   Enquanto body nao tem .dash-pronto, o Dashboard mostra SO os blocos novos
+   (em forma de esqueleto). O conteudo antigo fica escondido para nao dar a
+   impressao de que o app voltou para a versao anterior. */
+body:not(.dash-pronto) #pg-dashboard > *:not(#home-blocks){display:none !important}
+.sk{position:relative;overflow:hidden;border-radius:24px;background:#E8ECF3}
+.sk::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);
+  transform:translateX(-100%);animation:skSweep 1.25s ease-in-out infinite}
+.sk-hero{height:104px;background:linear-gradient(120deg,#0B1A38,#1D4ED8 60%,#2563EB)}
+.sk-hero::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent)}
+.sk-card{border:1px solid #DDE3EC;background:#fff;
+  box-shadow:0 1px 2px rgba(5,10,22,.06),0 10px 22px -14px rgba(5,10,22,.22)}
+.sk-card::after{background:linear-gradient(90deg,transparent,rgba(224,231,243,.9),transparent)}
+@keyframes skSweep{to{transform:translateX(100%)}}
 .hm-card{overflow:hidden}
 .hm-2col{display:grid;grid-template-columns:1fr 1.25fr;gap:18px}
 @media(max-width:1100px){.hm-2col{grid-template-columns:1fr}}
