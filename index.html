@@ -1733,49 +1733,83 @@ window.enviarTermo=async function(){const ov=document.getElementById('termo-over
 /* Reconstroi o registro de um termo orfao a partir dos arquivos que ficaram
    guardados. E exatamente o conserto que eu fazia na mao: o PDF esta salvo,
    so falta o papel que aponta para ele. */
+/* Mostra o documento e so grava depois que VOCE confirmar de quem ele e.
+   Antes eu carimbava o nome do arrematante do lote sem olhar o arquivo: isso
+   transformou um PDF anexado no lote errado num registro que parecia correto.
+   Arquivo errado tem que ser visto, nao adivinhado. */
+window.__revisarOrfao=function(num){return new Promise(async function(resolve){
+ const p=tBase();
+ let tk='',partes={};
+ try{
+  do{const r=await fetch(p[0]+'/termos_chunks'+p[1]+'&pageSize=300&mask.fieldPaths=_'+(tk?'&pageToken='+tk:''));
+   if(!r.ok)break;const j=await r.json();
+   (j.documents||[]).forEach(function(d){const id=decodeURIComponent(d.name.split('/').pop());
+    if(id.indexOf(num+'_')===0){const ix=Number(id.slice(num.length+1).split('_')[0]);
+     if(!isNaN(ix))partes[ix]=(partes[ix]||0)+1;}});
+   tk=j.nextPageToken||'';}while(tk);
+ }catch(_e){}
+ const idxs=Object.keys(partes).map(Number).sort(function(a,b){return a-b;});
+ if(!idxs.length){resolve({num:num,st:'sem-arquivo'});return;}
+ let du='';
+ try{for(let i=0;i<partes[idxs[0]];i++){const rc=await fetch(p[0]+'/termos_chunks/'+encodeURIComponent(num)+'_'+idxs[0]+'_'+i+p[1]);
+  const jc=await rc.json();du+=jc.fields.data.stringValue;}}catch(_e){}
+ const lt=(typeof lotes!=='undefined'?lotes:[]).find(function(x){return String(x.num)===String(num);})||{};
+ const ov=document.createElement('div');
+ ov.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(5,10,22,.72);display:flex;align-items:center;justify-content:center;padding:18px';
+ ov.innerHTML='<div style="background:#fff;border-radius:18px;width:min(96vw,900px);max-height:94vh;display:flex;flex-direction:column;overflow:hidden">'
+  +'<div style="padding:14px 18px;border-bottom:1px solid #E2E8F0">'
+  +'<div style="font-weight:850;font-size:15px;color:#0F172A">Confira o documento · Lote '+num+'</div>'
+  +'<div style="font-size:12px;color:#64748B;margin-top:3px">Este arquivo foi salvo sem registro. Olhe de quem ele é <b>antes</b> de confirmar — pode ter sido anexado no lote errado.</div></div>'
+  +'<div style="flex:1;min-height:320px;background:#F1F5F9"><iframe src="'+du+'" style="width:100%;height:100%;min-height:380px;border:0"></iframe></div>'
+  +'<div style="padding:14px 18px;border-top:1px solid #E2E8F0">'
+  +'<div style="font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#6F8098;margin-bottom:6px">Nome do comprador, como está no documento</div>'
+  +'<input class="fi" id="orf-nome" style="width:100%;box-sizing:border-box" value="'+String(lt.arrematante||'').replace(/"/g,'&quot;')+'">'
+  +'<div style="font-size:11px;color:#B45309;margin-top:6px">Arrematante deste lote: <b>'+(lt.arrematante||'—')+'</b>. Se o documento for de outra pessoa, use <b>Não é deste lote</b>.</div>'
+  +'<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'
+  +'<button class="btn-p" id="orf-ok" style="flex:1;min-width:150px">Confirmar e registrar</button>'
+  +'<button class="btn-o" id="orf-nao" style="min-width:150px">Não é deste lote</button>'
+  +'<button class="btn-o" id="orf-depois" style="min-width:100px">Depois</button>'
+  +'</div></div></div>';
+ document.body.appendChild(ov);
+ const fim=function(st,nome){ov.remove();resolve({num:num,st:st,nome:nome});};
+ ov.querySelector('#orf-depois').onclick=function(){fim('pulou');};
+ ov.querySelector('#orf-nao').onclick=function(){fim('errado');};
+ ov.querySelector('#orf-ok').onclick=async function(){
+  const bt=this;bt.disabled=true;bt.textContent='Registrando...';
+  const nome=(ov.querySelector('#orf-nome').value||'').trim();
+  const dt=lt.dataRetirada||new Date().toISOString().slice(0,10);
+  const vals=idxs.map(function(ix){return {mapValue:{fields:{
+    name:{stringValue:'termo-retirada-'+num+(idxs.length>1?'-'+(ix+1):'')+'.pdf'},
+    tipo:{stringValue:'application/pdf'},chunks:{integerValue:String(partes[ix])},
+    anexadoEm:{stringValue:new Date().toISOString()}}}};});
+  const meta={fields:{num:{stringValue:String(num)},comprador:{stringValue:nome},arrematante:{stringValue:String(lt.arrematante||'')},
+    dataRetirada:{stringValue:dt},arquivos:{arrayValue:{values:vals}}}};
+  let rm=null;
+  for(let tt=0;tt<3;tt++){
+   try{rm=await fetch(p[0]+'/termos_retirada/'+encodeURIComponent(num)+p[1],{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(meta)});}catch(_e){rm=null;}
+   if(rm&&rm.ok)break;await new Promise(function(r){setTimeout(r,1000*(tt+1));});
+  }
+  if(!rm||!rm.ok){bt.disabled=false;bt.textContent='Confirmar e registrar';alert('Não consegui gravar agora. Tente de novo.');return;}
+  if(lt.id&&!lt.retirou){try{await window._upd(window._doc(window._db,'lotes',lt.id),{retirou:true,dataRetirada:dt});}catch(_e){}}
+  TERMOS.add(String(num));fim('ok',nome);
+ };
+});};
+
 window.regularizarOrfaos=async function(btn){
  const lista=(window.__orfaos||[]).slice();
  if(!lista.length)return;
- if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Regularizando...';}
- const p=tBase();let ok=0;const falhou=[];
- for(let li=0;li<lista.length;li++){
-  const num=lista[li];
-  try{
-   let tk='',partes={};
-   do{const r=await fetch(p[0]+'/termos_chunks'+p[1]+'&pageSize=300&mask.fieldPaths=_'+(tk?'&pageToken='+tk:''));
-    if(!r.ok)break;const j=await r.json();
-    (j.documents||[]).forEach(function(d){const id=decodeURIComponent(d.name.split('/').pop());
-     if(id.indexOf(num+'_')===0){const ix=Number(id.slice(num.length+1).split('_')[0]);
-      if(!isNaN(ix))partes[ix]=(partes[ix]||0)+1;}});
-    tk=j.nextPageToken||'';}while(tk);
-   const idxs=Object.keys(partes).map(Number).sort(function(a,b){return a-b;});
-   if(!idxs.length){falhou.push(num);continue;}
-   const lt=(typeof lotes!=='undefined'?lotes:[]).find(function(x){return String(x.num)===String(num);})||{};
-   const nome=String(lt.arrematante||'');
-   const dt=lt.dataRetirada||new Date().toISOString().slice(0,10);
-   const vals=idxs.map(function(ix){return {mapValue:{fields:{
-     name:{stringValue:'termo-retirada-'+num+(idxs.length>1?'-'+(ix+1):'')+'.pdf'},
-     tipo:{stringValue:'application/pdf'},
-     chunks:{integerValue:String(partes[ix])},
-     anexadoEm:{stringValue:new Date().toISOString()}}}};});
-   const meta={fields:{num:{stringValue:String(num)},comprador:{stringValue:nome},arrematante:{stringValue:nome},
-     dataRetirada:{stringValue:dt},arquivos:{arrayValue:{values:vals}}}};
-   let rm=null;
-   for(let tt=0;tt<3;tt++){
-    try{rm=await fetch(p[0]+'/termos_retirada/'+encodeURIComponent(num)+p[1],{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(meta)});}catch(_e){rm=null;}
-    if(rm&&rm.ok)break;
-    await new Promise(function(r){setTimeout(r,1000*(tt+1));});
-   }
-   if(!rm||!rm.ok){falhou.push(num);continue;}
-   if(lt.id&&!lt.retirou){try{await window._upd(window._doc(window._db,'lotes',lt.id),{retirou:true,dataRetirada:dt});}catch(_e){}}
-   TERMOS.add(String(num));ok++;
-  }catch(_e){falhou.push(num);}
- }
+ if(btn)btn.disabled=true;
+ const res=[];
+ for(let li=0;li<lista.length;li++){res.push(await window.__revisarOrfao(lista[li]));}
+ const ok=res.filter(function(x){return x.st==='ok';}).length;
+ const errados=res.filter(function(x){return x.st==='errado';}).map(function(x){return x.num;});
  TCACHE=null;
- alert(ok+' termo(s) regularizado(s).'+(falhou.length?'\nNão consegui: '+falhou.join(', '):'')
-  +'\n\nConfira o nome do comprador nesses termos: usei o nome do arrematante do lote, que pode não ser exatamente o que está assinado no papel.');
+ if(errados.length)alert('Marcado como arquivo errado: '+errados.join(', ')
+  +'\n\nO arquivo continua guardado, mas não virou termo. Anexe o documento certo nesse(s) lote(s) — ao anexar, o arquivo errado é substituído.');
+ else if(ok)alert(ok+' termo(s) registrado(s).');
  await window.renderArquivoTermos(true);
  try{if(window.renderControle)window.renderControle();}catch(_e){}
+ if(btn)btn.disabled=false;
 };
 let TCACHE=null;
 window.renderArquivoTermos=async function(reload){const box=document.getElementById('doc-termos');if(!box)return;
@@ -1808,7 +1842,7 @@ window.renderArquivoTermos=async function(reload){const box=document.getElementB
     ?'<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px;border:1px solid #FFD6A5;background:#FFF7ED;border-radius:12px;margin-bottom:10px;font-size:12px;color:#9A3412;font-weight:650">'
      +'<div style="flex:1;min-width:240px"><i class="ti ti-alert-triangle"></i> '+lista.length+' termo(s) com arquivo salvo mas sem registro: <b>'+lista.join(', ')+'</b>. '
      +'O arquivo está guardado — só falta o registro.</div>'
-     +'<button class="btn-p" style="font-size:12px;padding:8px 14px" onclick="regularizarOrfaos(this)"><i class="ti ti-refresh"></i> Regularizar agora</button></div>'
+     +'<button class="btn-p" style="font-size:12px;padding:8px 14px" onclick="regularizarOrfaos(this)"><i class="ti ti-eye"></i> Ver e regularizar</button></div>'
     :'';
   }catch(_e){}
  }
