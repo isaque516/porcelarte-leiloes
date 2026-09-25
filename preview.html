@@ -1665,13 +1665,21 @@ window.enviarTermo=async function(){const ov=document.getElementById('termo-over
   let du=await new Promise(function(res,rej){const fr=new FileReader();fr.onload=function(){res(fr.result);};fr.onerror=rej;fr.readAsDataURL(file);});
   if(file.type.indexOf('image/')===0&&window.__shrink&&du.length>900000){try{du=await window.__shrink(du,850000);}catch(_e){}}
   const idx=metaArr.length;const CH=700000;const n=Math.ceil(du.length/CH);
-  for(let i=0;i<n;i++){const rc=await fetch(p[0]+'/termos_chunks/'+encodeURIComponent(num)+'_'+idx+'_'+i+p[1],{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{data:{stringValue:du.slice(i*CH,(i+1)*CH)}}})});
-   if(!rc.ok)throw new Error('falha no upload de '+file.name+' (parte '+(i+1)+'/'+n+')');}
+  for(let i=0;i<n;i++){
+   let rc=null;
+   for(let tt=0;tt<3;tt++){
+    try{rc=await fetch(p[0]+'/termos_chunks/'+encodeURIComponent(num)+'_'+idx+'_'+i+p[1],{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{data:{stringValue:du.slice(i*CH,(i+1)*CH)}}})});}catch(_e){rc=null;}
+    if(rc&&rc.ok)break;
+    if(tt<2){stEl.textContent='Reenviando '+file.name+' (parte '+(i+1)+'/'+n+', tentativa '+(tt+2)+' de 3)...';await new Promise(function(r){setTimeout(r,1200*(tt+1));});}
+   }
+   if(!rc||!rc.ok)throw new Error('falha no upload de '+file.name+' (parte '+(i+1)+'/'+n+')');}
   metaArr.push({mapValue:{fields:{name:{stringValue:file.name},tipo:{stringValue:file.type||''},chunks:{integerValue:String(n)},anexadoEm:{stringValue:new Date().toISOString()}}}});}
+ /* ORDEM IMPORTA: primeiro o registro do termo, depois a marcacao do lote.
+    O registro e a prova de que o arquivo existe; se ele nao gravar, o PDF fica
+    orfao e invisivel. Buscar o nome do arrematante na memoria (e nao na rede)
+    tira daqui a chamada que antes podia travar e abortar tudo pelo meio. */
  let arrem='',avisoLote='';
- try{const all=await fetchLotes();const l=all.find(function(x){return String(x.num)===String(num);});arrem=(l&&l.arrematante)||'';
-  if(l&&l.id&&!l.retirou){await window._upd(window._doc(window._db,'lotes',l.id),{retirou:true,dataRetirada:new Date().toISOString().slice(0,10)});}}
- catch(_e){avisoLote='O arquivo foi salvo, mas não consegui marcar o lote como retirado. Marque à mão em Controle.';}
+ try{const lm=(typeof lotes!=='undefined'?lotes:[]).find(function(x){return String(x.num)===String(num);});arrem=(lm&&lm.arrematante)||'';}catch(_e){}
  const hoje=dtExist||new Date().toISOString().slice(0,10);
  const meta={fields:{num:{stringValue:String(num)},comprador:{stringValue:compNome},arrematante:{stringValue:arrem},dataRetirada:{stringValue:hoje},arquivos:{arrayValue:{values:metaArr}}}};
  /* 3 tentativas + conferencia de leitura. Sem isso, uma falha passageira de rede
@@ -1686,6 +1694,11 @@ window.enviarTermo=async function(){const ov=document.getElementById('termo-over
  if(!rm||!rm.ok)throw new Error('falha ao salvar o registro do termo (o arquivo subiu, mas o registro não; tente anexar de novo)');
  const rv=await fetch(p[0]+'/termos_retirada/'+encodeURIComponent(num)+p[1]+'&mask.fieldPaths=num');
  if(!rv.ok)throw new Error('o registro do termo não apareceu no banco depois de salvar; tente de novo');
+ /* Registro garantido. So agora marca o lote: se isso falhar, o termo ja esta
+    salvo e visivel, e voce so precisa marcar retirado a mao. */
+ try{const all=await fetchLotes();const l=all.find(function(x){return String(x.num)===String(num);});
+  if(l&&l.id&&!l.retirou){await window._upd(window._doc(window._db,'lotes',l.id),{retirou:true,dataRetirada:hoje});}}
+ catch(_e){avisoLote='O termo foi salvo, mas não consegui marcar o lote '+num+' como retirado. Marque à mão em Controle.';}
  TERMOS.add(String(num));TCACHE=null;stEl.textContent='';inp.value='';
  if(typeof window.toast==='function')window.toast(avisoLote?'Termo anexado, mas confira o lote.':'Termo anexado! Lote marcado como retirado.',avisoLote?'warn':'ok');
  if(avisoLote)alert(avisoLote);
