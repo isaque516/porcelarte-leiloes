@@ -481,7 +481,7 @@ td{padding:12px 18px}
 .cal-ct{margin-top:2px;font-size:9.5px;padding:2px 8px}
 </style>
 </head>
-<body>
+<body class="deslogado">
 
 <div class="sb">
   <div class="sb-logo">
@@ -514,6 +514,7 @@ td{padding:12px 18px}
       <div><div class="sb-fb-name">Firebase</div><div class="sb-fb-st" id="fb-st">Conectando...</div></div>
       <div id="fb-dot" style="width:8px;height:8px;border-radius:50%;background:var(--gray2);margin-left:auto;flex-shrink:0"></div>
     </div>
+    <div id="sair-bar"><i class="ti ti-user-check"></i><span id="sair-email"></span><button type="button" id="btn-sair" style="margin-left:auto">Sair</button></div>
   </div>
 </div>
 
@@ -781,13 +782,107 @@ td{padding:12px 18px}
 
 <div class="toast-wrap" id="toasts"></div>
 
+<style id="logincss">
+body.deslogado > *:not(#login-tela){display:none !important}
+#login-tela{display:none;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#0A0F1D 0%,#132244 45%,#1D4ED8 120%)}
+body.deslogado #login-tela{display:flex}
+#login-tela .lg-aura{position:absolute;inset:-30%;pointer-events:none;
+  background:radial-gradient(38% 42% at 24% 26%,rgba(96,165,250,.34),transparent 64%),
+             radial-gradient(34% 40% at 78% 74%,rgba(16,211,145,.26),transparent 64%);
+  animation:heroAura 9s ease-in-out infinite alternate}
+#login-tela .lg-card{position:relative;width:min(92vw,380px);background:#fff;border-radius:26px;padding:34px 30px 28px;
+  box-shadow:0 40px 90px -30px rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.9) inset;animation:riseIn .5s cubic-bezier(.22,1,.36,1) both}
+#login-tela h2{font-size:21px;font-weight:850;letter-spacing:-.04em;color:#050A16;margin:0 0 4px}
+#login-tela p.lg-sub{font-size:12.5px;color:#6F8098;margin:0 0 20px;font-weight:550}
+#login-tela label{display:block;font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#6F8098;margin:14px 0 6px}
+#login-tela input{width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #DDE3EC;border-radius:13px;
+  font:inherit;font-size:14px;color:#050A16;background:#FBFCFE;transition:border-color .2s,box-shadow .2s}
+#login-tela input:focus{outline:none;border-color:#2563EB;box-shadow:0 0 0 3px #BFDBFE;background:#fff}
+#login-tela button.lg-go{width:100%;margin-top:22px;padding:13px;border:0;border-radius:13px;cursor:pointer;
+  font:inherit;font-size:14px;font-weight:800;letter-spacing:-.01em;color:#fff;
+  background:linear-gradient(120deg,#1D4ED8,#2563EB);box-shadow:0 14px 30px -12px rgba(37,99,235,.9)}
+#login-tela button.lg-go:disabled{opacity:.6;cursor:default}
+#login-tela .lg-link{display:block;width:100%;margin-top:12px;background:none;border:0;cursor:pointer;
+  font:inherit;font-size:11.5px;font-weight:650;color:#6F8098;text-align:center}
+#login-tela .lg-link:hover{color:#2563EB}
+#login-tela .lg-msg{margin-top:14px;font-size:12px;font-weight:650;line-height:1.45;display:none}
+#login-tela .lg-msg.erro{display:block;color:#D92D3C}
+#login-tela .lg-msg.ok{display:block;color:#04996A}
+#sair-bar{display:none;align-items:center;gap:8px;padding:10px 14px;margin-top:auto;
+  font-size:11px;color:rgba(255,255,255,.62);font-weight:600}
+body:not(.deslogado) #sair-bar{display:flex}
+#sair-bar button{background:none;border:0;cursor:pointer;font:inherit;font-size:11px;font-weight:800;
+  color:rgba(255,255,255,.9);text-decoration:underline;padding:0}
+</style>
+
+<div id="login-tela">
+  <div class="lg-aura"></div>
+  <form class="lg-card" id="login-form" autocomplete="on">
+    <h2>Porcelarte · Gestão de Leilões</h2>
+    <p class="lg-sub">Entre para acessar seus lotes e clientes.</p>
+    <label for="lg-email">E-mail</label>
+    <input id="lg-email" name="email" type="email" autocomplete="username" required>
+    <label for="lg-senha">Senha</label>
+    <input id="lg-senha" name="password" type="password" autocomplete="current-password" required>
+    <button class="lg-go" id="lg-go" type="submit">Entrar</button>
+    <button class="lg-link" id="lg-esqueci" type="button">Esqueci minha senha</button>
+    <div class="lg-msg" id="lg-msg"></div>
+  </form>
+</div>
+
+<script>
+/* AUTENTICACAO - parte 1: toda chamada REST ao Firestore leva o token do usuario logado.
+   Feito num ponto so, de proposito: sao 14 lugares que chamam o Firestore direto, e
+   editar um por um significa esquecer um e descobrir por erro silencioso depois que
+   as regras fecharem. Aqui nao tem como escapar nenhum. */
+(function(){
+  var _f = window.fetch.bind(window);
+  window.fetch = async function(u, o){
+    try{
+      var url = (typeof u === 'string') ? u : ((u && u.url) || '');
+      if (url.indexOf('firestore.googleapis.com') > -1 && window._token){
+        var jaTem = o && o.headers && (o.headers.Authorization || o.headers.authorization);
+        if (!jaTem){
+          var t = await window._token();
+          if (t){ o = Object.assign({}, o || {}); o.headers = Object.assign({}, o.headers || {}, { Authorization: 'Bearer ' + t }); }
+        }
+      }
+    }catch(_e){}
+    return _f(u, o);
+  };
+})();
+</script>
+
 <script type="module">
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import{getFirestore,collection,doc,getDocs,addDoc,updateDoc,deleteDoc,query,orderBy}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import{getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut,setPersistence,browserLocalPersistence,sendPasswordResetEmail}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 const cfg={apiKey:"AIzaSyCk5wE8UUvUGOTjEGzEGecCBFjRd4Am0ro",authDomain:"porcelarte-leiloes.firebaseapp.com",projectId:"porcelarte-leiloes",storageBucket:"porcelarte-leiloes.firebasestorage.app",messagingSenderId:"1022628888843",appId:"1:1022628888843:web:fe1ade18896ae2696d220e"};
-const app=initializeApp(cfg);const db=getFirestore(app);
+const app=initializeApp(cfg);const db=getFirestore(app);const auth=getAuth(app);
 window._db=db;window._col=collection;window._doc=doc;window._getDocs=getDocs;window._add=addDoc;window._upd=updateDoc;window._del=deleteDoc;window._q=query;window._ord=orderBy;
-window.dispatchEvent(new Event('fb-ok'));
+
+/* AUTENTICACAO - parte 2: sessao.
+   browserLocalPersistence = voce loga uma vez por navegador e continua logado,
+   mesmo fechando o app. O token se renova sozinho; nao ha senha guardada aqui. */
+window._auth=auth;
+window._token=async()=>{try{return auth.currentUser?await auth.currentUser.getIdToken():'';}catch(_e){return '';}};
+window._entrar=(em,se)=>signInWithEmailAndPassword(auth,em,se);
+window._sair=()=>signOut(auth);
+window._resetSenha=(em)=>sendPasswordResetEmail(auth,em);
+try{await setPersistence(auth,browserLocalPersistence);}catch(_e){}
+
+let _booted=false;
+onAuthStateChanged(auth,u=>{
+  window._user=u||null;
+  if(u){
+    document.body.classList.remove('deslogado');
+    const e=document.getElementById('sair-email'); if(e)e.textContent=u.email||'';
+    if(!_booted){_booted=true;window.dispatchEvent(new Event('fb-ok'));}
+  }else{
+    document.body.classList.add('deslogado');
+  }
+});
 </script>
 
 <script>
@@ -801,6 +896,46 @@ const subs={dashboard:'Aqui está o resumo do seu sistema de leilões.',leiloes:
 document.getElementById('date-txt').textContent=hoje.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
 document.getElementById('f-data').value=hoje.toISOString().slice(0,10);
 document.getElementById('f-hora').value='10:00';
+
+/* AUTENTICACAO - parte 3: o formulario.
+   Mensagens de erro em portugues e sem entregar se o e-mail existe ou nao. */
+(function(){
+  var form=document.getElementById('login-form');if(!form)return;
+  var msg=document.getElementById('lg-msg'), botao=document.getElementById('lg-go');
+  function diz(t,tipo){msg.textContent=t;msg.className='lg-msg '+(tipo||'erro');}
+  function limpa(){msg.textContent='';msg.className='lg-msg';}
+  form.addEventListener('submit',async function(ev){
+    ev.preventDefault();limpa();
+    var em=document.getElementById('lg-email').value.trim();
+    var se=document.getElementById('lg-senha').value;
+    if(!em||!se){diz('Preencha e-mail e senha.');return;}
+    botao.disabled=true;botao.textContent='Entrando...';
+    try{
+      await window._entrar(em,se);
+      document.getElementById('lg-senha').value='';
+    }catch(e){
+      var c=String((e&&e.code)||'');
+      var t='Nao consegui entrar. Tente de novo em instantes.';
+      if(c.indexOf('invalid-credential')>-1||c.indexOf('wrong-password')>-1||c.indexOf('user-not-found')>-1||c.indexOf('invalid-email')>-1)
+        t='E-mail ou senha incorretos.';
+      else if(c.indexOf('too-many-requests')>-1)
+        t='Muitas tentativas seguidas. Espere alguns minutos e tente de novo.';
+      else if(c.indexOf('network')>-1)
+        t='Sem conexao com a internet.';
+      diz(t);
+    }
+    botao.disabled=false;botao.textContent='Entrar';
+  });
+  document.getElementById('lg-esqueci').addEventListener('click',async function(){
+    limpa();
+    var em=document.getElementById('lg-email').value.trim();
+    if(!em){diz('Escreva seu e-mail no campo acima primeiro.');return;}
+    try{await window._resetSenha(em);}catch(_e){}
+    diz('Se esse e-mail tiver conta, o link para trocar a senha chega em instantes.','ok');
+  });
+  var bs=document.getElementById('btn-sair');
+  if(bs)bs.addEventListener('click',function(){if(confirm('Sair da sua conta neste navegador?'))window._sair();});
+})();
 
 window.addEventListener('fb-ok',async()=>{
   document.getElementById('fb-st').textContent='Conectado';
