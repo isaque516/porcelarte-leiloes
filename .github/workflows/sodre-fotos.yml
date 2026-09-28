@@ -28,3 +28,6 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Baixa e anexa fotos
         run: node scripts/sodre-fotos.mjs
+        env:
+          ABADIAS_EMAIL: ${{ secrets.ABADIAS_EMAIL }}
+          ABADIAS_SENHA: ${{ secrets.ABADIAS_SENHA }}

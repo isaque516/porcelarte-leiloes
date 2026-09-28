@@ -29,3 +29,6 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Sincroniza lances da Sodre
         run: node scripts/sodre-sync.mjs
+        env:
+          ABADIAS_EMAIL: ${{ secrets.ABADIAS_EMAIL }}
+          ABADIAS_SENHA: ${{ secrets.ABADIAS_SENHA }}
