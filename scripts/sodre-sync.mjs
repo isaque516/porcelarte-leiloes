@@ -10,6 +10,50 @@ import { chromium } from 'playwright';
 var PROJECT = 'porcelarte-leiloes';
 var KEY = 'AIzaSyCk5wE8UUvUGOTjEGzEGecCBFjRd4Am0ro';
 var B = 'https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/(default)/documents';
+
+// ---------- LOGIN DO ROBO ----------
+// As regras do Firestore passaram a exigir usuario autenticado. Sem isto, TODA
+// gravacao volta 403 e o robo roda "verde" sem escrever nada. Por isso aqui a
+// falha de login DERRUBA a execucao (process.exit(1)): melhor o GitHub marcar
+// vermelho do que fingir que deu certo.
+var _fetch = globalThis.fetch.bind(globalThis);
+var AUTH_EMAIL = process.env.ABADIAS_EMAIL || '';
+var AUTH_SENHA = process.env.ABADIAS_SENHA || '';
+var _tok = '', _tokExp = 0;
+
+async function tokenRobo() {
+  if (_tok && Date.now() < _tokExp) return _tok;
+  if (!AUTH_EMAIL || !AUTH_SENHA) {
+    console.error('ERRO: faltam os segredos ABADIAS_EMAIL e ABADIAS_SENHA nas configuracoes do repositorio.');
+    process.exit(1);
+  }
+  var r = await _fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + KEY, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: AUTH_EMAIL, password: AUTH_SENHA, returnSecureToken: true })
+  });
+  if (!r.ok) {
+    console.error('ERRO: login do robo recusado (HTTP ' + r.status + '). Senha trocada? Atualize o segredo ABADIAS_SENHA.');
+    process.exit(1);
+  }
+  var j = await r.json();
+  _tok = j.idToken;
+  _tokExp = Date.now() + (Number(j.expiresIn || 3600) - 300) * 1000;
+  console.log('Login do robo: OK');
+  return _tok;
+}
+
+// Um ponto so: toda chamada ao Firestore leva o token, sem depender de lembrar
+// de cada local de chamada.
+globalThis.fetch = async function (u, o) {
+  var url = (typeof u === 'string') ? u : ((u && u.url) || '');
+  if (url.indexOf('firestore.googleapis.com') > -1) {
+    var t = await tokenRobo();
+    o = Object.assign({}, o || {});
+    o.headers = Object.assign({}, o.headers || {}, { Authorization: 'Bearer ' + t });
+  }
+  return _fetch(u, o);
+};
+
 var PAGINA = 'https://www.sodresantoro.com.br/materiais/lotes?client_name=' +
   encodeURIComponent('francisco alves de oliveira porcelanato (porcelart') + '&sort=auction_date_init_asc';
 var MAX_CRIACOES = 60;
@@ -61,15 +105,33 @@ async function main() {
   // Percorre TODAS as paginas do vendedor (antes lia so a primeira e perdia lotes).
   var text = '', links = {}, totalPag = 0;
   for (var pg = 1; pg <= 15; pg++) {
-    try {
-      await page.goto(PAGINA + '&page=' + pg, { waitUntil: 'domcontentloaded', timeout: 90000 });
-      await page.waitForFunction(function () {
-        return /Leil\u00e3o\s+\d+\s*-\s*\d+/.test(document.body.innerText) && /Lance (inicial|atual)/.test(document.body.innerText);
-      }, { timeout: pg === 1 ? 150000 : 45000 });
-    } catch (e) {
+    // A pagina da Sodre as vezes fica no esqueleto por minutos. Antes, uma falha
+    // na pagina 1 encerrava o robo em SILENCIO (saida verde, zero gravacao), e
+    // ninguem ficava sabendo. Agora: 3 tentativas com recarga e, se nao carregar,
+    // a execucao MORRE em vermelho.
+    var carregou = false, ultimoErro = '';
+    var tentativas = (pg === 1) ? 3 : 1;
+    for (var tt = 1; tt <= tentativas && !carregou; tt++) {
+      try {
+        await page.goto(PAGINA + '&page=' + pg, { waitUntil: 'domcontentloaded', timeout: 90000 });
+        await page.waitForFunction(function () {
+          return /Leil\u00e3o\s+\d+\s*-\s*\d+/.test(document.body.innerText) && /Lance (inicial|atual)/.test(document.body.innerText);
+        }, { timeout: pg === 1 ? 180000 : 45000 });
+        carregou = true;
+      } catch (e) {
+        ultimoErro = (e && e.message ? e.message.slice(0, 150) : String(e));
+        if (pg === 1) {
+          console.log('Pagina 1 nao carregou (tentativa ' + tt + ' de ' + tentativas + '): ' + ultimoErro);
+          if (tt < tentativas) await page.waitForTimeout(20000 * tt);
+        }
+      }
+    }
+    if (!carregou) {
       if (pg === 1) {
-        console.log('AVISO: pagina do vendedor nao carregou lotes. Nada alterado. Detalhe: ' + (e && e.message ? e.message.slice(0, 150) : e));
-        await browser.close(); return;
+        console.error('ERRO: a pagina do vendedor na Sodre nao carregou os lotes em 3 tentativas. Nada foi alterado.');
+        console.error('Ultimo erro: ' + ultimoErro);
+        await browser.close();
+        process.exit(1);
       }
       break;
     }

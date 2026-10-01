@@ -8,6 +8,50 @@ import sharp from 'sharp';
 var PROJECT = 'porcelarte-leiloes';
 var KEY = 'AIzaSyCk5wE8UUvUGOTjEGzEGecCBFjRd4Am0ro';
 var B = 'https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/(default)/documents';
+
+// ---------- LOGIN DO ROBO ----------
+// As regras do Firestore passaram a exigir usuario autenticado. Sem isto, TODA
+// gravacao volta 403 e o robo roda "verde" sem escrever nada. Por isso aqui a
+// falha de login DERRUBA a execucao (process.exit(1)): melhor o GitHub marcar
+// vermelho do que fingir que deu certo.
+var _fetch = globalThis.fetch.bind(globalThis);
+var AUTH_EMAIL = process.env.ABADIAS_EMAIL || '';
+var AUTH_SENHA = process.env.ABADIAS_SENHA || '';
+var _tok = '', _tokExp = 0;
+
+async function tokenRobo() {
+  if (_tok && Date.now() < _tokExp) return _tok;
+  if (!AUTH_EMAIL || !AUTH_SENHA) {
+    console.error('ERRO: faltam os segredos ABADIAS_EMAIL e ABADIAS_SENHA nas configuracoes do repositorio.');
+    process.exit(1);
+  }
+  var r = await _fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + KEY, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: AUTH_EMAIL, password: AUTH_SENHA, returnSecureToken: true })
+  });
+  if (!r.ok) {
+    console.error('ERRO: login do robo recusado (HTTP ' + r.status + '). Senha trocada? Atualize o segredo ABADIAS_SENHA.');
+    process.exit(1);
+  }
+  var j = await r.json();
+  _tok = j.idToken;
+  _tokExp = Date.now() + (Number(j.expiresIn || 3600) - 300) * 1000;
+  console.log('Login do robo: OK');
+  return _tok;
+}
+
+// Um ponto so: toda chamada ao Firestore leva o token, sem depender de lembrar
+// de cada local de chamada.
+globalThis.fetch = async function (u, o) {
+  var url = (typeof u === 'string') ? u : ((u && u.url) || '');
+  if (url.indexOf('firestore.googleapis.com') > -1) {
+    var t = await tokenRobo();
+    o = Object.assign({}, o || {});
+    o.headers = Object.assign({}, o.headers || {}, { Authorization: 'Bearer ' + t });
+  }
+  return _fetch(u, o);
+};
+
 var MAX_LOTES = 50;
 
 async function listar(col, campos) {
