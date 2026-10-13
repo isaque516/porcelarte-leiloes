@@ -964,7 +964,8 @@ window.addEventListener('fb-ok',async()=>{
   document.getElementById('fb-st').textContent='Conectado';
   document.getElementById('fb-dot').style.background='#22C55E';
   await loadLotes();
-  try{await window.carregarPrestacoes();}catch(_e){}  /* precisa vir ANTES de desenhar o financeiro */
+  try{await window.carregarPrestacoes();}catch(_e){}
+  try{await window.carregarLeiloesMapa();}catch(_e){}  /* precisa vir ANTES de desenhar o financeiro */
   initDash();
   try{if(window.renderHome)window.renderHome();}catch(_e){console.warn("home",_e);}
   finally{document.body.classList.add('dash-pronto');}  /* mesmo se falhar, libera o resto: melhor conteudo antigo que tela vazia */
@@ -1468,6 +1469,29 @@ window.carregarPrestacoes=async function(){
   }catch(_e){console.warn('prestacoes',_e);}
   return window.__PREST;
 };
+/* Mapa dos leiloes para o painel. Quem recebe o pix e o LEILAO, nao o lote:
+   o Financeiro ja usava le.pago, mas a linha do tempo olhava lote a lote e
+   mostrava PREVISTO num leilao que o Financeiro mostrava PAGO (29082, 29085). */
+window.__LEI=new Map();
+window.carregarLeiloesMapa=async function(){
+  try{const cfg=window._db.app.options;
+    const base='https://firestore.googleapis.com/v1/projects/'+cfg.projectId+'/databases/(default)/documents';
+    let tk='';
+    do{const r=await fetch(base+'/leiloes?key='+cfg.apiKey+'&pageSize=300&mask.fieldPaths=numero&mask.fieldPaths=pago&mask.fieldPaths=pagoEm&mask.fieldPaths=valorRecebido'+(tk?'&pageToken='+tk:''));
+      if(!r.ok){console.warn('leiloes: HTTP '+r.status);break;}const j=await r.json();
+      (j.documents||[]).forEach(function(d){const f=d.fields||{};
+        const num=(f.numero&&f.numero.stringValue)||''; if(!num)return;
+        window.__LEI.set(String(num),{
+          pago:!!(f.pago&&f.pago.booleanValue===true),
+          pagoEm:(f.pagoEm&&f.pagoEm.stringValue)||'',
+          recebido:Number((f.valorRecebido&&f.valorRecebido.doubleValue)||0)});});
+      tk=j.nextPageToken||'';}while(tk);
+  }catch(_e){console.warn('leiloesMapa',_e);}
+  return window.__LEI;
+};
+window.leilaoPago=function(n){const e=window.__LEI&&window.__LEI.get(String(n));return !!e&&e.pago;};
+window.leilaoPagoEm=function(n){const e=window.__LEI&&window.__LEI.get(String(n));return (e&&e.pagoEm)||'';};
+
 function prestacaoDe(n){return (window.__PREST&&window.__PREST.get(String(n)))||null;}
 /* Cobrar so faz sentido quando a prestacao confirmou a venda. */
 function cobravel(n){const p=prestacaoDe(n);return !!p&&p.aplicada===true;}
@@ -2487,8 +2511,10 @@ body:not(.dash-pronto) #pg-dashboard > *:not(#home-blocks){display:none !importa
       if(!v.length)return;
       var bruto=v.reduce(function(s,x){return s+(Number(x.valorVenda)||Number(x.lanceAtual)||0);},0);
       if(bruto<=0)return;
-      var pago=ls.every(function(x){return !x.vendido||x.pago;});
+      /* Fonte unica: o leilao. Antes isto olhava lote a lote e divergia do Financeiro. */
+      var pago=(typeof window.leilaoPago==='function')?window.leilaoPago(n):ls.every(function(x){return !x.vendido||x.pago;});
       var pv=_prox(ls[0].data);
+      if(pago&&typeof window.leilaoPagoEm==='function'){var pe=window.leilaoPagoEm(n);if(pe){var dd=new Date(pe+'T12:00:00');if(!isNaN(dd))pv=dd;}}
       recs.push({leilao:n,liq:bruto*0.95,pago:pago,data:pv,atras:!pago&&pv&&hoje>pv&&(typeof window.cobravel==='function'&&window.cobravel(n))});
     });
     recs.sort(function(a,b){return (a.data?a.data.getTime():0)-(b.data?b.data.getTime():0);});
