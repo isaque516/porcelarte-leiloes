@@ -547,9 +547,9 @@ td{padding:12px 18px}
         </div>
       </div>
       <div class="krow">
-        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Lotes no mês</div><div class="kpi-ic blue"><i class="ti ti-gavel"></i></div></div><div class="kpi-val" id="k-lotes">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
-        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Dias com leilão</div><div class="kpi-ic purple"><i class="ti ti-calendar-event"></i></div></div><div class="kpi-val" id="k-dias">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
-        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Lance inicial total</div><div class="kpi-ic amber"><i class="ti ti-currency-dollar"></i></div></div><div class="kpi-val" id="k-total">R$ 0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
+        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Lotes na praça</div><div class="kpi-ic blue"><i class="ti ti-gavel"></i></div></div><div class="kpi-val" id="k-lotes">0</div><div class="kpi-tr">pregão ainda por acontecer</div></div>
+        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Dias com pregão à frente</div><div class="kpi-ic purple"><i class="ti ti-calendar-event"></i></div></div><div class="kpi-val" id="k-dias">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
+        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Valor na praça (lance inicial)</div><div class="kpi-ic amber"><i class="ti ti-currency-dollar"></i></div></div><div class="kpi-val" id="k-total">R$ 0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
         <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Condicionais</div><div class="kpi-ic orange"><i class="ti ti-tag"></i></div></div><div class="kpi-val" id="k-cond">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
         <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Pagtos pendentes</div><div class="kpi-ic amber"><i class="ti ti-clock"></i></div></div><div class="kpi-val" id="k-pend">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
         <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Total vendido</div><div class="kpi-ic green"><i class="ti ti-chart-bar"></i></div></div><div class="kpi-val" id="k-vend">R$ 0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
@@ -1001,9 +1001,14 @@ async function loadLotes(){
 
 function initDash(){
   const m=hoje.getMonth(),y=hoje.getFullYear();
-  const lm=lotes.filter(l=>{const d=new Date(l.data+'T12:00:00');return d.getMonth()===m&&d.getFullYear()===y;});
+  /* "Na praca agora" = so o que ainda vai a pregao, sem cancelado. E o unico
+     recorte que bate com a sua conta na Sodre. Antes isto somava o mes inteiro,
+     misturando pregao que ja passou com o que ainda vem, e ainda contava lote
+     cancelado: dava R$ 198.400 contra R$ 144.900 na Sodre. */
+  const hojeStr=hoje.toISOString().slice(0,10);
+  const lm=lotes.filter(l=>!l.cancelado&&!l.vendido&&String(l.data||'')>=hojeStr);
   const dias=new Set(lm.map(l=>l.data)).size;
-  const ini=lm.reduce((s,l)=>s+(l.lanceInicial||0),0);
+  const ini=lm.reduce((s,l)=>s+(Number(l.lanceInicial)||0),0);
   const conds=lotes.filter(l=>l.condicional&&!l.pago).length;
   const vend=lotes.filter(l=>l.vendido||l.pago).reduce((s,l)=>s+(Number(l.valorVenda)||l.lanceAtual||0),0);
   document.getElementById('k-lotes').textContent=lm.length;
