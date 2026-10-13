@@ -964,6 +964,7 @@ window.addEventListener('fb-ok',async()=>{
   document.getElementById('fb-st').textContent='Conectado';
   document.getElementById('fb-dot').style.background='#22C55E';
   await loadLotes();
+  try{await window.carregarPrestacoes();}catch(_e){}  /* precisa vir ANTES de desenhar o financeiro */
   initDash();
   try{if(window.renderHome)window.renderHome();}catch(_e){console.warn("home",_e);}
   finally{document.body.classList.add('dash-pronto');}  /* mesmo se falhar, libera o resto: melhor conteudo antigo que tela vazia */
@@ -1443,6 +1444,23 @@ window.loadLeiloes=async function(){await db();const s=await window._getDocs(win
 window.fillLeilaoSel=function(sel){const el=$('f-leilao');if(!el)return;el.innerHTML='<option value="">— Sem leilão —</option>'+LE.map(function(l){const dt=l.data?new Date(l.data+'T12:00:00').toLocaleDateString('pt-BR'):'';return '<option value="'+l.numero+'"'+(String(sel)===String(l.numero)?' selected':'')+'>'+l.numero+(dt?' · '+dt:'')+'</option>';}).join('');};
 
 function prevPag(dataStr){if(!dataStr)return null;var d=new Date(dataStr+'T12:00:00');if(isNaN(d))return null;var n=0;while(n<6){d.setDate(d.getDate()+1);var w=d.getDay();if(w!==0&&w!==6)n++;}return d;}
+
+/* Quais leiloes ja tiveram prestacao de contas ou fechamento lido pelo robo.
+   Sem isso o app chamava de ATRASADO qualquer leilao que passou da data - mesmo
+   quando os lotes tinham sido CANCELADOS e o dinheiro nunca ia cair (foi o caso
+   do 29068, que ficou 11 dias cobrando R$ 11.875 que nao existiam). */
+window.__PREST=new Set();
+window.carregarPrestacoes=async function(){
+  try{const p=tBase();let tk='';
+    do{const r=await fetch(p[0]+'/emails_processados'+p[1]+'&pageSize=300&mask.fieldPaths=leilao'+(tk?'&pageToken='+tk:''));
+      if(!r.ok)break;const j=await r.json();
+      (j.documents||[]).forEach(function(d){const id=decodeURIComponent(d.name.split('/').pop());
+        const m=id.match(/^(?:baixa|fechamento)-(\d+)$/); if(m)window.__PREST.add(m[1]);});
+      tk=j.nextPageToken||'';}while(tk);
+  }catch(_e){}
+  return window.__PREST;
+};
+function temPrestacao(n){return window.__PREST&&window.__PREST.has(String(n));}
 function lotesDoLeilao(num,all){return (all||[]).filter(function(x){return String(x.leilaoNum||'')===String(num)||String(x.num||'').indexOf(String(num)+'-')===0;});}
 
 function kpi(lab,val,cor){return '<div class="lei-kpi"><div class="lb"><span class="dt" style="background:'+(cor||'#94A3B8')+'"></span>'+lab+'</div><div class="vl"'+(cor?' style="color:'+cor+'"':'')+'>'+val+'</div></div>';}
@@ -1470,10 +1488,14 @@ try{
     if(jaPago){stPill='<span class="badge" style="background:#D1FAE5;color:#059669;margin-left:8px">PAGO'+(le.pagoEm?' \u00b7 '+le.pagoEm.split('-').reverse().join('/'):'')+(vRec>0?' \u00b7 '+money(vRec):'')+'</span>';
       if(vRec>0&&Math.abs(vRec-liq)>0.5)stPill+='<span class="badge" style="background:#FEF3C7;color:#B45309;margin-left:6px" title="O valor que caiu \u00e9 diferente do calculado pelos lotes \u2014 confira a presta\u00e7\u00e3o de contas">\u26a0 calculado: '+money(liq)+'</span>';}
     else if(vendas>0){var pv=prevPag(le.data);var pvTxt=pv?pv.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'';
-      var atrasado=pv&&(new Date())>pv;
-      stPill=atrasado
-        ?'<span class="badge" style="background:#FEE2E2;color:#DC2626;margin-left:8px"><i class="ti ti-alert-triangle"></i> A RECEBER '+money(liq)+' \u00b7 previsto '+pvTxt+' \u00b7 ATRASADO</span>'
-        :'<span class="badge" style="background:#FEF3C7;color:#D97706;margin-left:8px">A RECEBER '+money(liq)+' \u00b7 Pix previsto '+pvTxt+'</span>';}
+      var passou=pv&&(new Date())>pv;
+      /* So chama de ATRASADO quando a prestacao/fechamento confirmou a venda e o
+         dinheiro nao veio. Passou da data sem prestacao = a gente NAO SABE: pode
+         ser atraso, pode ser lote cancelado que nunca vai pagar. Dizer "atrasado"
+         ali e afirmar o que o sistema nao sabe. */
+      if(!passou) stPill='<span class="badge" style="background:#FEF3C7;color:#D97706;margin-left:8px">A RECEBER '+money(liq)+' \u00b7 Pix previsto '+pvTxt+'</span>';
+      else if(temPrestacao(le.numero)) stPill='<span class="badge" style="background:#FEE2E2;color:#DC2626;margin-left:8px"><i class="ti ti-alert-triangle"></i> ATRASADO '+money(liq)+' \u00b7 previsto '+pvTxt+'</span>';
+      else stPill='<span class="badge" style="background:#FFF7ED;color:#C2410C;margin-left:8px" title="Passou da data prevista e a presta\u00e7\u00e3o de contas ainda n\u00e3o chegou. Pode ser atraso da Sodr\u00e9 ou lote cancelado \u2014 confirme antes de cobrar."><i class="ti ti-help-circle"></i> AGUARDANDO PRESTA\u00c7\u00c3O \u00b7 '+money(liq)+' \u00b7 previsto '+pvTxt+' \u00b7 confirme se n\u00e3o foi cancelado</span>';}
     const dt=le.data?new Date(le.data+'T12:00:00').toLocaleDateString('pt-BR'):'sem data';
     if(vendas===0&&!jaPago&&!window.__leiTodos){ocultos++;return '';}
     return '<div class="lei-card">'
@@ -2412,7 +2434,8 @@ body:not(.dash-pronto) #pg-dashboard > *:not(#home-blocks){display:none !importa
     Object.keys(porLeilao).forEach(function(n){
       var ls=porLeilao[n],v=ls.filter(function(x){return x.vendido&&!x.pago;});
       if(!v.length)return;
-      var pv=_prox(ls[0].data); if(pv&&hoje>pv) atras.push({leilao:n,valor:v.reduce(function(s,x){return s+(Number(x.valorVenda)||Number(x.lanceAtual)||0);},0)*0.95,dias:Math.round((hoje-pv)/864e5)});
+      /* So conta como atraso quando a prestacao confirmou. Sem prestacao a gente nao sabe se e atraso ou lote cancelado. */
+      var pv=_prox(ls[0].data); if(pv&&hoje>pv&&(typeof temPrestacao!=='function'||temPrestacao(n))) atras.push({leilao:n,valor:v.reduce(function(s,x){return s+(Number(x.valorVenda)||Number(x.lanceAtual)||0);},0)*0.95,dias:Math.round((hoje-pv)/864e5)});
     });
     var pend=[
       {n:cond.length, t:'Condicionais para aprovar', s:'aguardando sua resposta à Sodré', ic:'ti-hourglass-high', c:'am', go:function(){ir('condicionais');}},
@@ -2441,7 +2464,7 @@ body:not(.dash-pronto) #pg-dashboard > *:not(#home-blocks){display:none !importa
       if(bruto<=0)return;
       var pago=ls.every(function(x){return !x.vendido||x.pago;});
       var pv=_prox(ls[0].data);
-      recs.push({leilao:n,liq:bruto*0.95,pago:pago,data:pv,atras:!pago&&pv&&hoje>pv});
+      recs.push({leilao:n,liq:bruto*0.95,pago:pago,data:pv,atras:!pago&&pv&&hoje>pv&&(typeof temPrestacao!=='function'||temPrestacao(n))});
     });
     recs.sort(function(a,b){return (a.data?a.data.getTime():0)-(b.data?b.data.getTime():0);});
     var futuros=recs.filter(function(r){return !r.pago;});
