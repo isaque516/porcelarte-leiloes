@@ -1451,9 +1451,11 @@ function prevPag(dataStr){if(!dataStr)return null;var d=new Date(dataStr+'T12:00
    do 29068, que ficou 11 dias cobrando R$ 11.875 que nao existiam). */
 window.__PREST=new Set();
 window.carregarPrestacoes=async function(){
-  try{const p=tBase();let tk='';
-    do{const r=await fetch(p[0]+'/emails_processados'+p[1]+'&pageSize=300&mask.fieldPaths=leilao'+(tk?'&pageToken='+tk:''));
-      if(!r.ok)break;const j=await r.json();
+  try{const cfg=window._db.app.options;
+    const base='https://firestore.googleapis.com/v1/projects/'+cfg.projectId+'/databases/(default)/documents';
+    let tk='';
+    do{const r=await fetch(base+'/emails_processados?key='+cfg.apiKey+'&pageSize=300&mask.fieldPaths=leilao'+(tk?'&pageToken='+tk:''));
+      if(!r.ok){console.warn('prestacoes: HTTP '+r.status);break;}const j=await r.json();
       (j.documents||[]).forEach(function(d){const id=decodeURIComponent(d.name.split('/').pop());
         const m=id.match(/^(?:baixa|fechamento)-(\d+)$/); if(m)window.__PREST.add(m[1]);});
       tk=j.nextPageToken||'';}while(tk);
