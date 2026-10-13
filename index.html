@@ -1440,7 +1440,25 @@ let LE=[];
 async function db(){for(let i=0;i<40;i++){if(window._db&&window._getDocs)return;await new Promise(function(r){setTimeout(r,250);});}throw new Error('Firebase não inicializou');}
 function nz(msg,tipo){if(typeof window.toast==='function'){try{window.toast(msg,tipo);return;}catch(e){}}alert(msg);}
 
-window.loadLeiloes=async function(){await db();const s=await window._getDocs(window._col(window._db,'leiloes'));LE=[];s.forEach(function(d){LE.push(Object.assign({id:d.id},d.data()));});LE.sort(function(a,b){return String(b.numero).localeCompare(String(a.numero),undefined,{numeric:true});});return LE;};
+window.loadLeiloes=async function(){await db();const s=await window._getDocs(window._col(window._db,'leiloes'));LE=[];s.forEach(function(d){LE.push(Object.assign({id:d.id},d.data()));});LE.sort(ordemFinanceiro_);return LE;};
+/* Ordem do Financeiro: o proximo dinheiro a cair fica no topo.
+   Antes ordenava por numero do leilao, e as datas de pix ficavam embaralhadas
+   (16/10, depois 14/10, depois 19/10) - impossivel ler "o que vem primeiro". */
+function ordemFinanceiro_(a,b){
+  function chave(le){
+    var pagoFlag=le.pago===true;
+    var d=null;
+    if(pagoFlag&&le.pagoEm){d=new Date(le.pagoEm+'T12:00:00');}
+    else if(le.data){d=prevPag(le.data);}
+    return {pago:pagoFlag, t:(d&&!isNaN(d))?d.getTime():0};
+  }
+  var ka=chave(a), kb=chave(b);
+  /* 1) a receber primeiro, do pix mais proximo para o mais distante */
+  if(ka.pago!==kb.pago) return ka.pago?1:-1;
+  if(!ka.pago) return (ka.t||9e15)-(kb.t||9e15);
+  /* 2) depois os ja pagos, do mais recente para o mais antigo */
+  return kb.t-ka.t;
+}
 
 window.fillLeilaoSel=function(sel){const el=$('f-leilao');if(!el)return;el.innerHTML='<option value="">— Sem leilão —</option>'+LE.map(function(l){const dt=l.data?new Date(l.data+'T12:00:00').toLocaleDateString('pt-BR'):'';return '<option value="'+l.numero+'"'+(String(sel)===String(l.numero)?' selected':'')+'>'+l.numero+(dt?' · '+dt:'')+'</option>';}).join('');};
 
