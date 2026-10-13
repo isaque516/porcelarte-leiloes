@@ -1669,8 +1669,13 @@ let FILTRO='todos';
 const HJ=(function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
 async function db(){for(let i=0;i<40;i++){if(window._db&&window._getDocs)return;await new Promise(function(r){setTimeout(r,250);});}throw new Error('Firebase não inicializou');}
 async function fetchLotes(){await db();const s=await window._getDocs(window._col(window._db,'lotes'));const a=[];s.forEach(function(d){a.push(Object.assign({id:d.id},d.data()));});a.sort(function(x,y){return ((parseInt(x.num,10)||0)-(parseInt(y.num,10)||0))||String(x.num).localeCompare(String(y.num));});return a;}
-function classifica(l){var pass=!l.vendido&&!l.condicional&&!l.pago&&!l.repostado&&!!l.data&&String(l.data)<HJ;return {
-  livre: !l.vendido && !l.condicional && !l.pago && !l.repostado && !pass,
+function classifica(l){
+  /* Vendido fora da plataforma: saiu do estoque, mas NAO e venda da Sodre -
+     nao gera comissao nem pix. Por isso estado proprio, e nao vendido:true. */
+  var fora=!!l.vendidoFora;
+  var pass=!fora&&!l.cancelado&&!l.vendido&&!l.condicional&&!l.pago&&!l.repostado&&!!l.data&&String(l.data)<HJ;return {
+  livre: !fora && !l.cancelado && !l.vendido && !l.condicional && !l.pago && !l.repostado && !pass,
+  vendidoFora: fora,
   repostado: !!l.repostado,
   naoVendido: pass,
   cond: !!l.condicional && !l.pago,
@@ -1986,12 +1991,12 @@ box.innerHTML='<div class="skel-wrap"><div class="skel" style="width:88%"></div>
 try{
 const all=await fetchLotes();
 try{TERMOS=await carregarTermosSet();}catch(_e){}
-const c={todos:all.length,livre:0,naoVendido:0,cond:0,vendido:0,faltaRetirar:0,retirado:0,pago:0};
+const c={todos:all.length,livre:0,naoVendido:0,vendidoFora:0,cond:0,vendido:0,faltaRetirar:0,retirado:0,pago:0};
 let valVendido=0, valFalta=0;
 all.forEach(function(l){const k=classifica(l);const v=Number(l.valorVenda)||l.lanceAtual||0;
-  if(k.livre)c.livre++; if(k.naoVendido)c.naoVendido++; if(k.cond)c.cond++; if(k.vendido){c.vendido++;valVendido+=v;}
+  if(k.livre)c.livre++; if(k.naoVendido)c.naoVendido++; if(k.vendidoFora)c.vendidoFora++; if(k.cond)c.cond++; if(k.vendido){c.vendido++;valVendido+=v;}
   if(k.faltaRetirar){c.faltaRetirar++;valFalta+=v;} if(k.retirado)c.retirado++; if(k.pago)c.pago++;});
-const defs=[['todos','Todos',c.todos,'#334155'],['livre','Cadastrados',c.livre,'#2563EB'],['naoVendido','Não vendidos',c.naoVendido,'#DC2626'],['cond','Condicional',c.cond,'#D97706'],['vendido','Vendidos',c.vendido,'#059669'],['faltaRetirar','Falta retirar',c.faltaRetirar,'#EA580C'],['retirado','Retirados',c.retirado,'#7C3AED'],['pago','Pagos',c.pago,'#059669']];
+const defs=[['todos','Todos',c.todos,'#334155'],['livre','Cadastrados',c.livre,'#2563EB'],['naoVendido','Não vendidos',c.naoVendido,'#DC2626'],['vendidoFora','Vendido fora',c.vendidoFora,'#0891B2'],['cond','Condicional',c.cond,'#D97706'],['vendido','Vendidos',c.vendido,'#059669'],['faltaRetirar','Falta retirar',c.faltaRetirar,'#EA580C'],['retirado','Retirados',c.retirado,'#7C3AED'],['pago','Pagos',c.pago,'#059669']];
 const chips=defs.map(function(d){const on=FILTRO===d[0];
   return '<button class="ctl-chip'+(on?' on':'')+'" style="color:'+d[3]+(on?';background:'+d[3]:'')+'" onclick="setFiltroCtl(\''+d[0]+'\')"><span class="dt" style="background:'+(on?'#fff':d[3])+'"></span>'+d[1]+'<span class="ct">'+d[2]+'</span></button>';}).join('');
 const resumo='<div class="ctl-resumo">'
@@ -2004,6 +2009,7 @@ const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVe
     :k.retirado?'<span class="ctl-st" style="background:#EDE9FE;color:#7C3AED">Retirado</span>'
     :k.faltaRetirar?'<span class="ctl-st" style="background:#FEF0E7;color:#EA580C">Falta retirar</span>'
     :k.cond?'<span class="ctl-st" style="background:#FEF3C7;color:#D97706">Condicional</span>'
+    :k.vendidoFora?'<span class="ctl-st" style="background:#CFFAFE;color:#0891B2" title="Vendido fora da plataforma - nao entra no financeiro da Sodre">Vendido fora'+(l.valorFora?' \u00b7 '+money(Number(l.valorFora)):'')+'</span>'
     :k.repostado?'<span class="ctl-st" style="background:#E0E7FF;color:#4F46E5">Repostado'+(l.repostadoComo?' \u2192 '+l.repostadoComo:'')+'</span>'
     :k.naoVendido?'<span class="ctl-st" style="background:#FEE2E2;color:#DC2626">Não vendido</span>'
     :'<span class="ctl-st" style="background:#F1F5F9;color:#64748B">Livre</span>';
@@ -2491,7 +2497,7 @@ body:not(.dash-pronto) #pg-dashboard > *:not(#home-blocks){display:none !importa
     }
 
     /* ---------- 2. CENTRAL DE PENDÊNCIAS ---------- */
-    var naoVend=L.filter(function(l){return !l.vendido&&!l.condicional&&!l.pago&&!l.cancelado&&!l.repostado&&l.data&&l.data<HJ;});
+    var naoVend=L.filter(function(l){return !l.vendido&&!l.condicional&&!l.pago&&!l.cancelado&&!l.vendidoFora&&!l.repostado&&l.data&&l.data<HJ;});
     var cond=L.filter(function(l){return l.condicional&&!l.pago&&!l.vendido;});
     var semTermo=L.filter(function(l){return (l.vendido||l.pago)&&!l.retirou;});
     var atras=[],hoje=new Date();
