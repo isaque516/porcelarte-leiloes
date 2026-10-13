@@ -1449,20 +1449,28 @@ function prevPag(dataStr){if(!dataStr)return null;var d=new Date(dataStr+'T12:00
    Sem isso o app chamava de ATRASADO qualquer leilao que passou da data - mesmo
    quando os lotes tinham sido CANCELADOS e o dinheiro nunca ia cair (foi o caso
    do 29068, que ficou 11 dias cobrando R$ 11.875 que nao existiam). */
-window.__PREST=new Set();
+window.__PREST=new Map();
 window.carregarPrestacoes=async function(){
   try{const cfg=window._db.app.options;
     const base='https://firestore.googleapis.com/v1/projects/'+cfg.projectId+'/databases/(default)/documents';
     let tk='';
-    do{const r=await fetch(base+'/emails_processados?key='+cfg.apiKey+'&pageSize=300&mask.fieldPaths=leilao'+(tk?'&pageToken='+tk:''));
+    do{const r=await fetch(base+'/emails_processados?key='+cfg.apiKey+'&pageSize=300&mask.fieldPaths=leilao&mask.fieldPaths=baixaAplicada&mask.fieldPaths=motivoFalha'+(tk?'&pageToken='+tk:''));
       if(!r.ok){console.warn('prestacoes: HTTP '+r.status);break;}const j=await r.json();
       (j.documents||[]).forEach(function(d){const id=decodeURIComponent(d.name.split('/').pop());
-        const m=id.match(/^(?:baixa|fechamento)-(\d+)$/); if(m)window.__PREST.add(m[1]);});
+        const m=id.match(/^(?:baixa|fechamento)-(\d+)$/); if(!m)return;
+        const f=d.fields||{};
+        /* baixaAplicada ausente = prestacao lida por uma versao antiga do robo,
+           que nao registrava isso. Nesse caso tratamos como "nao sei". */
+        window.__PREST.set(m[1],{
+          aplicada: f.baixaAplicada ? f.baixaAplicada.booleanValue===true : null,
+          motivo: (f.motivoFalha&&f.motivoFalha.stringValue)||''});});
       tk=j.nextPageToken||'';}while(tk);
-  }catch(_e){}
+  }catch(_e){console.warn('prestacoes',_e);}
   return window.__PREST;
 };
-function temPrestacao(n){return window.__PREST&&window.__PREST.has(String(n));}
+function prestacaoDe(n){return (window.__PREST&&window.__PREST.get(String(n)))||null;}
+/* Cobrar so faz sentido quando a prestacao confirmou a venda. */
+function cobravel(n){const p=prestacaoDe(n);return !!p&&p.aplicada===true;}
 function lotesDoLeilao(num,all){return (all||[]).filter(function(x){return String(x.leilaoNum||'')===String(num)||String(x.num||'').indexOf(String(num)+'-')===0;});}
 
 function kpi(lab,val,cor){return '<div class="lei-kpi"><div class="lb"><span class="dt" style="background:'+(cor||'#94A3B8')+'"></span>'+lab+'</div><div class="vl"'+(cor?' style="color:'+cor+'"':'')+'>'+val+'</div></div>';}
@@ -1496,8 +1504,19 @@ try{
          ser atraso, pode ser lote cancelado que nunca vai pagar. Dizer "atrasado"
          ali e afirmar o que o sistema nao sabe. */
       if(!passou) stPill='<span class="badge" style="background:#FEF3C7;color:#D97706;margin-left:8px">A RECEBER '+money(liq)+' \u00b7 Pix previsto '+pvTxt+'</span>';
-      else if(temPrestacao(le.numero)) stPill='<span class="badge" style="background:#FEE2E2;color:#DC2626;margin-left:8px"><i class="ti ti-alert-triangle"></i> ATRASADO '+money(liq)+' \u00b7 previsto '+pvTxt+'</span>';
-      else stPill='<span class="badge" style="background:#FFF7ED;color:#C2410C;margin-left:8px" title="Passou da data prevista e a presta\u00e7\u00e3o de contas ainda n\u00e3o chegou. Pode ser atraso da Sodr\u00e9 ou lote cancelado \u2014 confirme antes de cobrar."><i class="ti ti-help-circle"></i> AGUARDANDO PRESTA\u00c7\u00c3O \u00b7 '+money(liq)+' \u00b7 previsto '+pvTxt+' \u00b7 confirme se n\u00e3o foi cancelado</span>';}
+      else{
+        /* NAO RECEBIDO e fato. O resto e o que se sabe do motivo - e cada motivo
+           pede uma acao diferente: esperar, cobrar, ou abrir o e-mail. */
+        var pr=prestacaoDe(le.numero);
+        var cor,ico,txt,dica;
+        if(!pr){cor='#C2410C;background:#FFF7ED';ico='ti-help-circle';
+          txt='presta\u00e7\u00e3o ainda n\u00e3o chegou';dica='Pode ser atraso da Sodr\u00e9 ou lote cancelado. N\u00e3o cobre ainda \u2014 espere a presta\u00e7\u00e3o.';}
+        else if(pr.aplicada===true){cor='#DC2626;background:#FEE2E2';ico='ti-alert-triangle';
+          txt='venda confirmada na presta\u00e7\u00e3o \u2014 cobrar';dica='A presta\u00e7\u00e3o confirmou a venda e o dinheiro n\u00e3o entrou. Aqui cabe cobrar a Sodr\u00e9.';}
+        else{cor='#B45309;background:#FEF3C7';ico='ti-mail-exclamation';
+          txt='o rob\u00f4 n\u00e3o conseguiu ler a presta\u00e7\u00e3o \u2014 confira no Gmail';
+          dica='A presta\u00e7\u00e3o chegou mas n\u00e3o foi aplicada'+(pr.motivo?' ('+pr.motivo+')':'')+'. Abra o e-mail antes de cobrar: pode ter lote cancelado.';}
+        stPill='<span class="badge" style="color:'+cor+';margin-left:8px" title="'+dica.replace(/"/g,'&quot;')+'"><i class="ti '+ico+'"></i> N\u00c3O RECEBIDO '+money(liq)+' \u00b7 previsto '+pvTxt+' \u00b7 '+txt+'</span>';}}
     const dt=le.data?new Date(le.data+'T12:00:00').toLocaleDateString('pt-BR'):'sem data';
     if(vendas===0&&!jaPago&&!window.__leiTodos){ocultos++;return '';}
     return '<div class="lei-card">'
@@ -2437,13 +2456,13 @@ body:not(.dash-pronto) #pg-dashboard > *:not(#home-blocks){display:none !importa
       var ls=porLeilao[n],v=ls.filter(function(x){return x.vendido&&!x.pago;});
       if(!v.length)return;
       /* So conta como atraso quando a prestacao confirmou. Sem prestacao a gente nao sabe se e atraso ou lote cancelado. */
-      var pv=_prox(ls[0].data); if(pv&&hoje>pv&&(typeof temPrestacao!=='function'||temPrestacao(n))) atras.push({leilao:n,valor:v.reduce(function(s,x){return s+(Number(x.valorVenda)||Number(x.lanceAtual)||0);},0)*0.95,dias:Math.round((hoje-pv)/864e5)});
+      var pv=_prox(ls[0].data); if(pv&&hoje>pv&&(typeof cobravel!=='function'||cobravel(n))) atras.push({leilao:n,valor:v.reduce(function(s,x){return s+(Number(x.valorVenda)||Number(x.lanceAtual)||0);},0)*0.95,dias:Math.round((hoje-pv)/864e5)});
     });
     var pend=[
       {n:cond.length, t:'Condicionais para aprovar', s:'aguardando sua resposta à Sodré', ic:'ti-hourglass-high', c:'am', go:function(){ir('condicionais');}},
       {n:naoVend.length, t:'Lotes para repostar', s:_m(naoVend.reduce(function(s,l){return s+(Number(l.lanceInicial)||0);},0))+' parados', ic:'ti-rotate-clockwise', c:'rd', go:function(){ir('controle');if(window.setFiltroCtl)setFiltroCtl('naoVendido');}},
       {n:semTermo.length, t:'Termos de retirada faltando', s:'vendidos que ainda não retiraram', ic:'ti-file-description', c:'or', go:function(){ir('controle');if(window.setFiltroCtl)setFiltroCtl('faltaRetirar');}},
-      {n:atras.length, t:'Pagamentos atrasados', s:atras.length?_m(atras.reduce(function(s,a){return s+a.valor;},0))+' em atraso':'tudo em dia', ic:'ti-alert-triangle', c:'rd', go:function(){ir('leiloes');}}
+      {n:atras.length, t:'Cobrar da Sodré', s:atras.length?_m(atras.reduce(function(s,a){return s+a.valor;},0))+' em atraso':'tudo em dia', ic:'ti-alert-triangle', c:'rd', go:function(){ir('leiloes');}}
     ];
     window.__homeGo=pend.map(function(p){return p.go;});
     var tudoOk=pend.every(function(p){return p.n===0;});
@@ -2466,7 +2485,7 @@ body:not(.dash-pronto) #pg-dashboard > *:not(#home-blocks){display:none !importa
       if(bruto<=0)return;
       var pago=ls.every(function(x){return !x.vendido||x.pago;});
       var pv=_prox(ls[0].data);
-      recs.push({leilao:n,liq:bruto*0.95,pago:pago,data:pv,atras:!pago&&pv&&hoje>pv&&(typeof temPrestacao!=='function'||temPrestacao(n))});
+      recs.push({leilao:n,liq:bruto*0.95,pago:pago,data:pv,atras:!pago&&pv&&hoje>pv&&(typeof cobravel!=='function'||cobravel(n))});
     });
     recs.sort(function(a,b){return (a.data?a.data.getTime():0)-(b.data?b.data.getTime():0);});
     var futuros=recs.filter(function(r){return !r.pago;});
