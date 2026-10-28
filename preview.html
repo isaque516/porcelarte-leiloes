@@ -1657,6 +1657,9 @@ setTimeout(async function(){try{await window.loadLeiloes();window.fillLeilaoSel(
 .ctl-chip.on{color:#fff !important;border-color:transparent}
 .ctl-chip.on .ct{background:rgba(255,255,255,.25);color:#fff}
 .ctl-row{border-top:1px solid #F1F5F9;transition:background .12s}
+/* Cabecalho fixo: com 185 lotes voce perde a referencia das colunas ao rolar. */
+#pg-controle thead th{position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 #E2E8F0}
+#pg-controle .ctl-tbl-wrap{max-height:70vh;overflow:auto}
 .ctl-row:hover{background:#F8FAFC}
 .ctl-st{border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:800;white-space:nowrap}
 .ctl-resumo{margin:0 18px 12px;padding:12px 16px;border-radius:12px;background:linear-gradient(135deg,#F8FAFC,#F1F5F9);border:1px solid #E2E8F0;display:flex;gap:24px;flex-wrap:wrap;font-size:12.5px;color:#334155}
@@ -2012,8 +2015,41 @@ const resumo='<div class="ctl-resumo">'
   +'<div><i class="ti ti-cash" style="color:#059669"></i> Vendido (bruto): <b>'+money(valVendido)+'</b></div>'
   +'<div><i class="ti ti-truck" style="color:#EA580C"></i> Aguardando retirada: <b style="color:#EA580C">'+money(valFalta)+'</b> em '+c.faltaRetirar+' lote(s)</div></div>';
 const fl=all.filter(function(l){const k=classifica(l);return FILTRO==='todos'||k[FILTRO];});
+/* Ordem por urgencia: o que espera acao ha mais tempo sobe. Antes era por
+   numero do lote, e o lote parado ha 28 dias ficava enterrado no meio. */
+fl.sort(function(a,b){
+  var ka=classifica(a), kb=classifica(b);
+  var pa=(ka.naoVendido||ka.cancelado)?0:(ka.faltaRetirar?1:(ka.cond?2:3));
+  var pb=(kb.naoVendido||kb.cancelado)?0:(kb.faltaRetirar?1:(kb.cond?2:3));
+  if(pa!==pb)return pa-pb;
+  var da=String(a.data||''), db=String(b.data||'');
+  if(pa<3) return da===db?String(a.num).localeCompare(String(b.num)):(da<db?-1:1);
+  return db===da?String(a.num).localeCompare(String(b.num)):(db<da?-1:1);
+});
 const TD='padding:10px 8px;vertical-align:middle;';
+const DIAS=function(d){if(!d)return null;var x=new Date(d+'T12:00:00');if(isNaN(x))return null;return Math.round((new Date()-x)/864e5);};
 const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVenda)||l.lanceAtual||l.lanceInicial||0;
+  /* A mesma coluna mostrava venda, lance e preco de abertura sem dizer qual.
+     Foi isso que fez parecer que um lote cancelado tinha sido vendido. */
+  var natureza = Number(l.valorVenda)>0 ? 'venda'
+    : ((Number(l.lanceAtual)||0)>(Number(l.lanceInicial)||0)||String(l.arrematante||'').trim()!=='' ? 'lance' : 'abertura');
+  var corNat = natureza==='venda'?'#059669':(natureza==='lance'?'#2563EB':'#94A3B8');
+  /* Tempo parado: o dado mais acionavel do negocio e estava invisivel. */
+  var dias=DIAS(l.data);
+  var esperando = k.naoVendido || k.cancelado || k.faltaRetirar;
+  var selo='';
+  if(esperando&&dias!=null&&dias>0){
+    var cd = dias>=21?'#DC2626':(dias>=10?'#EA580C':'#94A3B8');
+    var pd = dias>=21?'600':'400';
+    selo='<div style="font-size:10.5px;color:'+cd+';font-weight:'+pd+';margin-top:3px;white-space:nowrap">'+dias+' dia'+(dias>1?'s':'')+'</div>';
+  }
+  /* Apelido da plataforma (f*1) nao e comprador confirmado. */
+  var arr=String(l.arrematante||'').trim();
+  var mascarado = arr.indexOf('*')>-1;
+  var arrHtml = !arr ? '<span style="color:#CBD5E1">—</span>'
+    : (mascarado
+      ? '<span title="Apelido da plataforma. O nome real chega com a presta\u00e7\u00e3o de contas." style="font-family:ui-monospace,monospace;font-size:11.5px;color:#64748B;background:#F1F5F9;padding:2px 7px;border-radius:6px">'+arr+'</span>'
+      : '<span title="Comprador confirmado na presta\u00e7\u00e3o de contas" style="font-size:12px;color:#0F172A;font-weight:650">'+arr+'</span>');
   const st=k.pago?'<span class="ctl-st" style="background:#D1FAE5;color:#059669">Pago</span>'
     :k.retirado?'<span class="ctl-st" style="background:#EDE9FE;color:#7C3AED">Retirado</span>'
     :k.faltaRetirar?'<span class="ctl-st" style="background:#FEF0E7;color:#EA580C">Falta retirar</span>'
@@ -2028,17 +2064,21 @@ const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVe
     ?('<label style="display:flex;gap:5px;align-items:center;font-size:11px;cursor:pointer;font-weight:600;color:#334155"><input type="checkbox" style="width:15px;height:15px;accent-color:#7C3AED" '+(l.retirou?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'retirou\',this.checked)">Retirou</label>'
      +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;cursor:pointer;font-weight:600;color:#334155"><input type="checkbox" style="width:15px;height:15px;accent-color:#059669" '+(l.pago?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'pago\',this.checked)">Pago</label>'+'<button class="btn-o" style="font-size:10.5px;padding:4px 8px;'+(TERMOS.has(String(l.num))?'color:#059669;border-color:#6EE7B7':(l.retirou?'color:#DC2626;border-color:#FCA5A5':''))+'" onclick="abrirTermo(\''+l.num+'\')" title="Termo de retirada"><i class="ti ti-paperclip"></i> '+(TERMOS.has(String(l.num))?'Termo \u2713':'Termo')+'</button>')
     :'<span style="font-size:11px;color:#CBD5E1">—</span>';
-  return '<tr class="ctl-row">'
+  var faixa = k.pago?'#059669':k.retirado?'#7C3AED':k.faltaRetirar?'#EA580C':k.cond?'#D97706'
+    :k.duplicado?'#A21CAF':k.cancelado?'#94A3B8':k.vendidoFora?'#0891B2':k.repostado?'#4F46E5'
+    :k.naoVendido?'#DC2626':'#E2E8F0';
+  return '<tr class="ctl-row" style="box-shadow:inset 3px 0 0 '+faixa+'">'
     +'<td style="'+TD+'"><input type="checkbox" data-selid="'+l.id+'" data-selval="'+(Number(l.valorVenda)||Number(l.lanceAtual)||Number(l.lanceInicial)||0)+'" data-selm2="'+(Number(l.m2)||0)+'" '+(SEL.has(l.id)?'checked':'')+' style="width:15px;height:15px;cursor:pointer;accent-color:#2563EB" onchange="toggleSel(\''+l.id+'\',this.checked)"></td>'
     +'<td style="'+TD+'font-weight:800;white-space:nowrap;color:#0F172A">'+l.num+'</td>'
     +'<td style="'+TD+'font-size:12px;max-width:400px;color:#334155">'+((l.descricao||'').slice(0,90))+'</td>'
-    +'<td style="'+TD+'font-size:12px;color:#64748B">'+(l.arrematante||'—')+'</td>'
-    +'<td style="'+TD+'font-weight:800;white-space:nowrap;color:#0F172A">'+money(val)+'</td>'
-    +'<td style="'+TD+'">'+st+'</td>'
+    +'<td style="'+TD+'">'+arrHtml+'</td>'
+    +'<td style="'+TD+'white-space:nowrap"><div style="font-weight:800;color:#0F172A">'+money(val)+'</div>'
+      +'<div style="font-size:10px;color:'+corNat+';font-weight:700;letter-spacing:.04em;text-transform:uppercase">'+natureza+'</div></td>'
+    +'<td style="'+TD+'">'+st+selo+'</td>'
     +'<td style="'+TD+'"><div style="display:flex;gap:14px">'+toggles+'</div></td></tr>';}).join('');
 box.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 18px 12px">'+chips+(FILTRO==='naoVendido'&&fl.length?'<button class="btn-p" style="font-size:11px;padding:7px 13px" onclick="exportNaoVendidos()"><i class="ti ti-download"></i> Exportar Excel p/ repostar</button>':'')+'<button id="btn-exp-sel" class="btn-p" style="font-size:11px;padding:7px 13px;background:#0F766E;'+(SEL.size?'':'display:none')+'" onclick="exportSelecionados()"><i class="ti ti-download"></i> Exportar selecionados ('+SEL.size+')</button>'+'</div>'+resumo
   +(fl.length
-    ?'<div style="padding:0 18px 16px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="text-align:left;color:#94A3B8;font-size:10px;text-transform:uppercase;letter-spacing:.5px"><th style="padding:8px"><input type="checkbox" style="width:14px;height:14px;cursor:pointer" onchange="toggleSelAll(this.checked)" title="Selecionar todos"></th><th style="padding:8px">Lote</th><th style="padding:8px">Descrição</th><th style="padding:8px">Arrematante</th><th style="padding:8px">Valor</th><th style="padding:8px">Status</th><th style="padding:8px">Ações</th></tr></thead><tbody>'+linhas+'</tbody></table></div>'
+    ?'<div class="ctl-tbl-wrap" style="padding:0 18px 16px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="text-align:left;color:#94A3B8;font-size:10px;text-transform:uppercase;letter-spacing:.5px"><th style="padding:8px"><input type="checkbox" style="width:14px;height:14px;cursor:pointer" onchange="toggleSelAll(this.checked)" title="Selecionar todos"></th><th style="padding:8px">Lote</th><th style="padding:8px">Descrição</th><th style="padding:8px">Arrematante</th><th style="padding:8px">Valor</th><th style="padding:8px">Status</th><th style="padding:8px">Ações</th></tr></thead><tbody>'+linhas+'</tbody></table></div>'
       +'<div id="sel-total" style="display:none;margin:0 18px 16px;padding:13px 16px;border:1px solid #BFDBFE;border-radius:14px;background:linear-gradient(180deg,#F0F7FF,#E8F2FE);align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap"></div>'
     :'<div style="padding:28px;text-align:center;color:#64748B;font-size:13px">Nenhum lote nesse status.</div>');
   updSelBtn();
