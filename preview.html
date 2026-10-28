@@ -1162,7 +1162,28 @@ async function aprovarCond(id){const l=lotes.find(x=>x.id===id);if(!l)return;con
 async function recusarCond(id){const l=lotes.find(x=>x.id===id);if(!l)return;if(!confirm('Recusar o lance do lote '+l.num+'? Ele volta para Livre.'))return;try{await window._upd(window._doc(window._db,'lotes',id),{condicional:false,vendido:false});await loadLotes();renderCond();initDash();toast('Lance recusado','inf');}catch(e){toast('Erro: '+e.message,'er');}}
 window.aprovarCond=aprovarCond;window.recusarCond=recusarCond;
 
-function updateDocSel(){const o='<option value="">— Selecione —</option>'+lotes.map(l=>`<option value="${l.id}">Lote ${l.num} — ${l.descricao}</option>`).join('');const s=document.getElementById('sel-doc');if(s)s.innerHTML=o;}
+function updateDocSel(){
+  /* Antes a lista jogava os 185 lotes em ordem de numero. O termo de retirada
+     so faz sentido para lote vendido e nao retirado - e era ali que dava pra
+     escolher o lote errado. Agora a fila de trabalho vem primeiro e cada
+     opcao mostra o arrematante. Nao uso classifica() aqui: ela mora em outro
+     <script> e nao enxerga este. */
+  const esc=function(t){return String(t==null?'':t).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
+  const curto=function(t){t=String(t||'').replace(/\s+/g,' ').trim();return t.length>58?t.slice(0,58)+'…':t;};
+  const rot=function(l){var a=String(l.arrematante||'').trim();return 'Lote '+l.num+(a?' · '+curto(a):'')+' — '+curto(l.descricao);};
+  const pend=[],ret=[],outros=[];
+  (lotes||[]).forEach(function(l){
+    var vend=!!(l.vendido||l.pago);
+    if(vend&&!l.retirou)pend.push(l); else if(l.retirou)ret.push(l); else outros.push(l);
+  });
+  const ord=function(a,b){return String(a.num).localeCompare(String(b.num));};
+  pend.sort(ord);ret.sort(ord);outros.sort(ord);
+  const grp=function(titulo,arr){if(!arr.length)return '';return '<optgroup label="'+esc(titulo)+' ('+arr.length+')">'+arr.map(function(l){return '<option value="'+esc(l.id)+'">'+esc(rot(l))+'</option>';}).join('')+'</optgroup>';};
+  const o='<option value="">— Selecione —</option>'
+    +grp('⬤ Falta retirar — termo pendente',pend)
+    +grp('✓ Já retirados',ret)
+    +grp('Demais lotes (sem venda)',outros);
+  const s=document.getElementById('sel-doc');if(s)s.innerHTML=o;}
 function getDocL(){return lotes.find(l=>l.id===document.getElementById('sel-doc').value);}
 function showDoc(t){document.getElementById('doc-txt').textContent=t;document.getElementById('doc-prev').style.display='block';}
 function gerarRecibo(){const l=getDocL();if(!l){toast('Selecione um lote','er');return;}showDoc(`RECIBO DE ARREMATAÇÃO\n${'='.repeat(44)}\nLeilão Porcelarte — ${new Date().toLocaleDateString('pt-BR')}\n\nLote Nº: ${l.num}\nDescrição: ${l.descricao}\nCategoria: ${l.categoria}\nArrematante: ${l.arrematante||'A definir'}\nValor: R$ ${(Number(l.valorVenda)||l.lanceAtual||l.lanceInicial||0).toLocaleString('pt-BR')}\nObservações: ${l.obs||'Nenhuma'}\n\n${'_'.repeat(44)}\nAssinatura do Arrematante\n\n${'_'.repeat(44)}\nResponsável pelo leilão`);}
