@@ -2710,8 +2710,9 @@ body:not(.dash-pronto) #pg-dashboard > *:not(#home-blocks){display:none !importa
 
 /* ---------- 1. A CASCA: aurora + grade + grão ---------- */
 body{background:var(--ink0) !important;letter-spacing:-.011em}
+body.theme-light{background:#EDEFF6 !important}
 #px-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:var(--ink0)}
-#px-bg .orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;mix-blend-mode:screen;will-change:transform}
+#px-bg .orb{position:absolute;border-radius:50%;filter:blur(58px);opacity:.78;mix-blend-mode:screen;will-change:transform}
 #px-bg .o1{width:46vw;height:46vw;left:-8vw;top:-14vw;background:radial-gradient(circle,var(--vio),transparent 68%);animation:orbA 26s var(--ease) infinite alternate}
 #px-bg .o2{width:40vw;height:40vw;right:-10vw;top:4vh;background:radial-gradient(circle,var(--cya),transparent 68%);animation:orbB 31s var(--ease) infinite alternate}
 #px-bg .o3{width:52vw;height:38vw;left:22vw;bottom:-20vh;background:radial-gradient(circle,#2F5BFF,transparent 70%);animation:orbC 37s var(--ease) infinite alternate}
@@ -2727,7 +2728,11 @@ body{background:var(--ink0) !important;letter-spacing:-.011em}
 #px-bg .grain{position:absolute;inset:-200px;opacity:.042;animation:grainShift .9s steps(5) infinite;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>")}
 @keyframes grainShift{0%{transform:translate(0,0)}20%{transform:translate(-14px,8px)}40%{transform:translate(10px,-12px)}60%{transform:translate(-8px,-6px)}80%{transform:translate(12px,10px)}100%{transform:translate(0,0)}}
-#px-bg .veil{position:absolute;inset:0;background:radial-gradient(130% 95% at 50% 0%,transparent 28%,rgba(5,7,14,.62) 100%)}
+#px-bg .veil{position:absolute;inset:0;background:radial-gradient(150% 110% at 50% 0%,transparent 44%,rgba(5,7,14,.45) 100%)}
+#px-bg .halo{position:absolute;left:0;right:0;top:-18vh;height:46vh;pointer-events:none;
+  background:radial-gradient(60% 100% at 30% 100%,rgba(124,92,255,.42),transparent 70%),radial-gradient(50% 100% at 78% 100%,rgba(34,211,238,.30),transparent 72%);
+  animation:haloBreathe 11s ease-in-out infinite alternate}
+@keyframes haloBreathe{from{opacity:.65;transform:translate3d(-2%,0,0)}to{opacity:1;transform:translate3d(3%,2%,0)}}
 .sb,.mn{position:relative;z-index:1}
 
 /* ---------- 2. SIDEBAR: vidro fino, trilho animado ---------- */
@@ -2779,7 +2784,7 @@ body{background:var(--ink0) !important;letter-spacing:-.011em}
 .date-c{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:var(--lt1);box-shadow:none}
 .pill-ok{background:rgba(52,229,161,.14);color:var(--lim);box-shadow:0 0 0 1px rgba(52,229,161,.26) inset}
 .pill-dot{background:var(--lim)}
-.ct{padding:6px 30px 30px;gap:16px;background:transparent}
+.ct{padding:8px 34px 34px;gap:18px;background:transparent}
 
 /* ---------- 4. PAINÉIS: claros, aresta curta, fio de luz no topo ---------- */
 .card,.kpi,.lei-card,.doc-c{
@@ -2862,9 +2867,26 @@ td{padding:13px 16px;border-bottom:1px solid var(--edge-2);color:var(--t2);font-
 .ctl-resumo,.lei-resumo,#sel-total{border-radius:14px !important;border:1px solid var(--edge) !important;
   background:linear-gradient(135deg,#FFFFFF,#F3F2FD) !important;box-shadow:none !important}
 
+/* ---------- 9b. TEMA CLARO: a casca clareia junto ---------- */
+body.theme-light #px-bg{background:#EDEFF6}
+body.theme-light #px-bg .orb{opacity:.30;mix-blend-mode:multiply}
+body.theme-light #px-bg .grid{opacity:.5;background-image:linear-gradient(rgba(10,16,32,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(10,16,32,.045) 1px,transparent 1px)}
+body.theme-light #px-bg .grain{opacity:.025}
+body.theme-light #px-bg .veil{background:radial-gradient(150% 110% at 50% 0%,transparent 50%,rgba(210,216,232,.7) 100%)}
+body.theme-light #px-bg .halo{opacity:.35}
+body.theme-light .top-title{color:var(--t1);text-shadow:none}
+body.theme-light .top-sub{color:var(--t3)}
+body.theme-light .theme-tg,body.theme-light .notif,body.theme-light #px-mo,body.theme-light .date-c{
+  background:#fff;border:1px solid var(--edge);color:var(--t2)}
+body.theme-light #px-mo .lv{color:var(--pri)}
+body.theme-light .pill-ok{background:#E3F8EF;color:#07875F;box-shadow:0 0 0 1px rgba(7,135,95,.2) inset}
+body.theme-light .card,body.theme-light .kpi,body.theme-light .lei-card,body.theme-light .doc-c{
+  box-shadow:0 1px 2px rgba(10,16,32,.05),0 16px 34px -24px rgba(10,16,32,.4)}
+
 /* ---------- 10. INTENSIDADE DO MOVIMENTO ---------- */
 body[data-mo="media"] #px-bg .grain,body[data-mo="media"] #px-bg .grid{display:none}
-body[data-mo="media"] #px-bg .orb{animation-duration:60s;opacity:.4}
+body[data-mo="media"] #px-bg .orb{animation-duration:60s;opacity:.5}
+body[data-mo="media"] #px-bg .halo{animation:none}
 body[data-mo="media"] .ctl-row,body[data-mo="media"] .nav.on::before{animation:none}
 body[data-mo="media"] .card::before,body[data-mo="media"] .kpi::before,body[data-mo="media"] .lei-card::before{transform:scaleX(1);animation:none}
 body[data-mo="zero"] #px-bg .grain,body[data-mo="zero"] #px-bg .grid{display:none}
@@ -2898,7 +2920,7 @@ body[data-mo="zero"] .card::before,body[data-mo="zero"] .kpi::before,body[data-m
     if(!D.getElementById('px-bg')){
       var bg=D.createElement('div'); bg.id='px-bg';
       bg.innerHTML='<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>'
-                 +'<div class="orb o4"></div><div class="grid"></div><div class="grain"></div><div class="veil"></div>';
+                 +'<div class="orb o4"></div><div class="grid"></div><div class="grain"></div><div class="veil"></div><div class="halo"></div>';
       B.insertBefore(bg,B.firstChild);
     }
   }catch(e){}
@@ -2985,9 +3007,9 @@ body[data-mo="zero"] .card::before,body[data-mo="zero"] .kpi::before,body[data-m
   /* ---- 6. tema claro: a casca também clareia ---- */
   try{
     new MutationObserver(function(){
-      var claro=B.classList.contains('theme-light');
-      var bgEl=D.getElementById('px-bg'); if(bgEl)bgEl.style.opacity=claro?'.30':'1';
-      B.style.background=claro?'#EEF0F7':'';
+      /* o tema claro e tratado por CSS (bloco 9b); nada a fazer aqui alem
+         de garantir que o fundo nao fique preso em algum estado antigo. */
+      B.style.background='';
     }).observe(B,{attributes:true,attributeFilter:['class']});
   }catch(e){}
 })();
