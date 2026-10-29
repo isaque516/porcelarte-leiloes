@@ -2684,5 +2684,314 @@ body:not(.dash-pronto) #pg-dashboard > *:not(#home-blocks){display:none !importa
 })();
 
 </script>
+<style id="ds7">
+/* ==========================================================================
+   PORCELARTE · VISUAL "PREGÃO" (v7)
+   Casca escura com aurora viva + painéis claros de precisão.
+   Por que a casca escura e os painéis claros: os dados (lote, valor, status)
+   ficam em superfície clara de alto contraste, que é onde você lê e decide.
+   O movimento fica na moldura, nunca embaixo do número.
+   Intensidade do movimento: body[data-mo="alta" | "media" | "zero"].
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+:root{
+  --ink0:#05070E; --ink1:#0A0E1A; --ink2:#111726;
+  --vio:#7C5CFF; --cya:#22D3EE; --amb:#FFB020; --lim:#34E5A1;
+  --pri:#6D5BFF; --pri-l:#A594FF;
+  --pane:#FCFCFE; --pane-2:#F5F6FB;
+  --edge:rgba(8,12,24,.09); --edge-2:rgba(8,12,24,.06);
+  --t1:#0A1020; --t2:#3C4759; --t3:#6B788C;
+  --lt1:#F2F5FF; --lt2:#A7B4D0; --lt3:#6E7C9B;
+  --r:16px; --r-s:12px;
+  --spring:cubic-bezier(.34,1.46,.5,1);
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+
+/* ---------- 1. A CASCA: aurora + grade + grão ---------- */
+body{background:var(--ink0) !important;letter-spacing:-.011em}
+#px-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:var(--ink0)}
+#px-bg .orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;mix-blend-mode:screen;will-change:transform}
+#px-bg .o1{width:46vw;height:46vw;left:-8vw;top:-14vw;background:radial-gradient(circle,var(--vio),transparent 68%);animation:orbA 26s var(--ease) infinite alternate}
+#px-bg .o2{width:40vw;height:40vw;right:-10vw;top:4vh;background:radial-gradient(circle,var(--cya),transparent 68%);animation:orbB 31s var(--ease) infinite alternate}
+#px-bg .o3{width:52vw;height:38vw;left:22vw;bottom:-20vh;background:radial-gradient(circle,#2F5BFF,transparent 70%);animation:orbC 37s var(--ease) infinite alternate}
+#px-bg .o4{width:22vw;height:22vw;right:16vw;bottom:-6vh;background:radial-gradient(circle,var(--amb),transparent 66%);opacity:.3;animation:orbD 23s var(--ease) infinite alternate}
+@keyframes orbA{0%{transform:translate3d(0,0,0) scale(1)}100%{transform:translate3d(16vw,10vh,0) scale(1.22)}}
+@keyframes orbB{0%{transform:translate3d(0,0,0) scale(1.1)}100%{transform:translate3d(-14vw,16vh,0) scale(.86)}}
+@keyframes orbC{0%{transform:translate3d(0,0,0) scale(.92)}100%{transform:translate3d(-12vw,-12vh,0) scale(1.18)}}
+@keyframes orbD{0%{transform:translate3d(0,0,0)}100%{transform:translate3d(-18vw,-8vh,0)}}
+#px-bg .grid{position:absolute;inset:-60px;opacity:.26;
+  background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px);
+  background-size:62px 62px;animation:gridPan 42s linear infinite}
+@keyframes gridPan{to{transform:translate3d(62px,62px,0)}}
+#px-bg .grain{position:absolute;inset:-200px;opacity:.042;animation:grainShift .9s steps(5) infinite;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>")}
+@keyframes grainShift{0%{transform:translate(0,0)}20%{transform:translate(-14px,8px)}40%{transform:translate(10px,-12px)}60%{transform:translate(-8px,-6px)}80%{transform:translate(12px,10px)}100%{transform:translate(0,0)}}
+#px-bg .veil{position:absolute;inset:0;background:radial-gradient(130% 95% at 50% 0%,transparent 28%,rgba(5,7,14,.62) 100%)}
+.sb,.mn{position:relative;z-index:1}
+
+/* ---------- 2. SIDEBAR: vidro fino, trilho animado ---------- */
+.sb{width:228px;background:linear-gradient(185deg,rgba(14,19,34,.80),rgba(6,9,18,.90));
+  backdrop-filter:blur(26px) saturate(150%);
+  box-shadow:1px 0 0 rgba(255,255,255,.055),0 0 80px -20px #000}
+.sb::before{display:none}
+.sb-logo{padding:22px 16px 18px;border-bottom:1px solid rgba(255,255,255,.055)}
+.sb-ico{width:42px;height:42px;border-radius:13px;
+  background:conic-gradient(from 210deg,var(--vio),var(--cya),var(--amb),var(--vio));
+  box-shadow:0 14px 30px -10px rgba(124,92,255,.95),0 0 0 1px rgba(255,255,255,.2) inset;
+  animation:icoOrbit 9s linear infinite}
+@keyframes icoOrbit{to{filter:hue-rotate(360deg)}}
+.sb-ico i{font-size:21px;text-shadow:0 2px 8px rgba(0,0,0,.45)}
+.sb-name{font-family:'Sora',sans-serif;font-size:16.5px;font-weight:800;letter-spacing:-.035em;color:#fff;text-shadow:none}
+.sb-sub{color:var(--lt3);font-size:8.5px;letter-spacing:.2em}
+.sb-lbl{color:#4E5C7C;font-size:8.5px;letter-spacing:.2em;padding:16px 18px 6px}
+.nav{margin:2px 10px;padding:10px 12px;border-radius:12px;color:var(--lt2);font-weight:500;font-size:12.8px;
+  transition:color .2s,background .2s,transform .26s var(--spring);overflow:visible}
+.nav i{font-size:17.5px;transition:transform .3s var(--spring),filter .3s}
+.nav:hover:not(.on){background:rgba(255,255,255,.055);color:var(--lt1);transform:translateX(3px)}
+.nav:hover:not(.on) i{transform:scale(1.16) rotate(-7deg)}
+.nav.on{color:#fff;background:linear-gradient(100deg,rgba(124,92,255,.30),rgba(34,211,238,.14));
+  box-shadow:0 0 0 1px rgba(255,255,255,.12) inset,0 10px 26px -14px var(--vio)}
+.nav.on i{filter:drop-shadow(0 0 7px rgba(167,148,255,.95))}
+.nav.on::after{display:none}
+.nav.on::before{content:"";position:absolute;left:-10px;top:50%;width:3px;height:0;border-radius:3px;
+  background:linear-gradient(180deg,var(--cya),var(--vio));box-shadow:0 0 12px 1px var(--pri-l);
+  transform:translateY(-50%);animation:navBar .4s var(--spring) forwards}
+@keyframes navBar{to{height:62%}}
+.sb-user,.sb-fb{background:rgba(255,255,255,.055);border-radius:13px;box-shadow:0 0 0 1px rgba(255,255,255,.06) inset}
+.sb-av{border-radius:12px;background:linear-gradient(140deg,var(--cya),var(--vio));box-shadow:0 8px 18px -6px rgba(124,92,255,.8)}
+.sb-uname,.sb-fb-name{font-size:12px}
+.sb-fb i{filter:drop-shadow(0 0 7px rgba(52,229,161,.9))}
+
+/* ---------- 3. TOPO: tipografia de display sobre o escuro ---------- */
+.mn{background:transparent !important}
+.top{padding:26px 30px 12px;background:transparent;border-bottom:none}
+.top-title{font-family:'Sora',sans-serif;font-size:31px;font-weight:800;letter-spacing:-.045em;line-height:1.06;
+  color:#fff;text-shadow:0 2px 28px rgba(124,92,255,.35)}
+.top-sub{color:var(--lt3);font-size:12.5px}
+.theme-tg,.notif,#px-mo{width:36px;height:36px;border-radius:11px;border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.07);color:var(--lt1);box-shadow:none;
+  transition:transform .24s var(--spring),background .2s,color .2s;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.theme-tg:hover,.notif:hover,#px-mo:hover{background:rgba(255,255,255,.15);color:#fff;transform:translateY(-3px) rotate(-6deg)}
+#px-mo i{font-size:17px}
+#px-mo .lv{position:absolute;bottom:3px;right:4px;font-size:7.5px;font-weight:800;letter-spacing:.04em;color:var(--cya)}
+.date-c{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:var(--lt1);box-shadow:none}
+.pill-ok{background:rgba(52,229,161,.14);color:var(--lim);box-shadow:0 0 0 1px rgba(52,229,161,.26) inset}
+.pill-dot{background:var(--lim)}
+.ct{padding:6px 30px 30px;gap:16px;background:transparent}
+
+/* ---------- 4. PAINÉIS: claros, aresta curta, fio de luz no topo ---------- */
+.card,.kpi,.lei-card,.doc-c{
+  background:var(--pane);border:1px solid var(--edge);border-radius:var(--r);
+  box-shadow:0 1px 2px rgba(5,8,18,.3),0 20px 46px -26px rgba(0,0,0,.85);
+  position:relative;overflow:hidden}
+.card::before,.kpi::before,.lei-card::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;z-index:2;
+  background:linear-gradient(90deg,var(--vio),var(--cya) 42%,var(--amb));
+  transform:scaleX(0);transform-origin:left;animation:edgeDraw .85s var(--ease) .1s forwards}
+@keyframes edgeDraw{to{transform:scaleX(1)}}
+.card,.kpi{animation:paneIn .6s var(--ease) both}
+@keyframes paneIn{from{opacity:0;transform:translateY(16px) scale(.988)}to{opacity:1;transform:none}}
+.ct .card:nth-child(2),.krow .kpi:nth-child(2){animation-delay:.07s}
+.ct .card:nth-child(3),.krow .kpi:nth-child(3){animation-delay:.14s}
+.ct .card:nth-child(4){animation-delay:.21s}
+.ct .card:nth-child(5){animation-delay:.28s}
+.ch{padding:17px 20px 13px;border-bottom:1px solid var(--edge-2);background:linear-gradient(180deg,var(--pane),var(--pane-2))}
+.ch-title{font-family:'Sora',sans-serif;font-size:15px;font-weight:700;letter-spacing:-.028em;color:var(--t1)}
+.ch-sub{color:var(--t3)}
+.ch-ico{border-radius:12px;box-shadow:0 8px 18px -10px rgba(109,91,255,.7)}
+
+/* ---------- 5. KPI: número em tabular, brilho e inclinação no hover ---------- */
+.krow{gap:14px}
+.kpi{padding:19px 20px;transform-style:preserve-3d;transition:transform .3s var(--ease),box-shadow .3s}
+.kpi::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity .3s;pointer-events:none;
+  background:radial-gradient(60% 90% at var(--mx,50%) var(--my,0%),rgba(109,91,255,.16),transparent 65%)}
+.kpi:hover::after{opacity:1}
+.kpi:hover{box-shadow:0 2px 4px rgba(5,8,18,.35),0 40px 70px -32px rgba(109,91,255,.95)}
+.kpi-lbl{font-size:10px;font-weight:800;color:var(--t3);letter-spacing:.11em}
+.kpi-val{font-family:'Sora',sans-serif;font-size:33px;font-weight:800;letter-spacing:-.05em;color:var(--t1);
+  font-variant-numeric:tabular-nums}
+.kpi-val.px-flash{animation:valFlash .9s var(--ease)}
+@keyframes valFlash{0%{color:var(--pri);text-shadow:0 0 22px rgba(109,91,255,.8)}100%{color:var(--t1);text-shadow:none}}
+.kpi-ic{width:42px;height:42px;border-radius:13px;transition:transform .32s var(--spring)}
+.kpi:hover .kpi-ic{transform:scale(1.14) rotate(-10deg)}
+.kpi-ic.blue{background:linear-gradient(145deg,#EDE9FF,#D7CEFF);color:var(--pri)}
+.kpi-ic.purple{background:linear-gradient(145deg,#DFF7FD,#BFEEF8);color:#0E8CA8}
+.kpi-ic.amber{background:linear-gradient(145deg,#FFF1D8,#FFE2AE);color:#B36E00}
+
+/* ---------- 6. BOTÕES ---------- */
+.btn-p{background:linear-gradient(120deg,var(--vio),var(--pri) 48%,#3B49E0);border-radius:12px;font-weight:700;
+  box-shadow:0 14px 28px -14px rgba(109,91,255,1),0 0 0 1px rgba(255,255,255,.2) inset}
+.btn-p:hover{transform:translateY(-3px) scale(1.02);filter:saturate(1.15) brightness(1.06);
+  box-shadow:0 22px 40px -16px rgba(109,91,255,1)}
+.btn-o{background:var(--pane);border:1px solid var(--edge);color:var(--t2);border-radius:11px;box-shadow:none}
+.btn-o:hover{background:#F0EEFF;color:var(--pri);transform:translateY(-2px)}
+
+/* ---------- 7. TABELAS: cascata nas linhas ---------- */
+th{background:var(--pane-2);color:var(--t3);font-size:9.5px;font-weight:800;letter-spacing:.13em;
+  padding:10px 16px 11px;border-bottom:1px solid var(--edge)}
+td{padding:13px 16px;border-bottom:1px solid var(--edge-2);color:var(--t2);font-variant-numeric:tabular-nums}
+.tbl tbody tr:hover td,.ctl-row:hover td{background:#F2F0FF}
+.ctl-row{animation:rowIn .5s var(--ease) both}
+@keyframes rowIn{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+.ctl-row:nth-child(1){animation-delay:.02s}.ctl-row:nth-child(2){animation-delay:.045s}
+.ctl-row:nth-child(3){animation-delay:.07s}.ctl-row:nth-child(4){animation-delay:.095s}
+.ctl-row:nth-child(5){animation-delay:.12s}.ctl-row:nth-child(6){animation-delay:.145s}
+.ctl-row:nth-child(7){animation-delay:.17s}.ctl-row:nth-child(8){animation-delay:.195s}
+.ctl-row:nth-child(9){animation-delay:.22s}.ctl-row:nth-child(10){animation-delay:.245s}
+.ctl-row:nth-child(n+11){animation-delay:.27s}
+#pg-controle thead th{background:var(--pane-2)}
+.ctl-tbl-wrap{max-height:70vh}
+
+/* ---------- 8. TROCA DE TELA ---------- */
+.pg{animation:pgIn .42s var(--ease) both}
+@keyframes pgIn{from{opacity:0;transform:translateY(12px);filter:blur(5px)}to{opacity:1;transform:none;filter:none}}
+
+/* ---------- 9. BADGES / ENTRADAS / MODAIS ---------- */
+.badge,.ctl-st{border-radius:8px;font-weight:750;font-size:10.5px;box-shadow:none}
+.fi{border-radius:11px;background:#fff;border:1px solid #DFE3EE;box-shadow:none;color:var(--t1)}
+.fi:focus{border-color:var(--pri-l);box-shadow:0 0 0 4px rgba(109,91,255,.18)}
+.fl{color:var(--t3);letter-spacing:.09em}
+#termo-overlay,#leilao-overlay{backdrop-filter:blur(10px) saturate(130%);background:rgba(5,7,14,.62)}
+#termo-overlay > div,#leilao-overlay > div{border-radius:20px;animation:mpop .4s var(--spring) both}
+.toast{border-radius:14px;box-shadow:0 30px 60px -22px #000}
+.cal-cell{border-radius:12px;border:1px solid var(--edge);background:var(--pane)}
+.cal-cell:hover{background:#F2F0FF;transform:translateY(-4px) scale(1.04);box-shadow:0 18px 30px -16px rgba(109,91,255,.9)}
+.cal-cell.today .cal-n{background:linear-gradient(140deg,var(--cya),var(--vio))}
+.empty-ic{background:linear-gradient(145deg,#EDE9FF,#D7CEFF);color:var(--pri);animation:icoFloat 5s ease-in-out infinite}
+.ctl-resumo,.lei-resumo,#sel-total{border-radius:14px !important;border:1px solid var(--edge) !important;
+  background:linear-gradient(135deg,#FFFFFF,#F3F2FD) !important;box-shadow:none !important}
+
+/* ---------- 10. INTENSIDADE DO MOVIMENTO ---------- */
+body[data-mo="media"] #px-bg .grain,body[data-mo="media"] #px-bg .grid{display:none}
+body[data-mo="media"] #px-bg .orb{animation-duration:60s;opacity:.4}
+body[data-mo="media"] .ctl-row,body[data-mo="media"] .nav.on::before{animation:none}
+body[data-mo="media"] .card::before,body[data-mo="media"] .kpi::before,body[data-mo="media"] .lei-card::before{transform:scaleX(1);animation:none}
+body[data-mo="zero"] #px-bg .grain,body[data-mo="zero"] #px-bg .grid{display:none}
+body[data-mo="zero"] #px-bg .orb{animation:none;opacity:.3}
+body[data-mo="zero"] *,body[data-mo="zero"] *::before,body[data-mo="zero"] *::after{animation:none !important;transition:none !important}
+body[data-mo="zero"] .card::before,body[data-mo="zero"] .kpi::before,body[data-mo="zero"] .lei-card::before{transform:scaleX(1)}
+@media (prefers-reduced-motion:reduce){
+  #px-bg .orb,#px-bg .grain,#px-bg .grid,.sb-ico,.card,.kpi,.pg,.ctl-row,.nav.on::before{animation:none !important}
+  .card::before,.kpi::before,.lei-card::before{transform:scaleX(1);animation:none}
+}
+
+/* ---------- 11. TELAS ESTREITAS ---------- */
+@media (max-width:900px){
+  #px-bg .grain,#px-bg .grid{display:none}
+  .sb{width:196px}.top{padding:16px 16px 10px}.top-title{font-size:24px}.ct{padding:4px 14px 20px}
+}
+</style>
+
+<script id="ds7js">
+/* ==========================================================================
+   PORCELARTE · camada de movimento do visual "Pregão" (v7)
+   Tudo aqui é decorativo. Nenhuma linha altera dado, cálculo ou gravação.
+   Se qualquer trecho falhar, o try/catch isola e o app segue funcionando.
+   ========================================================================== */
+(function(){
+  'use strict';
+  var D=document, B=D.body;
+
+  /* ---- 1. fundo vivo (aurora + grade + grão) ---- */
+  try{
+    if(!D.getElementById('px-bg')){
+      var bg=D.createElement('div'); bg.id='px-bg';
+      bg.innerHTML='<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>'
+                 +'<div class="orb o4"></div><div class="grid"></div><div class="grain"></div><div class="veil"></div>';
+      B.insertBefore(bg,B.firstChild);
+    }
+  }catch(e){}
+
+  /* ---- 2. botão de intensidade do movimento (alta / média / zero) ----
+     Fica salvo no navegador. Serve para quando a animação estiver no caminho. */
+  var NIV=['alta','media','zero'], ICO={alta:'ti-wand',media:'ti-wave-sine',zero:'ti-player-pause'};
+  function aplicaMo(v){ B.setAttribute('data-mo',v); try{localStorage.setItem('px-mo',v);}catch(e){}
+    var b=D.getElementById('px-mo'); if(b)b.innerHTML='<i class="ti '+ICO[v]+'"></i><span class="lv">'+v.slice(0,3).toUpperCase()+'</span>'; }
+  try{
+    var atual='alta';
+    try{ var sv=localStorage.getItem('px-mo'); if(NIV.indexOf(sv)>-1)atual=sv; }catch(e){}
+    if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches&&!localStorage.getItem('px-mo'))atual='zero';
+    var tg=D.getElementById('themeTg');
+    if(tg&&!D.getElementById('px-mo')){
+      var bt=D.createElement('button'); bt.id='px-mo'; bt.type='button';
+      bt.style.position='relative';
+      bt.title='Intensidade do movimento (alta / média / desligado)';
+      bt.addEventListener('click',function(){ aplicaMo(NIV[(NIV.indexOf(B.getAttribute('data-mo'))+1)%NIV.length]); });
+      tg.parentNode.insertBefore(bt,tg);
+    }
+    aplicaMo(atual);
+  }catch(e){}
+
+  /* ---- 3. números que sobem até o valor ----
+     Só mexe no texto enquanto anima e termina gravando o texto final exato,
+     para não existir risco de deixar um valor truncado na tela. */
+  function animaNum(el,alvo){
+    if(B.getAttribute('data-mo')==='zero'){el.textContent=alvo;return;}
+    var m=String(alvo).match(/-?[\d.]+(,\d+)?/);
+    if(!m){el.textContent=alvo;return;}
+    var bruto=m[0], num=parseFloat(bruto.replace(/\./g,'').replace(',','.'));
+    if(!isFinite(num)||Math.abs(num)<2){el.textContent=alvo;return;}
+    var pre=alvo.slice(0,m.index), pos=alvo.slice(m.index+bruto.length);
+    var dec=(bruto.indexOf(',')>-1)?(bruto.split(',')[1]||'').length:0;
+    var t0=performance.now(), dur=760;
+    el.__px=1;
+    (function passo(t){
+      var p=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-p,3), v=num*e;
+      el.textContent=p<1 ? pre+v.toLocaleString('pt-BR',{minimumFractionDigits:dec,maximumFractionDigits:dec})+pos : alvo;
+      if(p<1)requestAnimationFrame(passo); else {el.__px=0;el.classList.add('px-flash');setTimeout(function(){el.classList.remove('px-flash');},950);}
+    })(t0);
+  }
+  try{
+    var obs=new MutationObserver(function(muts){
+      muts.forEach(function(mu){
+        var el=mu.target.nodeType===3?mu.target.parentElement:mu.target;
+        if(!el||!el.classList)return;
+        if(!el.classList.contains('kpi-val')&&el.id!=='pp-val')return;
+        if(el.__px)return;
+        var txt=(el.textContent||'').trim();
+        if(!txt||txt===el.__ult)return;
+        el.__ult=txt; animaNum(el,txt);
+      });
+    });
+    setTimeout(function(){
+      D.querySelectorAll('.kpi-val,#pp-val').forEach(function(el){
+        el.__ult=(el.textContent||'').trim();
+        obs.observe(el,{childList:true,characterData:true,subtree:true});
+      });
+    },400);
+  }catch(e){}
+
+  /* ---- 4. KPI que acende seguindo o cursor ---- */
+  try{
+    D.addEventListener('mousemove',function(ev){
+      var k=ev.target.closest&&ev.target.closest('.kpi'); if(!k)return;
+      var r=k.getBoundingClientRect();
+      k.style.setProperty('--mx',((ev.clientX-r.left)/r.width*100)+'%');
+      k.style.setProperty('--my',((ev.clientY-r.top)/r.height*100)+'%');
+    },{passive:true});
+  }catch(e){}
+
+  /* ---- 5. cascata nas linhas quando a tabela do Controle é redesenhada ---- */
+  try{
+    var alvo=D.getElementById('ctl-body');
+    if(alvo)new MutationObserver(function(){
+      if(B.getAttribute('data-mo')==='zero')return;
+      var rs=alvo.querySelectorAll('.ctl-row');
+      for(var i=0;i<rs.length&&i<40;i++){ rs[i].style.animation='none'; void rs[i].offsetWidth; rs[i].style.animation=''; }
+    }).observe(alvo,{childList:true});
+  }catch(e){}
+
+  /* ---- 6. tema claro: a casca também clareia ---- */
+  try{
+    new MutationObserver(function(){
+      var claro=B.classList.contains('theme-light');
+      var bgEl=D.getElementById('px-bg'); if(bgEl)bgEl.style.opacity=claro?'.30':'1';
+      B.style.background=claro?'#EEF0F7':'';
+    }).observe(B,{attributes:true,attributeFilter:['class']});
+  }catch(e){}
+})();
+</script>
+
 </body>
 </html>
