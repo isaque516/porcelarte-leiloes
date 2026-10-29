@@ -2867,6 +2867,34 @@ td{padding:13px 16px;border-bottom:1px solid var(--edge-2);color:var(--t2);font-
 .ctl-resumo,.lei-resumo,#sel-total{border-radius:14px !important;border:1px solid var(--edge) !important;
   background:linear-gradient(135deg,#FFFFFF,#F3F2FD) !important;box-shadow:none !important}
 
+/* ---------- 5b. KPI EM VIDRO ESCURO ----------
+   Os KPIs sao os unicos blocos cujo conteudo e 100% controlado por classe
+   (kpi-lbl / kpi-val / kpi-ic / kpi-tr). Por isso eles podem virar vidro
+   escuro sem risco de sumir texto. As tabelas continuam claras de proposito:
+   e la que voce le e decide. */
+.kpi{background:linear-gradient(165deg,rgba(23,29,52,.86),rgba(9,13,26,.92));
+  border:1px solid rgba(255,255,255,.09);
+  box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 26px 54px -28px #000}
+.kpi::before{height:3px;background:linear-gradient(90deg,var(--vio),var(--cya) 45%,var(--amb))}
+.kpi::after{background:radial-gradient(60% 90% at var(--mx,50%) var(--my,0%),rgba(167,148,255,.30),transparent 62%)}
+.kpi:hover{border-color:rgba(167,148,255,.4);
+  box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 44px 76px -30px rgba(109,91,255,.9)}
+.kpi-lbl{color:var(--lt3)}
+.kpi-val{color:#fff;text-shadow:0 2px 26px rgba(124,92,255,.45)}
+.kpi-val.px-flash{animation:valFlashD .9s var(--ease)}
+@keyframes valFlashD{0%{color:var(--pri-l);text-shadow:0 0 30px rgba(167,148,255,1)}100%{color:#fff;text-shadow:0 2px 26px rgba(124,92,255,.45)}}
+.kpi-tr{color:var(--lt3) !important}
+.kpi-ic{background:rgba(255,255,255,.09) !important;box-shadow:0 0 0 1px rgba(255,255,255,.1) inset}
+.kpi-ic.blue i{color:var(--pri-l)} .kpi-ic.purple i{color:var(--cya)}
+.kpi-ic.amber i,.kpi-ic.orange i{color:var(--amb)} .kpi-ic.green i{color:var(--lim)}
+.kpi-ic i{filter:drop-shadow(0 0 8px currentColor)}
+body.theme-light .kpi{background:linear-gradient(165deg,rgba(18,23,42,.95),rgba(8,12,24,.97));border-color:rgba(255,255,255,.08)}
+
+/* ---------- 5c. CABEÇALHO DO PAINEL com faixa tingida ---------- */
+.card::before,.lei-card::before{height:3px}
+.ch{background:linear-gradient(180deg,#F6F4FF,var(--pane))}
+.ch-ico{background:linear-gradient(145deg,#EDE9FF,#D7CEFF) !important;color:var(--pri) !important}
+
 /* ---------- 9b. TEMA CLARO: a casca clareia junto ---------- */
 body.theme-light #px-bg{background:#EDEFF6}
 body.theme-light #px-bg .orb{opacity:.30;mix-blend-mode:multiply}
