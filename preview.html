@@ -2835,6 +2835,9 @@ setTimeout(function(){
 window.__xpTermos=null;
 window.__xpRender=async function(lotes){
   var box=document.getElementById('xp-root'); if(!box)return;
+  /* Nao depende do escopo de quem chamou: se a lista vier vazia, busca sozinho. */
+  if(!lotes || !lotes.length){ try{ var sn=await window._getDocs(window._col(window._db,'lotes'));
+      lotes=[]; sn.forEach(function(d){lotes.push(Object.assign({id:d.id},d.data()));}); }catch(e){ lotes=lotes||[]; } }
   var esc=function(t){return String(t==null?'':t).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
   var money=function(v){return 'R$ '+(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});};
   var mask=function(a){return String(a||'').indexOf('*')>-1;};
