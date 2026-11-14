@@ -2921,6 +2921,16 @@ window.__xpAgendar=async function(el,id){
     if(window.toast)window.toast(v?('Retirada agendada para '+v.split('-').reverse().join('/')):'Agendamento removido','ok');
   }catch(e){ if(window.toast)window.toast('Nao gravou: '+e.message,'err'); else alert('Nao gravou: '+e.message); }
 };
+/* A tela antiga reatribui window.renderExpedicao mais de uma vez; por isso
+   a troca e feita aqui, no ultimo script do arquivo, e tambem no clique do menu. */
+window.renderExpedicao=function(){ return window.__xpRender([]); };
+document.addEventListener('click',function(ev){
+  var n=ev.target&&ev.target.closest&&ev.target.closest('.nav');
+  if(n&&n.dataset&&n.dataset.p==='expedicao'){ setTimeout(function(){ window.__xpRender([]); },250); }
+});
+if(document.getElementById('pg-expedicao')){ setTimeout(function(){
+  var pg=document.getElementById('pg-expedicao');
+  if(pg&&getComputedStyle(pg).display!=='none') window.__xpRender([]); },1500); }
 window.__xpTermo=function(num){
   if(window.ir)window.ir('documentos');
   setTimeout(function(){ var s=document.getElementById('sel-doc'); if(!s)return;
