@@ -701,34 +701,7 @@ td{padding:12px 18px}
       </div>
     </div>
 
-    <div class="pg" id="pg-expedicao">
-      <div class="exp-work-head">
-        <div><div class="exp-eyebrow">OPERAÇÃO DE RETIRADAS</div><h2>Fila de expedição</h2><p>Controle o que falta antes de liberar e retirar cada lote.</p></div>
-        <button class="btn-p" onclick="window.print()"><i class="ti ti-printer"></i>Imprimir / PDF</button>
-      </div>
-      <div class="exp-summary" id="exp-kpis"></div>
-      <div class="card exp-work-card">
-        <div class="exp-toolbar">
-          <div class="sw"><i class="ti ti-search"></i><input class="si" id="exp-search" placeholder="Buscar lote, cliente ou leilão" oninput="renderExpedicao()"></div>
-          <select class="f-sel" id="exp-platform" onchange="renderExpedicao()"><option value="">Sodré + Kwara</option><option value="Sodré Santoro">Sodré Santoro</option><option value="Kwara">Kwara</option></select>
-          <select class="f-sel" id="exp-stage" onchange="renderExpedicao()"><option value="">Todas as pendências</option><option value="docs">Documentos pendentes</option><option value="liberacao">Aguardando liberação</option><option value="agendamento">Para agendar</option><option value="retirada">Agendados / retirar</option><option value="finalizado">Finalizados</option></select>
-          <button class="btn-o" onclick="renderExpedicao()"><i class="ti ti-refresh"></i></button>
-        </div>
-        <div class="exp-legend"><span><i class="dot dot-doc"></i>Documento recebido</span><span><i class="dot dot-release"></i>Liberado no sistema</span><span><i class="dot dot-physical"></i>Retirada física confirmada</span></div>
-        <div id="exp-queue"></div>
-      </div>
-    </div>
-
-    <div class="overlay" id="exp-check-overlay">
-      <div class="modal exp-modal"><div class="mh"><div><div class="mh-title">Checklist de expedição</div><div id="exp-check-lote" style="font-size:11px;color:var(--gray);margin-top:3px"></div></div><button class="ic-btn" onclick="opsFecharChecklist()"><i class="ti ti-x"></i></button></div>
-        <div class="mb"><input type="hidden" id="exp-check-id"><div class="exp-check-grid">
-          <label class="ops-check"><input type="checkbox" id="exp-email"><span>E-mail recebido</span></label><label class="ops-check"><input type="checkbox" id="exp-termo"><span>Termo recebido</span></label><label class="ops-check"><input type="checkbox" id="exp-nota"><span>Nota recebida</span></label><label class="ops-check"><input type="checkbox" id="exp-pagamento"><span>Pagamento confirmado</span></label><label class="ops-check release"><input type="checkbox" id="exp-liberado"><span>Lote liberado no sistema</span></label><label class="ops-check"><input type="checkbox" id="exp-fotos"><span>Fotos conferidas</span></label>
-        </div><div class="fgrid" style="margin-top:18px"><div class="fg"><div class="fl">Paletes</div><input class="fi" id="exp-paletes" placeholder="Ex: 3"></div><div class="fg"><div class="fl">Responsável</div><input class="fi" id="exp-responsavel" placeholder="Quem conferiu"></div><div class="fg" style="grid-column:span 2"><div class="fl">Agendamento de retirada</div><input class="fi" type="datetime-local" id="exp-agendamento"></div><div class="fg" style="grid-column:span 2"><div class="fl">Observações da expedição</div><textarea class="fi" id="exp-obs" style="height:76px;padding:10px;resize:vertical" placeholder="Ex: caminhão aberto, empilhadeira, divergência de paletes..."></textarea></div></div><label class="ops-check final" style="margin-top:8px"><input type="checkbox" id="exp-finalizado"><span>OK — retirada física finalizada</span></label><button class="btn-o" style="margin-top:15px" onclick="opsAbrirFotos()"><i class="ti ti-camera"></i>Adicionar / ver fotos do lote</button></div>
-        <div class="mf"><button class="btn-o" onclick="opsFecharChecklist()">Cancelar</button><button class="btn-p" onclick="opsSalvarChecklist()"><i class="ti ti-device-floppy"></i>Salvar checklist</button></div>
-      </div>
-    </div>
-
-    <div class="pg" id="pg-condicionais">
+    <div class="pg" id="pg-expedicao"><div class="card xp-top"><div><div class="xp-eyebrow">OPERAÇÃO DE RETIRADAS</div><h2>Fila de retirada</h2><p>Entra aqui o lote <b>vendido ou pago</b> que ainda não foi retirado. Lance ou apelido da plataforma não conta como venda.</p></div><button class="btn-o" onclick="window.renderExpedicao()"><i class="ti ti-refresh"></i> Atualizar</button></div><div id="xp-root"></div></div><div class="pg" id="pg-condicionais">
       <div class="card">
         <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-clock-pause"></i></div><div><div class="ch-title">Lotes em condicional</div></div></div><span id="cond-ct" style="font-size:11px;color:var(--gray2);font-weight:600"></span></div>
         <div id="cond-list"><div class="empty"><div class="empty-ic"><i class="ti ti-clipboard-check"></i><div class="empty-badge" style="color:var(--green3)"><i class="ti ti-check"></i></div></div><div class="empty-title">Nenhum lote em condicional</div><div class="empty-sub">Quando a Sodré informar lance abaixo do mínimo, marque "Condicional" na edição do lote. Ele aparece aqui para você aprovar ou recusar.</div></div></div>
@@ -2709,7 +2682,7 @@ body:not(.dash-pronto) #pg-dashboard > *:not(#home-blocks){display:none !importa
     el.innerHTML='<div style="overflow:auto"><table class="tbl ops-table"><thead><tr><th>Lote / plataforma</th><th>Cliente</th><th>Comercial</th><th>Documentos recebidos</th><th>Liberação efetiva</th><th>Fluxo</th><th>Ações</th></tr></thead><tbody>'+fl.map(l=>{const d=docs(l);return '<tr><td><span class="n">'+esc(l.num)+'</span><div style="font-size:10px;color:var(--gray);margin-top:5px">'+esc(l.plataforma||'Sodré Santoro')+' · '+esc(l.leilaoNum||'sem leilão')+'</div></td><td><div class="d">'+esc(l.arrematante||'Arrematante pendente')+'</div><div style="font-size:10px;color:var(--gray);margin-top:4px">'+paletes(l)+' palete(s) · '+esc(l.descricao).slice(0,54)+'</div></td><td>'+getBadge(l)+'</td><td><div class="ops-chips">'+chip('E-mail',d.email)+chip('Termo',d.termo)+chip('Nota',d.nota)+chip('Pgto',d.pagamento)+'</div></td><td>'+chip(liberado(l)?'Liberado no sistema':'Não liberado',liberado(l),liberado(l)?'real':'warn')+'</td><td>'+flowHtml(l)+'</td><td><div class="ops-actions"><button class="ops-action" onclick="opsToggle(\''+l.id+'\',\'termo\')">Termo</button><button class="ops-action" onclick="opsToggle(\''+l.id+'\',\'liberado\')">Liberar</button><button class="ops-action" onclick="opsAgendar(\''+l.id+'\')">Agenda</button><button class="ops-action" onclick="opsEditar(\''+l.id+'\')"><i class="ti ti-edit"></i></button></div></td></tr>'}).join('')+'</tbody></table></div>';
   }
   window.renderLotes=renderLotesV2; renderLotes=renderLotesV2;
-  window.renderExpedicao=function(){
+  window.renderExpedicao=function(){try{return window.__xpRender(lotes);}catch(e){console.warn("exp",e);}};window.__expAntigo=function(){
     const active=lotes.filter(temVenda), pendDocs=active.filter(l=>totalDocs(l)<4), noRelease=active.filter(l=>!liberado(l)), scheduled=active.filter(l=>agenda(l)&&!retirada(l)), done=active.filter(retirada);
     const k=document.getElementById('exp-kpis');if(k)k.innerHTML=[[''+active.length,'lotes pós-venda'],[''+noRelease.length,'sem liberação'],[''+scheduled.length,'agendados'],[''+done.length,'retiradas concluídas']].map(x=>'<div class="ops-kpi"><b>'+x[0]+'</b><span>'+x[1]+'</span></div>').join('');
     const a=document.getElementById('exp-alerts');if(a)a.innerHTML=[['danger',pendDocs.length,'Documentos incompletos','E-mail, termo, nota ou pagamento pendente','lotes'],['warn',noRelease.length,'Aguardando liberação','Documento não confirma retirada no sistema','lotes'],['ok',scheduled.length,'Retiradas agendadas','Prontas para conferência física e fotos','retirada']].map(x=>'<div class="ops-alert '+x[0]+'" onclick="'+(x[4]==='lotes'?"ir('lotes')":"")+'"><div class="ops-a-num">'+x[1]+'</div><b>'+x[2]+'</b><small>'+x[3]+'</small></div>').join('');
@@ -2778,6 +2751,195 @@ setTimeout(function(){
   if(bloco&&bloco.querySelector('.sk'))bloco.innerHTML='';
   document.body.classList.add('dash-pronto');
 },1800);
+</script>
+
+<style id="xpcss">
+/* ===== FILA DE RETIRADA — visual na linguagem do app (azul/branco) ===== */
+#xp-root{display:flex;flex-direction:column;gap:18px}
+@keyframes xpUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes xpBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes xpPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.35)}60%{box-shadow:0 0 0 10px rgba(220,38,38,0)}}
+.xp-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;padding:18px 22px}
+.xp-eyebrow{font-size:10px;font-weight:800;letter-spacing:.16em;color:#94A3B8}
+.xp-top h2{font-size:20px;font-weight:800;letter-spacing:-.035em;color:#0F172A;margin:3px 0}
+.xp-top p{font-size:12.5px;color:#64748B;max-width:680px}
+.xp-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media(max-width:1100px){.xp-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.xp-k{position:relative;overflow:hidden;background:#fff;border:1px solid #E2E8F0;border-radius:18px;padding:18px 18px 16px;
+  box-shadow:0 1px 2px rgba(15,23,42,.04),0 14px 30px -20px rgba(15,23,42,.3);animation:xpUp .5s cubic-bezier(.22,1,.36,1) both;
+  transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .25s,border-color .25s}
+.xp-k:hover{transform:translateY(-5px);box-shadow:0 2px 4px rgba(15,23,42,.05),0 32px 54px -26px rgba(37,99,235,.55)}
+.xp-k::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:currentColor;opacity:.9}
+.xp-k::after{content:'';position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:currentColor;opacity:.05;transition:transform .35s}
+.xp-k:hover::after{transform:scale(1.5)}
+.xp-k-ic{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:currentColor;margin-bottom:12px}
+.xp-k-ic i{font-size:20px;color:#fff}
+.xp-k-n{font-size:34px;font-weight:800;letter-spacing:-.05em;color:#0F172A;line-height:1;font-variant-numeric:tabular-nums}
+.xp-k-r{font-size:12px;font-weight:750;color:#0F172A;margin-top:7px;letter-spacing:-.01em}
+.xp-k-s{font-size:11px;color:#94A3B8;margin-top:2px}
+.xp-dang{color:#DC2626}.xp-warn{color:#EA580C}.xp-ok{color:#059669}.xp-info{color:#2563EB}
+.xp-dang .xp-k-ic{animation:xpPulse 2.6s ease-in-out infinite}
+.xp-sec{background:#fff;border:1px solid #E2E8F0;border-radius:20px;padding:20px 22px 22px;
+  box-shadow:0 1px 2px rgba(15,23,42,.04),0 14px 30px -22px rgba(15,23,42,.28);animation:xpUp .55s cubic-bezier(.22,1,.36,1) both}
+.xp-sec header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.xp-sec h3{font-size:16px;font-weight:780;letter-spacing:-.03em;color:#0F172A;display:flex;align-items:center;gap:9px}
+.xp-sec h3 i{font-size:19px;color:#2563EB}
+.xp-sec p{font-size:12.5px;color:#64748B;margin-top:4px;max-width:720px}
+.xp-sec-dang{border-color:#FCA5A5;background:linear-gradient(180deg,#FFF7F7,#fff)}
+.xp-sec-dang h3 i{color:#DC2626}
+.xp-chips{display:flex;flex-wrap:wrap;gap:8px}
+.xp-chip{font-size:11.5px;font-weight:650;color:#991B1B;background:#FEE2E2;border-radius:9px;padding:6px 11px}
+.xp-chip b{font-weight:800}
+.xp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(470px,1fr));gap:14px}
+.xp-c{border:1px solid #E2E8F0;border-radius:16px;padding:15px 16px 6px;background:linear-gradient(180deg,#FCFDFF,#fff);
+  animation:xpUp .5s cubic-bezier(.22,1,.36,1) both;transition:transform .22s cubic-bezier(.22,1,.36,1),box-shadow .22s,border-color .22s}
+.xp-c:hover{transform:translateY(-4px);border-color:#BFDBFE;box-shadow:0 26px 46px -26px rgba(37,99,235,.6)}
+.xp-c-h{display:flex;align-items:center;gap:11px;margin-bottom:11px}
+.xp-av{width:38px;height:38px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:12.5px;font-weight:800;color:#fff;background:linear-gradient(140deg,#60A5FA,#1D4ED8);box-shadow:0 8px 18px -8px rgba(37,99,235,.9)}
+.xp-c-t{flex:1;min-width:0}
+.xp-c-t h4{font-size:13.5px;font-weight:780;color:#0F172A;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xp-c-t span{font-size:11.5px;color:#64748B}
+.xp-badge{font-size:10.5px;font-weight:750;padding:5px 10px;border-radius:8px;white-space:nowrap;color:#fff}
+.xp-badge.xp-ok{background:#059669}.xp-badge.xp-warn{background:#EA580C}.xp-badge.xp-info{background:#2563EB}
+.xp-bar{height:5px;border-radius:4px;background:#EEF2F7;overflow:hidden}
+.xp-bar i{display:block;height:100%;background:linear-gradient(90deg,#34D399,#059669);transform-origin:left;animation:xpBar .7s cubic-bezier(.22,1,.36,1) both}
+.xp-bar-r{font-size:10.5px;color:#94A3B8;margin:5px 0 8px;font-weight:650}
+.xp-tb{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.xp-tb td{padding:9px 6px;border-top:1px solid #F1F5F9;vertical-align:middle}
+.xp-tb tr{transition:background .15s}
+.xp-tb tr:hover td{background:#F8FAFF}
+.xp-cel{width:auto;min-width:0}
+.xp-num{font-weight:800;color:#0F172A;white-space:nowrap}
+.xp-desc{color:#64748B;font-size:11px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xp-val{width:104px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:#0F172A;font-weight:750}
+.xp-m2{font-size:10.5px;color:#94A3B8;font-weight:600;margin-top:1px}
+.xp-tags{margin-top:4px;white-space:nowrap;overflow:hidden}
+.xp-t{display:inline-block;font-size:9.5px;font-weight:750;padding:3px 7px;border-radius:6px;margin-right:4px}
+.xp-t-ok{background:#D1FAE5;color:#047857}.xp-t-warn{background:#FFEDD5;color:#C2410C}.xp-t-info{background:#DBEAFE;color:#1D4ED8}
+.xp-ac{width:172px;white-space:nowrap;text-align:right}
+.xp-date{font:inherit;font-size:11px;width:118px;border:1px solid #E2E8F0;border-radius:8px;padding:5px 7px;color:#334155;background:#fff;transition:.2s}
+.xp-date:hover{border-color:#93C5FD}
+.xp-date:focus{outline:none;border-color:#2563EB;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.xp-date.xp-ok,#sel-doc.xp-ok{border-color:#059669;box-shadow:0 0 0 3px rgba(5,150,105,.22)}
+.xp-b{margin-left:5px;border:1px solid #E2E8F0;background:#fff;border-radius:8px;width:28px;height:28px;cursor:pointer;color:#64748B;transition:.2s}
+.xp-b:hover{background:#EFF6FF;color:#2563EB;border-color:#BFDBFE;transform:translateY(-2px)}
+.xp-vazio{padding:26px;text-align:center;color:#64748B;font-size:13px}
+@media(prefers-reduced-motion:reduce){.xp-k,.xp-c,.xp-sec,.xp-bar i,.xp-k-ic{animation:none!important}}
+
+</style>
+<script id="xpjs">
+/* ===== FILA DE RETIRADA (Expedicao v2) =====
+   Regra base: entra o lote VENDIDO ou PAGO que ainda NAO foi retirado.
+   Ter lance ou apelido no campo arrematante NAO conta como venda. */
+window.__xpTermos=null;
+window.__xpRender=async function(lotes){
+  var box=document.getElementById('xp-root'); if(!box)return;
+  /* Nao depende do escopo de quem chamou: se a lista vier vazia, busca sozinho. */
+  if(!lotes || !lotes.length){ try{ var sn=await window._getDocs(window._col(window._db,'lotes'));
+      lotes=[]; sn.forEach(function(d){lotes.push(Object.assign({id:d.id},d.data()));}); }catch(e){ lotes=lotes||[]; } }
+  var esc=function(t){return String(t==null?'':t).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
+  var money=function(v){return 'R$ '+(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});};
+  var mask=function(a){return String(a||'').indexOf('*')>-1;};
+  var nomeDe=function(l){var a=String(l.arrematante||'').trim();return (a&&!mask(a))?a:'';};
+  if(window.__xpTermos===null){ window.__xpTermos={}; try{ var ts=await window._getDocs(window._col(window._db,'termos_retirada')); ts.forEach(function(d){var o=d.data()||{}; window.__xpTermos[String(o.num||'')]=true;}); }catch(e){} }
+  var TT=window.__xpTermos;
+  var fila=(lotes||[]).filter(function(l){return (l.vendido||l.pago) && !l.retirou;});
+  var semNome=fila.filter(function(l){return !nomeDe(l);});
+  var comNome=fila.filter(function(l){return !!nomeDe(l);});
+  var aPagar=comNome.filter(function(l){return !l.pago;});
+  var agendar=comNome.filter(function(l){return l.pago && !l.dataRetirada;});
+  var agendados=comNome.filter(function(l){return !!l.dataRetirada;});
+  var m2=function(arr){return arr.reduce(function(s,l){return s+(Number(l.m2)||0);},0);};
+  var val=function(arr){return arr.reduce(function(s,l){return s+(Number(l.valorVenda)||Number(l.lanceAtual)||0);},0);};
+  window.__xpDados={fila:fila,semNome:semNome,comNome:comNome};
+  var kpi=function(n,rot,sub,cor,ico){return '<div class="xp-k xp-'+cor+'"><div class="xp-k-ic"><i class="ti '+ico+'"></i></div>'
+    +'<div class="xp-k-n">'+n+'</div><div class="xp-k-r">'+rot+'</div><div class="xp-k-s">'+sub+'</div></div>';};
+  var topo='<div class="xp-kpis">'
+    +kpi(semNome.length,'Sem nome do comprador','Travado ate a Sodre informar','dang','ti-user-question')
+    +kpi(aPagar.length,'Aguardando pagamento','Nao libera retirada','warn','ti-cash-off')
+    +kpi(agendar.length,'Pronto para agendar','Pago e identificado','ok','ti-calendar-plus')
+    +kpi(agendados.length,'Agendado','Data marcada','info','ti-truck-delivery')
+    +'</div>';
+  var blocoA='';
+  if(semNome.length){
+    var porLeilao={};
+    semNome.forEach(function(l){var k=String(l.leilaoNum||String(l.num||'').split('-')[0]||'?');(porLeilao[k]=porLeilao[k]||[]).push(l);});
+    var chips=Object.keys(porLeilao).sort().map(function(k){return '<span class="xp-chip">Leilao '+esc(k)+' <b>'+porLeilao[k].length+'</b></span>';}).join('');
+    blocoA='<section class="xp-sec xp-sec-dang">'
+      +'<header><div><h3><i class="ti ti-alert-triangle"></i> Falta o nome do comprador</h3>'
+      +'<p>'+semNome.length+' lote(s) · '+m2(semNome).toLocaleString("pt-BR",{maximumFractionDigits:2})+' m² · '+money(val(semNome))+' parados. Sem o nome nao da para emitir termo nem agendar.</p></div>'
+      +'<button class="btn-p" onclick="window.__xpCopiar()"><i class="ti ti-copy"></i> Copiar lista p/ pedir a Sodre</button></header>'
+      +'<div class="xp-chips">'+chips+'</div></section>';
+  }
+  var grupos={};
+  comNome.forEach(function(l){var n=nomeDe(l);(grupos[n]=grupos[n]||[]).push(l);});
+  var ordem=Object.keys(grupos).sort(function(a,b){
+    var pa=grupos[a].filter(function(l){return l.pago;}).length, pb=grupos[b].filter(function(l){return l.pago;}).length;
+    if((pb>0)!==(pa>0))return pb>0?1:-1;
+    return grupos[b].length-grupos[a].length;});
+  var cards=ordem.map(function(n,idx){
+    var ls=grupos[n], pagos=ls.filter(function(l){return l.pago;}).length;
+    var ag=ls.filter(function(l){return !!l.dataRetirada;}).length;
+    var prog=Math.round((pagos/ls.length)*100);
+    var estado = ag===ls.length ? ['Agendado','ok'] : (pagos===ls.length ? ['Pronto para agendar','info'] : ['Aguardando pagamento','warn']);
+    var linhas=ls.sort(function(a,b){return String(a.num).localeCompare(String(b.num));}).map(function(l){
+      var tags='';
+      tags+= l.pago ? '<span class="xp-t xp-t-ok">Pago</span>' : '<span class="xp-t xp-t-warn">A pagar</span>';
+      if(TT[String(l.num)])tags+='<span class="xp-t xp-t-info">Termo no sistema</span>';
+      if(l.dataRetirada)tags+='<span class="xp-t xp-t-ok">'+esc(String(l.dataRetirada).split('-').reverse().join('/'))+'</span>';
+      return '<tr><td class="xp-cel"><div class="xp-num">'+esc(l.num)+'</div>'
+        +'<div class="xp-desc">'+esc(String(l.descricao||'').slice(0,54))+'</div>'
+        +'<div class="xp-tags">'+tags+'</div></td>'
+        +'<td class="xp-val"><div>'+money(Number(l.valorVenda)||Number(l.lanceAtual)||0)+'</div>'
+        +'<div class="xp-m2">'+(Number(l.m2)||0).toLocaleString("pt-BR",{maximumFractionDigits:2})+' m²</div></td>'
+        +'<td class="xp-ac"><input type="date" class="xp-date" value="'+esc(l.dataRetirada||'')+'" onchange="window.__xpAgendar(this,\''+l.id+'\')" title="Agendar retirada">'
+        +'<button class="xp-b" title="Anexar termo de retirada" onclick="window.__xpTermo(\''+esc(l.num)+'\')"><i class="ti ti-file-upload"></i></button></td></tr>';}).join('');
+    return '<article class="xp-c" style="animation-delay:'+Math.min(idx*45,450)+'ms">'
+      +'<div class="xp-c-h"><div class="xp-av">'+esc(n.slice(0,2).toUpperCase())+'</div>'
+      +'<div class="xp-c-t"><h4>'+esc(n)+'</h4>'
+      +'<span>'+ls.length+' lote(s) · '+m2(ls).toLocaleString("pt-BR",{maximumFractionDigits:2})+' m² · '+money(val(ls))+'</span></div>'
+      +'<span class="xp-badge xp-'+estado[1]+'">'+estado[0]+'</span></div>'
+      +'<div class="xp-bar"><i style="width:'+prog+'%"></i></div>'
+      +'<div class="xp-bar-r">'+pagos+' de '+ls.length+' pago(s)</div>'
+      +'<table class="xp-tb"><tbody>'+linhas+'</tbody></table></article>';}).join('');
+  var blocoB='<section class="xp-sec"><header><div><h3><i class="ti ti-users"></i> Por comprador identificado</h3>'
+    +'<p>'+ordem.length+' comprador(es) · '+comNome.length+' lote(s). Quem ja pagou aparece primeiro.</p></div></header>'
+    +(ordem.length?'<div class="xp-grid">'+cards+'</div>':'<div class="xp-vazio">Nenhum lote com comprador identificado na fila.</div>')+'</section>';
+  box.innerHTML=topo+blocoA+blocoB;
+};
+window.__xpCopiar=function(){
+  var d=window.__xpDados; if(!d)return;
+  var txt=d.semNome.map(function(l){return l.num+'\t'+String(l.descricao||'').slice(0,60)+'\t'+(Number(l.m2)||0)+' m2';}).join('\n');
+  var cab='Lotes vendidos sem o nome do arrematante informado:\n\nLOTE\tDESCRICAO\tMETRAGEM\n';
+  navigator.clipboard.writeText(cab+txt).then(function(){ if(window.toast)window.toast(d.semNome.length+' lote(s) copiado(s). Cole no e-mail para a Sodre.','ok'); });
+};
+window.__xpAgendar=async function(el,id){
+  var v=el.value||'';
+  try{ await window._upd(window._doc(window._db,'lotes',''+id),{dataRetirada:v});
+    el.classList.add('xp-ok'); setTimeout(function(){el.classList.remove('xp-ok');},1200);
+    if(window.toast)window.toast(v?('Retirada agendada para '+v.split('-').reverse().join('/')):'Agendamento removido','ok');
+  }catch(e){ if(window.toast)window.toast('Nao gravou: '+e.message,'err'); else alert('Nao gravou: '+e.message); }
+};
+/* A tela antiga reatribui window.renderExpedicao mais de uma vez; por isso
+   a troca e feita aqui, no ultimo script do arquivo, e tambem no clique do menu. */
+window.renderExpedicao=function(){ return window.__xpRender([]); };
+document.addEventListener('click',function(ev){
+  var n=ev.target&&ev.target.closest&&ev.target.closest('.nav');
+  if(n&&n.dataset&&n.dataset.p==='expedicao'){ setTimeout(function(){ window.__xpRender([]); },250); }
+});
+if(document.getElementById('pg-expedicao')){ setTimeout(function(){
+  var pg=document.getElementById('pg-expedicao');
+  if(pg&&getComputedStyle(pg).display!=='none') window.__xpRender([]); },1500); }
+window.__xpTermo=function(num){
+  if(window.ir)window.ir('documentos');
+  setTimeout(function(){ var s=document.getElementById('sel-doc'); if(!s)return;
+    var alvo=[].slice.call(s.options).find(function(o){return o.text.indexOf('Lote '+num)===0;});
+    if(alvo){ s.value=alvo.value; s.dispatchEvent(new Event('change',{bubbles:true}));
+      s.scrollIntoView({block:'center'}); s.classList.add('xp-ok'); setTimeout(function(){s.classList.remove('xp-ok');},1600); }
+  },600);
+};
+
 </script>
 </body>
 </html>
