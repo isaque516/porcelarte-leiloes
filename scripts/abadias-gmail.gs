@@ -23,11 +23,43 @@ function criarGatilho() {
     'Verificacao automatica ativada: todos os dias ~10h e ~16h.\nResultados e baixas da Sodre serao aplicados no Abadias sozinhos.');
 }
 
+
+// ---------- LOGIN DO ROBO ----------
+// O robo entra com a MESMA conta que voce usa no app. A senha NAO fica aqui no
+// codigo (nem no GitHub): fica em Configuracoes do projeto > Propriedades do script.
+var _tk = null, _tkExp = 0;
+function fsToken_() {
+  var agora = new Date().getTime();
+  if (_tk && agora < _tkExp) return _tk;
+  var p = PropertiesService.getScriptProperties();
+  var em = p.getProperty('ABADIAS_EMAIL'), se = p.getProperty('ABADIAS_SENHA');
+  if (!em || !se) throw new Error('faltam ABADIAS_EMAIL e ABADIAS_SENHA nas Propriedades do script');
+  var r = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + FS_KEY, {
+    method: 'post', contentType: 'application/json',
+    payload: JSON.stringify({ email: em, password: se, returnSecureToken: true }),
+    muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) throw new Error('login do robo recusado (HTTP ' + r.getResponseCode() + ')');
+  var j = JSON.parse(r.getContentText());
+  _tk = j.idToken;
+  _tkExp = agora + (Number(j.expiresIn || 3600) - 300) * 1000;  // renova 5 min antes de vencer
+  return _tk;
+}
+
+function fsHeaders_() { return { Authorization: 'Bearer ' + fsToken_() }; }
+
+function testarLoginRobo() {
+  var t = fsToken_();
+  var r = fsGet_('lotes/sodre-29029-001');
+  var msg = 'Login do robo OK (token de ' + t.length + ' caracteres). Leitura de teste: HTTP ' + r.code + '.';
+  Logger.log(msg);
+  return msg;
+}
+
 // ---------- Firestore ----------
 function fsGet_(path) {
   var r = null;
   for (var tent = 0; tent < 3; tent++) {
-    r = UrlFetchApp.fetch(FS_BASE + '/' + path + '?key=' + FS_KEY, { muteHttpExceptions: true });
+    r = UrlFetchApp.fetch(FS_BASE + '/' + path + '?key=' + FS_KEY, { headers: fsHeaders_(), muteHttpExceptions: true });
     var c = r.getResponseCode();
     if (c == 200 || c == 404) break;
     Utilities.sleep(1500);
@@ -38,6 +70,7 @@ function fsPatch_(path, fields, mask) {
   var url = FS_BASE + '/' + path + '?key=' + FS_KEY;
   if (mask) for (var i = 0; i < mask.length; i++) url += '&updateMask.fieldPaths=' + mask[i];
   var r = UrlFetchApp.fetch(url, { method: 'patch', contentType: 'application/json',
+    headers: fsHeaders_(),
     payload: JSON.stringify({ fields: fields }), muteHttpExceptions: true });
   return r.getResponseCode() == 200;
 }
@@ -45,7 +78,7 @@ function fsList_(col) {
   var out = [], tk = '';
   do {
     var u = FS_BASE + '/' + col + '?key=' + FS_KEY + '&pageSize=100' + (tk ? '&pageToken=' + tk : '');
-    var j = JSON.parse(UrlFetchApp.fetch(u).getContentText());
+    var j = JSON.parse(UrlFetchApp.fetch(u, { headers: fsHeaders_() }).getContentText());
     var ds = j.documents || [];
     for (var i = 0; i < ds.length; i++) out.push(ds[i]);
     tk = j.nextPageToken || '';
@@ -102,23 +135,28 @@ function pdfParaTexto_(blob) {
 // Por isso localizamos o inicio de cada lote (001, 002, ...) e lemos so o pedaco dele.
 function parsePrestacao_(txt) {
   txt = String(txt || '').replace(/[\u200B-\u200D\uFEFF]/g, '');
-  var mt = txt.match(/Total de Lotes:\s*(\d+)/);
-  if (!mt) return null;
-  var N = Number(mt[1]);
-  if (!N || N > 400) return null;
+  // O resumo mudou de layout. Antes saia "Total de Lotes: 4"; hoje o rotulo e o
+  // numero vem separados ("Total de Lotes: Vendidos:" ... mais adiante "4").
+  // Entao o total passa a ser contado pelos proprios blocos de lote, e o resumo
+  // vira so conferencia quando ainda der para ler.
   var fim = txt.indexOf('Total de Lotes');
   var corpo = txt.slice(0, fim > 0 ? fim : txt.length);
-  var pos = [], busca = 0;
-  for (var i = 1; i <= N; i++) {
-    var alvo = ('000' + i).slice(-3);
-    var re = new RegExp('(?:^|[\\r\\n]|[A-Za-z\\u00C0-\\u017F])(' + alvo + ')[\\s\\u00A0]+\\S', 'g');
-    re.lastIndex = busca;
-    var m = re.exec(corpo);
-    if (!m) return null;
-    var idx = m.index + m[0].indexOf(alvo);
-    pos.push({ num: alvo, ini: idx });
-    busca = idx + 3;
+  // Os lotes NAO comecam em 001. O leilao e compartilhado com outros vendedores,
+  // entao a nossa faixa pode ser 004-006, 010-012, 017-020, 025-028. Procurar
+  // 001..N era a causa real de 5 prestacoes nunca terem sido lidas.
+  // Tambem nao da para exigir quebra de linha antes do numero: o PDF cola o
+  // status do lote anterior no numero do proximo ("... Paletes Cancelado 002 475,20").
+  var re = /(?:^|[\s\u00A0]|[A-Za-z\u00C0-\u017F)\]])(\d{3})[\s\u00A0]+(?=[\dA-Za-z\u00C0-\u017F])/g;
+  var pos = [], mm, ultimo = -1;
+  while ((mm = re.exec(corpo)) !== null) {
+    var nn = Number(mm[1]);
+    if (nn <= ultimo) continue;          // numero de lote so cresce
+    pos.push({ num: mm[1], ini: mm.index + mm[0].indexOf(mm[1]) });
+    ultimo = nn;
   }
+  if (!pos.length) return null;
+  var mt = txt.match(/Total de Lotes:\s*(\d+)/);
+  if (mt && Number(mt[1]) > 0 && Number(mt[1]) !== pos.length) return null;
   var out = {};
   for (var k = 0; k < pos.length; k++) {
     var ini2 = pos[k].ini;
@@ -127,10 +165,11 @@ function parsePrestacao_(txt) {
     var ms = bloco.match(/(Cancelado|SemLicitante|Sem Licitante|Retirado|Vendido)/g) || [];
     var st = ms.length ? String(ms[0]).replace(/\s+/g, '') : '';
     if (!st) return null;
+    // O valor por lote NAO e lido daqui. No layout novo o R$ de um lote aparece
+    // no inicio do bloco do lote SEGUINTE; gravar valor no lote errado e pior do
+    // que nao gravar. O valor continua vindo da planilha de resultado.
     var venda = 0, comprador = '', doc = '';
     if (st === 'Vendido') {
-      var mv = bloco.match(/R\$\s*([\d.]+,\d{2})/);
-      if (mv) venda = Number(mv[1].replace(/\./g, '').replace(',', '.')) || 0;
       // NOME REAL do arrematante (o site so mostra mascarado)
       var mn = bloco.match(/Vendido\s*Para\s*:?\s*([^\n]+)/i);
       if (mn) {
@@ -159,6 +198,30 @@ function parseVenda_(v) {
 function main_() {
   var MEU = Session.getActiveUser().getEmail();
   var log = [];
+
+  // BACKUP primeiro, antes de tudo: se o resto quebrar, a copia ja esta salva.
+  var _bkOk = false, _bkMsg = '';
+  try {
+    var _bk = backupDiario_(false);
+    _bkOk = true;
+    _bkMsg = _bk ? (_bk.nome + ' - ' + _bk.docs + ' doc, ' + _bk.kb + ' KB, + ' + _bk.fotosDocs + ' fotos em ' + _bk.fotosPartes + ' parte(s))')
+                 : 'o arquivo de hoje ja existia';
+    if (_bk && new Date().getDay() === 1) {
+      log.push('BACKUP do banco OK: ' + _bkMsg + ' na pasta "' + BK_PASTA + '" do seu Drive.');
+    }
+  } catch (eBk) {
+    _bkOk = false; _bkMsg = eBk.message;
+    log.push('ATENCAO: o BACKUP de hoje NAO foi gravado - ' + eBk.message
+           + '\n  O banco esta sem copia de hoje. Os anteriores continuam na pasta "' + BK_PASTA + '".');
+  }
+  /* O e-mail diario se perde no meio de outros. O app precisa conseguir mostrar
+     sozinho se o robo rodou e se o backup saiu - foi a falta disso que deixou o
+     backup quebrado por 25 dias sem ninguem perceber. */
+  try {
+    fsPatch_('robo/status', { rodouEm: S_(new Date().toISOString()),
+      backupOk: B_(_bkOk), backupInfo: S_(String(_bkMsg).slice(0, 300)) },
+      ['rodouEm', 'backupOk', 'backupInfo']);
+  } catch (eSt) {}
   var lotes = fsList_('lotes');
   var porNum = {};
   for (var i = 0; i < lotes.length; i++) {
@@ -199,7 +262,9 @@ function main_() {
         var h = String(vals[r0][c]).toLowerCase().replace(/\s+/g, ' ').trim();
         if (h === 'lote') cLote = c;
         if (h.indexOf('st.') === 0 || h.indexOf('st. lote') > -1) cSt = c;
-        if (h.indexOf('venda') === 0) cVenda = c;
+        /* A Sodre renomeou a coluna de valor de "Venda" para "Oferta R$" em
+           out/2026. O robo parou de aplicar resultado e avisou - acertado. */
+        if (h.indexOf('venda') === 0 || h.indexOf('oferta') === 0) cVenda = c;
       }
       if (cLote > -1 && cSt > -1 && cVenda > -1) { hi = r0; break; }
     }
@@ -232,7 +297,8 @@ function main_() {
   }
 
   // 2) PRESTACAO DE CONTAS -> BAIXA
-  var ths2 = GmailApp.search('subject:prestacao OR subject:"prestação" newer_than:14d');
+  // 90 dias: uma falha tem 3 meses para se consertar sozinha numa rodada seguinte.
+  var ths2 = GmailApp.search('subject:prestacao OR subject:"prestação" newer_than:90d');
   for (var t2 = 0; t2 < ths2.length; t2++) {
     var th2 = ths2[t2];
     var subj2 = th2.getFirstMessageSubject();
@@ -241,7 +307,12 @@ function main_() {
     var leilao2 = m2[1];
     var stB = fsGet_('emails_processados/baixa-' + leilao2);
     if (stB.code !== 200 && stB.code !== 404) { log.push('Baixa ' + leilao2 + ': status ilegivel (' + stB.code + '), pulei por seguranca.'); continue; }
-    var jaFeita = (stB.code === 200);
+    // O marcador baixa-XXXXX e gravado mesmo quando a baixa FALHA. Tratar a simples
+    // existencia do marcador como 'ja feita' fazia o robo nunca mais tentar de novo:
+    // 13 baixas ficaram presas entre 19/10 e 14/11. Agora so conta como feita se aplicou.
+    var _apl = stB.json && stB.json.fields && stB.json.fields.baixaAplicada;
+    var _falhou = !!(_apl && _apl.booleanValue === false);
+    var jaFeita = (stB.code === 200) && !_falhou;
     // rede de seguranca: se a baixa ja rodou mas algum lote vendido segue sem o nome real, tenta de novo
     var faltaNome = false;
     for (var nF in porNum) {
@@ -256,14 +327,35 @@ function main_() {
     // Le o PDF "PC D" (Prestacao de Contas Detalhada) para saber cancelados e valores REAIS
     var pcd = null;
     var msgs2 = th2.getMessages();
-    for (var k2 = 0; k2 < msgs2.length && !pcd; k2++) {
+    // A Sodre nao usa nome fixo no anexo. Ja veio "PC D 29085.pdf" e hoje vem
+    // "FRANCISCO ALVES DE OLIVEIRA - D - 29195.pdf", com erro de digitacao no nome.
+    // Procurar a string "PC D" deixou 9 baixas sem aplicar entre 19/10 e 14/11.
+    // Agora escolhe por pontuacao, nunca por nome exato.
+    var melhor = -1;
+    for (var k2 = 0; k2 < msgs2.length; k2++) {
       var as2 = msgs2[k2].getAttachments();
       for (var j2 = 0; j2 < as2.length; j2++) {
-        if (/PC\s*D/i.test(as2[j2].getName()) && /\.pdf$/i.test(as2[j2].getName())) { pcd = as2[j2]; break; }
+        var nm2 = as2[j2].getName();
+        if (!/\.pdf$/i.test(nm2)) continue;
+        var pt = 0;
+        if (/PC\s*D\b/i.test(nm2)) pt += 5;
+        if (/(^|[\s\-_])D([\s\-_]|$)/i.test(nm2)) pt += 4;
+        if (nm2.indexOf(leilao2) > -1) pt += 2;
+        if (/PC\s*R\b/i.test(nm2)) pt -= 6;
+        if (/(^|[\s\-_])(NV|RPA|NF|NFS)([\s\-_.]|$)/i.test(nm2)) pt -= 6;
+        if (/^\s*[\d.]+,\d{2}\s/.test(nm2)) pt -= 5;
+        if (pt > melhor && pt > 0) { melhor = pt; pcd = as2[j2]; }
       }
     }
     var detalhe = null, motivoFalha = '';
-    if (!pcd) motivoFalha = 'anexo "PC D" nao encontrado no e-mail';
+    if (!pcd) {
+      var listaNomes = [];
+      for (var k9 = 0; k9 < msgs2.length; k9++) {
+        var as9 = msgs2[k9].getAttachments();
+        for (var j9 = 0; j9 < as9.length; j9++) listaNomes.push(as9[j9].getName());
+      }
+      motivoFalha = 'nao achei a prestacao detalhada. Anexos: ' + listaNomes.join(' | ').slice(0, 300);
+    }
     if (pcd) {
       try {
         var txtPdf = pdfParaTexto_(pcd.copyBlob());
@@ -284,6 +376,18 @@ function main_() {
       var fL = { pago: B_(true), pagoEm: S_(dt) }, mL = ['pago', 'pagoEm'];
       if (vRec > 0) { fL.valorRecebido = D_(vRec); mL.push('valorRecebido'); }
       fsPatch_('leiloes/' + alvo.name.split('/').pop(), fL, mL);
+    }
+    // Rede de seguranca: se o PDF trouxe menos lotes do que o app conhece desse
+    // leilao, nao aplico nada. Aplicar pela metade deixa lote pago e lote nao pago
+    // no mesmo leilao sem ninguem perceber - foi exatamente o que houve no 29099.
+    if (detalhe) {
+      var _esp = 0, _ach = 0;
+      for (var _nE in porNum) if (_nE.indexOf(leilao2 + '-') === 0) _esp++;
+      for (var _nA in detalhe) if (porNum[leilao2 + '-' + _nA]) _ach++;
+      if (_esp > 0 && _ach < _esp) {
+        detalhe = null;
+        motivoFalha = 'li ' + _ach + ' de ' + _esp + ' lotes do leilao no PDF; nao apliquei para nao marcar pela metade';
+      }
     }
     var n = 0, canc = 0, nomes = 0, totReal = 0, detLog = [];
     if (detalhe) {
@@ -321,8 +425,13 @@ function main_() {
       detLog.push('ATENCAO: os lotes NAO foram marcados como pagos porque ' + motivoFalha + '.');
       detLog.push('Confira a prestacao de contas no Gmail e ajuste no app.');
     }
+    /* Registra SE a baixa foi aplicada. Antes gravava o mesmo marcador tendo
+       dado certo ou nao, e o app nao conseguia distinguir "a Sodre atrasou" de
+       "o robo nao conseguiu ler a prestacao" - duas coisas que pedem acoes
+       opostas (cobrar x abrir o e-mail). */
     fsPatch_('emails_processados/baixa-' + leilao2,
-      { tipo: S_('baixa'), leilao: S_(leilao2), pagoEm: S_(dt), atualizadoEm: S_(new Date().toISOString()) }, null);
+      { tipo: S_('baixa'), leilao: S_(leilao2), pagoEm: S_(dt), atualizadoEm: S_(new Date().toISOString()),
+        baixaAplicada: B_(!!detalhe), motivoFalha: S_(detalhe ? '' : (motivoFalha || 'motivo nao registrado')) }, null);
     if (soNomes) {
       if (nomes) log.push('Leilao ' + leilao2 + ': ' + nomes + ' comprador(es) preenchido(s) na 2a tentativa.\n  ' + detLog.join('\n  '));
       continue;
@@ -334,7 +443,273 @@ function main_() {
       + (detLog.length ? '\n  ' + detLog.join('\n  ') : ''));
   }
 
+
+  // Fechamento do Pos-Venda: le por ultimo, para cancelar o que nao vai ser pago.
+  try { lerFechamentos_(log); }
+  catch (eF) { log.push('ATENCAO: nao consegui ler os e-mails de FECHAMENTO - ' + eF.message); }
   if (log.length) {
     MailApp.sendEmail(MEU, 'Abadias - Sodre: ' + log.length + ' atualizacao(oes)', log.join('\n'));
   }
+}
+
+// ============================================================
+// BACKUP DIARIO DO BANCO (roda junto com o main_, 1x por dia)
+// Grava um JSON com TODAS as colecoes numa pasta do seu Drive.
+// Regra de ouro: nunca sobrescreve um backup bom por um ruim.
+// ============================================================
+var BK_PASTA = 'Abadias - Backups';
+// fotos_lotes saiu daqui de proposito: sao ~47 MB em base64 e estouravam o
+// limite de tamanho do Drive, o que matou o backup entre 20/10 e 14/11 sem
+// ninguem ver. Ela agora vai em arquivos proprios, por partes (backupFotos_).
+var BK_COLS  = ['lotes','leiloes','termos_retirada','termos_chunks',
+                'emails_processados','lotes_ignorados','lotes_backup'];
+var BK_FOTOS_LIM = 7000000;   // ~7 MB por parte, com folga para o limite do Drive
+var BK_DIAS  = 60;   // guarda 60 dias de copias
+var BK_MIN   = 50;   // se vier menos doc que isso, e leitura falha: aborta
+function pastaBackup_() {
+  var it = DriveApp.getFoldersByName(BK_PASTA);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(BK_PASTA);
+}
+
+function dumpCols_(cols) {
+  var dump = { gerado: new Date().toISOString(), versao: 1, colecoes: {}, totalDocs: 0 };
+  for (var i = 0; i < cols.length; i++) {
+    var col = cols[i], docs = null, erro = '';
+    for (var tent = 0; tent < 3 && docs === null; tent++) {
+      try { docs = fsList_(col); } catch (e) { erro = String(e); Utilities.sleep(2000); }
+    }
+    if (docs === null) throw new Error('colecao "' + col + '" ilegivel (' + erro + ')');
+    var arr = [];
+    for (var j = 0; j < docs.length; j++) {
+      arr.push({ id: docs[j].name.split('/').pop(), fields: docs[j].fields || {} });
+    }
+    dump.colecoes[col] = arr;
+    dump.totalDocs += arr.length;
+  }
+  return dump;
+}
+
+// Backup das FOTOS em arquivos proprios, fatiados por tamanho.
+function backupFotos_(pasta, hoje) {
+  var docs = null, erro = '';
+  for (var t = 0; t < 3 && docs === null; t++) {
+    try { docs = fsList_('fotos_lotes'); } catch (e) { erro = String(e); Utilities.sleep(2000); }
+  }
+  if (docs === null) throw new Error('colecao "fotos_lotes" ilegivel (' + erro + ')');
+  var partes = [], atual = [], tam = 0;
+  for (var i = 0; i < docs.length; i++) {
+    var d = { id: docs[i].name.split('/').pop(), fields: docs[i].fields || {} };
+    var s = JSON.stringify(d).length;
+    if (tam + s > BK_FOTOS_LIM && atual.length) { partes.push(atual); atual = []; tam = 0; }
+    atual.push(d); tam += s;
+  }
+  if (atual.length) partes.push(atual);
+  for (var p = 0; p < partes.length; p++) {
+    var nm = 'abadias-fotos-' + hoje + '-' + ('0' + (p + 1)).slice(-2) + '.json';
+    var ex = pasta.getFilesByName(nm);
+    while (ex.hasNext()) ex.next().setTrashed(true);
+    pasta.createFile(nm, JSON.stringify({ gerado: new Date().toISOString(), colecao: 'fotos_lotes',
+      parte: p + 1, de: partes.length, docs: partes[p] }), 'application/json');
+  }
+  return { docs: docs.length, partes: partes.length };
+}
+
+function backupDiario_(forcar) {
+  var hoje  = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd');
+  var nome  = 'abadias-' + hoje + '.json';
+  var pasta = pastaBackup_();
+  if (!forcar && pasta.getFilesByName(nome).hasNext()) return null;
+  var dump = dumpCols_(BK_COLS);
+  if (dump.totalDocs < BK_MIN) {
+    throw new Error('backup abortado: so ' + dump.totalDocs + ' documentos lidos (minimo ' + BK_MIN + ').');
+  }
+  var ex = pasta.getFilesByName(nome);
+  while (ex.hasNext()) ex.next().setTrashed(true);
+  var f = pasta.createFile(nome, JSON.stringify(dump), 'application/json');
+  var fot = backupFotos_(pasta, hoje);
+  limparBackupsAntigos_(pasta);
+  return { nome: nome, docs: dump.totalDocs, kb: Math.round(f.getSize() / 1024),
+           fotosDocs: fot.docs, fotosPartes: fot.partes };
+}
+
+function limparBackupsAntigos_(pasta) {
+  var lim = new Date().getTime() - BK_DIAS * 86400000;
+  var fs = pasta.getFiles(), todos = [];
+  while (fs.hasNext()) todos.push(fs.next());
+  if (todos.length <= 7) return;
+  for (var i = 0; i < todos.length; i++) {
+    if (todos[i].getDateCreated().getTime() < lim) todos[i].setTrashed(true);
+  }
+}
+
+function restaurarDump_(dump, cols, dryRun) {
+  var res = { gravados: 0, falhas: 0, porCol: {} };
+  for (var i = 0; i < cols.length; i++) {
+    var col = cols[i], arr = (dump.colecoes || {})[col];
+    if (!arr) continue;
+    var ok = 0, bad = 0;
+    for (var j = 0; j < arr.length; j++) {
+      var d = arr[j], mask = [];
+      for (var k in d.fields) mask.push(k);
+      if (dryRun) { ok++; continue; }
+      if (fsPatch_(col + '/' + d.id, d.fields, mask)) ok++; else bad++;
+    }
+    res.porCol[col] = ok + (bad ? ' (' + bad + ' falha)' : '');
+    res.gravados += ok; res.falhas += bad;
+  }
+  return res;
+}
+
+function restaurarBackup() {
+  var ARQUIVO  = 'abadias-2026-09-24.json';
+  var COLECOES = BK_COLS;
+  var DRY_RUN  = true;
+  var it = pastaBackup_().getFilesByName(ARQUIVO);
+  if (!it.hasNext()) throw new Error('nao achei o arquivo ' + ARQUIVO);
+  var dump = JSON.parse(it.next().getBlob().getDataAsString());
+  var r = restaurarDump_(dump, COLECOES, DRY_RUN);
+  var msg = (DRY_RUN ? '[SIMULACAO] ' : '[GRAVADO] ') + ARQUIVO
+          + '\nBackup de: ' + dump.gerado + '\nDocumentos: ' + JSON.stringify(r.porCol)
+          + '\nTotal: ' + r.gravados + (r.falhas ? ' | FALHAS: ' + r.falhas : '');
+  Logger.log(msg);
+  MailApp.sendEmail(Session.getActiveUser().getEmail(), 'Abadias - restauracao de backup', msg);
+  return msg;
+}
+
+function testarBackupRestore() {
+  var COL = 'backup_teste', ID = 'roundtrip';
+  var marca = 'teste-' + new Date().getTime();
+  var passos = [];
+  fsPatch_(COL + '/' + ID, { marca: S_(marca), numero: D_(1234.56), flag: B_(true) }, ['marca','numero','flag']);
+  passos.push('1. gravou doc de teste com marca=' + marca);
+  var dump = dumpCols_([COL]);
+  var achou = (dump.colecoes[COL] || []).filter(function (d) { return d.id === ID; })[0];
+  if (!achou) throw new Error('FALHOU: o backup nao capturou o documento de teste');
+  passos.push('2. backup capturou o doc');
+  fsPatch_(COL + '/' + ID, { marca: S_('DESTRUIDO'), numero: D_(0), flag: B_(false) }, ['marca','numero','flag']);
+  var conf = fsGet_(COL + '/' + ID);
+  if (gv_(conf.json, 'marca') !== 'DESTRUIDO') throw new Error('FALHOU: nao consegui destruir o doc para testar');
+  passos.push('3. destruiu o doc de proposito (marca=DESTRUIDO)');
+  restaurarDump_(dump, [COL], false);
+  var pos = fsGet_(COL + '/' + ID);
+  var m = gv_(pos.json, 'marca'), n = gv_(pos.json, 'numero'), b = gv_(pos.json, 'flag');
+  if (m !== marca || Number(n) !== 1234.56 || b !== true) {
+    throw new Error('FALHOU: restauracao nao bateu. marca=' + m + ' numero=' + n + ' flag=' + b);
+  }
+  passos.push('4. restaurou e conferiu: marca, numero e flag identicos ao original');
+  UrlFetchApp.fetch(FS_BASE + '/' + COL + '/' + ID + '?key=' + FS_KEY, { method: 'delete', headers: fsHeaders_(), muteHttpExceptions: true });
+  passos.push('5. limpou a colecao de teste');
+  var msg = 'CICLO BACKUP -> RESTAURACAO: OK\n\n' + passos.join('\n');
+  Logger.log(msg);
+  return msg;
+}
+
+function backupAgora() {
+  var r = backupDiario_(true);
+  var msg = 'Backup gravado: ' + r.nome + ' | ' + r.docs + ' documentos | ' + r.kb + ' KB'
+          + '\nPasta no Drive: ' + BK_PASTA;
+  Logger.log(msg);
+  return msg;
+}
+
+// ============================================================
+// FECHAMENTO DE LEILAO (planilha do Pos-Venda / Lainara)
+// Chega dias depois do pregao, de remetente e formato DIFERENTES da
+// prestacao do Ricardo. O robo nao vigiava isso: o fechamento do 29068
+// chegou em 01/10 dizendo que os 2 lotes foram CANCELADOS e o app ficou
+// 11 dias mostrando R$ 11.875 ATRASADO de dinheiro que nao existe.
+//
+// Regra: so age no caso inequivoco (linha com o numero do lote + a
+// palavra "cancelado"). Qualquer outra coisa NAO adivinha - manda e-mail
+// pedindo conferencia. Formato de terceiro muda sem aviso; chutar aqui
+// mexe no seu financeiro.
+// ============================================================
+function lerFechamentos_(log) {
+  var ths = GmailApp.search('subject:FECHAMENTO has:attachment newer_than:60d');
+  for (var t = 0; t < ths.length; t++) {
+    var msgs = ths[t].getMessages();
+    for (var m = 0; m < msgs.length; m++) {
+      var msg = msgs[m], assunto = msg.getSubject() || '';
+      var mn = assunto.match(/\b(\d{5})\b/);
+      if (!mn) continue;
+      var leilao = mn[1];
+      var marca = 'fechamento-' + leilao;
+      if (fsGet_('emails_processados/' + marca).code === 200) continue;
+      var anexos = msg.getAttachments(), planilha = null;
+      for (var a = 0; a < anexos.length; a++) {
+        if (/\.xlsx?$/i.test(anexos[a].getName())) { planilha = anexos[a]; break; }
+      }
+      if (!planilha) continue;
+      var linhas = null;
+      try { linhas = xlsParaLinhas_(planilha.copyBlob()); } catch (e) { linhas = null; }
+      if (!linhas) {
+        log.push('ATENCAO: chegou o FECHAMENTO do leilao ' + leilao + ' e eu nao consegui abrir a planilha.'
+               + '\n  Abra o e-mail e confira na mao se algum lote foi cancelado.');
+        continue;
+      }
+      var cancelados = [], duvidosos = [];
+      for (var i = 0; i < linhas.length; i++) {
+        var txt = linhas[i].join(' | ');
+        var ml = txt.match(new RegExp('\\b' + leilao + '\\s*[-/.]?\\s*(\\d{1,4})\\b'));
+        if (!ml) {
+          var so = txt.match(/^\s*\|?\s*(\d{1,3})\s*\|/);
+          if (!so) continue;
+          ml = [null, so[1]];
+        }
+        var num = leilao + '-' + ('00' + ml[1]).slice(-3);
+        if (/cancelad/i.test(txt)) cancelados.push(num);
+        else if (/sem\s*licitante|retirad|n[aã]o\s*pag/i.test(txt)) duvidosos.push(num + ' (' + txt.slice(0, 60) + ')');
+      }
+      var feitos = 0, naoAchei = [];
+      for (var c = 0; c < cancelados.length; c++) {
+        var alvo = porNumGlobal_(cancelados[c]);
+        if (!alvo) { naoAchei.push(cancelados[c]); continue; }
+        if (alvo.cancelado === true) continue;
+        if (fsPatch_('lotes/' + alvo.id, {
+              cancelado: B_(true), vendido: B_(false), valorVenda: D_(0), pago: B_(false),
+              obs: S_('Cancelado no fechamento do leilao ' + leilao + ' (planilha do Pos-Venda da Sodre).')
+            }, ['cancelado', 'vendido', 'valorVenda', 'pago', 'obs'])) feitos++;
+      }
+      fsPatch_('emails_processados/' + marca,
+        { tipo: S_('fechamento'), leilao: S_(leilao), lido: S_(new Date().toISOString()),
+          cancelados: S_(cancelados.join(',')) }, null);
+      var aviso = 'FECHAMENTO do leilao ' + leilao + ' lido (planilha do Pos-Venda).';
+      if (feitos) aviso += '\n  ' + feitos + ' lote(s) marcados como CANCELADO: ' + cancelados.join(', ')
+                        + '\n  Esses lotes sairam do financeiro - o dinheiro deles nao vai cair.';
+      if (!cancelados.length) aviso += '\n  Nenhum lote cancelado encontrado na planilha.';
+      if (naoAchei.length) aviso += '\n  ATENCAO: nao achei no Abadias: ' + naoAchei.join(', ');
+      if (duvidosos.length) aviso += '\n  CONFIRA NA MAO (nao mexi): ' + duvidosos.join(' ; ');
+      log.push(aviso);
+    }
+  }
+}
+
+function porNumGlobal_(num) {
+  var ls = fsList_('lotes');
+  for (var i = 0; i < ls.length; i++) {
+    if (String(gv_(ls[i], 'num')) === String(num)) {
+      return { id: ls[i].name.split('/').pop(), cancelado: gv_(ls[i], 'cancelado') === true };
+    }
+  }
+  return null;
+}
+
+
+function verCabecalho() {
+  var ths = GmailApp.search('from:montagem@sodresantoro.com.br subject:29079 has:attachment newer_than:45d');
+  var out = [];
+  for (var t = 0; t < ths.length; t++) {
+    var msgs = ths[t].getMessages();
+    for (var m = 0; m < msgs.length; m++) {
+      var as = msgs[m].getAttachments();
+      for (var j = 0; j < as.length; j++) {
+        if (!/\.xls/i.test(as[j].getName())) continue;
+        out.push('ARQUIVO: ' + as[j].getName());
+        var vals = xlsParaLinhas_(as[j].copyBlob());
+        for (var r = 0; r < Math.min(20, vals.length); r++) out.push(r + ' >> ' + vals[r].join(' | '));
+      }
+    }
+  }
+  fsPatch_('debug/cabecalho', { texto: S_(out.join('\n').slice(0, 20000)), em: S_(new Date().toISOString()) }, null);
+  return out.length;
 }
