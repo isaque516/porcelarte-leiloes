@@ -638,7 +638,7 @@ td{padding:12px 18px}
         <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-adjustments-horizontal"></i></div><div><div class="ch-title">Filtros</div></div></div><button class="btn-p" onclick="openModal()" style="padding:6px 12px;font-size:11px"><i class="ti ti-plus"></i>Novo lote</button></div>
         <div class="frow">
           <div class="sw"><i class="ti ti-search"></i><input class="si" type="text" placeholder="Buscar lote, arrematante..." id="s-lote" oninput="renderLotes()"></div>
-          <select class="f-sel" id="f-st" onchange="renderLotes()"><option value="">Todos os status</option><option value="livre">Livre</option><option value="condicional">Condicional</option><option value="vendido">Vendido</option><option value="retirou">Retirou</option><option value="pago">Pago</option></select>
+          <select class="f-sel" id="f-st" onchange="renderLotes()"><option value="">Todos os status</option><option value="livre">Livre (em pregão)</option><option value="naoVendido">Não vendido</option><option value="cancelado">Cancelado · repostar</option><option value="repostado">Repostado</option><option value="vendidoFora">Vendido fora</option><option value="condicional">Condicional</option><option value="vendido">Vendido</option><option value="retirou">Retirou</option><option value="pago">Pago</option><option value="duplicado">Duplicado</option></select>
           <select class="f-sel" id="f-ct" onchange="renderLotes()"><option value="">Todas as categorias</option><option value="Imóveis">Imóveis</option><option value="Veículos">Veículos</option><option value="Equipamentos">Equipamentos</option><option value="Outros">Outros</option></select>
           <select class="f-sel" id="f-platform" onchange="renderLotes()"><option value="">Sodré + Kwara</option><option value="Sodré Santoro">Sodré Santoro</option><option value="Kwara">Kwara</option></select>
           <select class="f-sel" id="f-ops" onchange="renderLotes()"><option value="">Toda operação</option><option value="pendente-doc">Documento pendente</option><option value="nao-liberado">Não liberado no sistema</option><option value="agendado">Agendado</option><option value="retirada">Retirada concluída</option></select>
@@ -736,6 +736,7 @@ td{padding:12px 18px}
     </div>
 
     <div class="pg" id="pg-gmail">
+      <div id="rb-root"></div>
       <div class="card">
         <div class="ch"><div class="ch-l"><div class="ch-ico"><i class="ti ti-mail"></i></div><div><div class="ch-title">Enviar email</div></div></div></div>
         <div class="cb">
@@ -1192,7 +1193,27 @@ async function aprovarCond(id){const l=lotes.find(x=>x.id===id);if(!l)return;con
 async function recusarCond(id){const l=lotes.find(x=>x.id===id);if(!l)return;if(!confirm('Recusar o lance do lote '+l.num+'? Ele volta para Livre.'))return;try{await window._upd(window._doc(window._db,'lotes',id),{condicional:false,vendido:false});await loadLotes();renderCond();initDash();toast('Lance recusado','inf');}catch(e){toast('Erro: '+e.message,'er');}}
 window.aprovarCond=aprovarCond;window.recusarCond=recusarCond;
 
-function updateDocSel(){const o='<option value="">— Selecione —</option>'+lotes.map(l=>`<option value="${l.id}">Lote ${l.num} — ${l.descricao}</option>`).join('');const s=document.getElementById('sel-doc');if(s)s.innerHTML=o;}
+function updateDocSel(){
+  /* Antes a lista jogava os 189 lotes em ordem de numero. O termo de retirada so
+     faz sentido para lote vendido e nao retirado, e era ali que dava pra escolher
+     o lote errado. Agora a fila de trabalho vem primeiro e cada opcao mostra o
+     comprador. Nao uso classifica() aqui: ela mora em outro <script>. */
+  const esc=function(t){return String(t==null?'':t).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
+  const curto=function(t){t=String(t||'').replace(/\s+/g,' ').trim();return t.length>58?t.slice(0,58)+'…':t;};
+  const rot=function(l){var a=String(l.arrematante||'').trim();return 'Lote '+l.num+(a?' · '+curto(a):'')+' — '+curto(l.descricao);};
+  const pend=[],ret=[],outros=[];
+  (lotes||[]).forEach(function(l){
+    var vend=!!(l.vendido||l.pago);
+    if(vend&&!l.retirou)pend.push(l); else if(l.retirou)ret.push(l); else outros.push(l);
+  });
+  const ord=function(a,b){return String(a.num).localeCompare(String(b.num));};
+  pend.sort(ord);ret.sort(ord);outros.sort(ord);
+  const grp=function(titulo,arr){if(!arr.length)return '';return '<optgroup label="'+esc(titulo)+' ('+arr.length+')">'+arr.map(function(l){return '<option value="'+esc(l.id)+'">'+esc(rot(l))+'</option>';}).join('')+'</optgroup>';};
+  const o='<option value="">— Selecione —</option>'
+    +grp('⚫ Falta retirar — termo pendente',pend)
+    +grp('✓ Já retirados',ret)
+    +grp('Demais lotes (sem venda)',outros);
+  const s=document.getElementById('sel-doc');if(s)s.innerHTML=o;}
 function getDocL(){return lotes.find(l=>l.id===document.getElementById('sel-doc').value);}
 function showDoc(t){document.getElementById('doc-txt').textContent=t;document.getElementById('doc-prev').style.display='block';}
 function gerarRecibo(){const l=getDocL();if(!l){toast('Selecione um lote','er');return;}showDoc(`RECIBO DE ARREMATAÇÃO\n${'='.repeat(44)}\nLeilão Porcelarte — ${new Date().toLocaleDateString('pt-BR')}\n\nLote Nº: ${l.num}\nDescrição: ${l.descricao}\nCategoria: ${l.categoria}\nArrematante: ${l.arrematante||'A definir'}\nValor: R$ ${(Number(l.valorVenda)||l.lanceAtual||l.lanceInicial||0).toLocaleString('pt-BR')}\nObservações: ${l.obs||'Nenhuma'}\n\n${'_'.repeat(44)}\nAssinatura do Arrematante\n\n${'_'.repeat(44)}\nResponsável pelo leilão`);}
@@ -1313,8 +1334,35 @@ function closeModal(){document.getElementById('modal-overlay').classList.remove(
 window.openModal=openModal;window.closeModal=closeModal;
 document.getElementById('modal-overlay').onclick=function(e){if(e.target===this)closeModal();};
 
-function getSt(l){if(l.pago)return'pago';if(l.retirou)return'retirou';if(l.condicional)return'condicional';if(l.vendido)return'vendido';return'livre';}
-function getBadge(l){const m={livre:'<span class="badge b-free">Livre</span>',vendido:'<span class="badge" style="background:#D1FAE5;color:#059669">Vendido</span>',condicional:'<span class="badge b-cond">Condicional</span>',pago:'<span class="badge b-pago">Pago</span>',retirou:'<span class="badge b-ret">Retirou</span>'};return m[getSt(l)]||'';}
+/* A tela Lotes so conhecia livre/condicional/vendido/retirou/pago. O Controle ja
+   trabalha com cancelado, vendido fora, repostado, duplicado e nao vendido - duas
+   telas falando linguas diferentes sobre o mesmo dado e fonte de erro. Esta funcao
+   passa a devolver os mesmos estados. Nao uso classifica() porque ela mora em
+   outro bloco <script> e nao enxerga este. */
+function getSt(l){
+  if(l.duplicado)return'duplicado';
+  if(l.vendidoFora)return'vendidoFora';
+  if(l.repostado)return'repostado';
+  if(l.pago)return'pago';
+  if(l.retirou)return'retirou';
+  if(l.cancelado)return'cancelado';
+  if(l.condicional)return'condicional';
+  if(l.vendido)return'vendido';
+  var hj=new Date().toISOString().slice(0,10);
+  if(!!l.data&&String(l.data)<hj)return'naoVendido';
+  return'livre';
+}
+function getBadge(l){const m={
+  livre:'<span class="badge b-free">Livre</span>',
+  naoVendido:'<span class="badge" style="background:#FEE2E2;color:#DC2626">Não vendido</span>',
+  cancelado:'<span class="badge" style="background:#F1F5F9;color:#64748B" title="Arrematante não pagou - a Sodré cancelou">Cancelado · repostar</span>',
+  repostado:'<span class="badge" style="background:#E0E7FF;color:#4F46E5">Repostado</span>',
+  vendidoFora:'<span class="badge" style="background:#CFFAFE;color:#0891B2">Vendido fora</span>',
+  duplicado:'<span class="badge" style="background:#FAE8FF;color:#A21CAF">Duplicado</span>',
+  vendido:'<span class="badge" style="background:#D1FAE5;color:#059669">Vendido</span>',
+  condicional:'<span class="badge b-cond">Condicional</span>',
+  pago:'<span class="badge b-pago">Pago</span>',
+  retirou:'<span class="badge b-ret">Retirou</span>'};return m[getSt(l)]||'';}
 function fmtD(s){if(!s)return'—';return new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});}
 function toast(msg,tipo='inf'){const e=document.createElement('div');const ic={ok:'ti-circle-check',er:'ti-circle-x',inf:'ti-info-circle'};const cc={ok:'var(--green)',er:'var(--red)',inf:'var(--blue3)'};e.className='toast '+tipo;e.innerHTML=`<i class="ti ${ic[tipo]}" style="font-size:16px;color:${cc[tipo]}"></i>${msg}`;document.getElementById('toasts').appendChild(e);setTimeout(()=>e.remove(),4000);}
 </script>
@@ -2042,8 +2090,40 @@ const resumo='<div class="ctl-resumo">'
   +'<div><i class="ti ti-cash" style="color:#059669"></i> Vendido (bruto): <b>'+money(valVendido)+'</b></div>'
   +'<div><i class="ti ti-truck" style="color:#EA580C"></i> Aguardando retirada: <b style="color:#EA580C">'+money(valFalta)+'</b> em '+c.faltaRetirar+' lote(s)</div></div>';
 const fl=all.filter(function(l){const k=classifica(l);return FILTRO==='todos'||k[FILTRO];});
+/* Ordem por urgencia: o que espera acao ha mais tempo sobe. Antes era por numero
+   do lote, e o lote parado ha 47 dias ficava enterrado no meio dos 189. */
+fl.sort(function(a,b){
+  var ka=classifica(a), kb=classifica(b);
+  var pa=(ka.naoVendido||ka.cancelado)?0:(ka.faltaRetirar?1:(ka.cond?2:3));
+  var pb=(kb.naoVendido||kb.cancelado)?0:(kb.faltaRetirar?1:(kb.cond?2:3));
+  if(pa!==pb)return pa-pb;
+  var da=String(a.data||''), db=String(b.data||'');
+  if(pa<3) return da===db?String(a.num).localeCompare(String(b.num)):(da<db?-1:1);
+  return db===da?String(a.num).localeCompare(String(b.num)):(db<da?-1:1);
+});
 const TD='padding:10px 8px;vertical-align:middle;';
+const DIAS=function(d){if(!d)return null;var x=new Date(d+'T12:00:00');if(isNaN(x))return null;return Math.round((new Date()-x)/864e5);};
 const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVenda)||l.lanceAtual||l.lanceInicial||0;
+  /* A coluna VALOR misturava preco de venda, lance atual e lance inicial no mesmo
+     formato. Foi isso que fez lote cancelado parecer vendido. */
+  var natureza = Number(l.valorVenda)>0 ? 'VENDA'
+    : (((Number(l.lanceAtual)||0)>(Number(l.lanceInicial)||0)||String(l.arrematante||'').trim()!=='') ? 'LANCE' : 'ABERTURA');
+  var corNat = natureza==='VENDA'?'#059669':(natureza==='LANCE'?'#2563EB':'#94A3B8');
+  var dias=DIAS(l.data);
+  var esperando = k.naoVendido || k.cancelado || k.faltaRetirar;
+  var selo='';
+  if(esperando&&dias!=null&&dias>0){
+    var cd = dias>=21?'#DC2626':(dias>=10?'#EA580C':'#94A3B8');
+    selo='<div style="font-size:10.5px;color:'+cd+';font-weight:700;margin-top:3px">'+dias+' dia'+(dias>1?'s':'')+'</div>';}
+  var arr=String(l.arrematante||'').trim();
+  var mascarado = arr.indexOf('*')>-1;
+  var arrHtml = !arr ? '<span style="color:#CBD5E1">\u2014</span>'
+    : (mascarado
+      ? '<span title="Apelido da plataforma, nao e o nome do comprador" style="font-family:ui-monospace,monospace;font-size:11px;background:#F1F5F9;color:#64748B;border-radius:6px;padding:2px 7px">'+arr+'</span>'
+      : '<span title="Nome confirmado na prestacao de contas" style="font-weight:700;color:#0F172A">'+arr+'</span>');
+  var faixa = k.pago?'#059669':k.retirado?'#7C3AED':k.faltaRetirar?'#EA580C':k.cond?'#D97706'
+    :k.duplicado?'#A21CAF':k.cancelado?'#94A3B8':k.vendidoFora?'#0891B2':k.repostado?'#4F46E5'
+    :k.naoVendido?'#DC2626':'#E2E8F0';
   const st=k.pago?'<span class="ctl-st" style="background:#D1FAE5;color:#059669">Pago</span>'
     :k.retirado?'<span class="ctl-st" style="background:#EDE9FE;color:#7C3AED">Retirado</span>'
     :k.faltaRetirar?'<span class="ctl-st" style="background:#FEF0E7;color:#EA580C">Falta retirar</span>'
@@ -2058,17 +2138,18 @@ const linhas=fl.map(function(l){const k=classifica(l);const val=Number(l.valorVe
     ?('<label style="display:flex;gap:5px;align-items:center;font-size:11px;cursor:pointer;font-weight:600;color:#334155"><input type="checkbox" style="width:15px;height:15px;accent-color:#7C3AED" '+(l.retirou?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'retirou\',this.checked)">Retirou</label>'
      +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;cursor:pointer;font-weight:600;color:#334155"><input type="checkbox" style="width:15px;height:15px;accent-color:#059669" '+(l.pago?'checked':'')+' onchange="toggleCtl(\''+l.id+'\',\'pago\',this.checked)">Pago</label>'+'<button class="btn-o" style="font-size:10.5px;padding:4px 8px;'+(TERMOS.has(String(l.num))?'color:#059669;border-color:#6EE7B7':(l.retirou?'color:#DC2626;border-color:#FCA5A5':''))+'" onclick="abrirTermo(\''+l.num+'\')" title="Termo de retirada"><i class="ti ti-paperclip"></i> '+(TERMOS.has(String(l.num))?'Termo \u2713':'Termo')+'</button>')
     :'<span style="font-size:11px;color:#CBD5E1">—</span>';
-  return '<tr class="ctl-row">'
+  return '<tr class="ctl-row" style="box-shadow:inset 3px 0 0 '+faixa+'">'
     +'<td style="'+TD+'"><input type="checkbox" data-selid="'+l.id+'" data-selval="'+(Number(l.valorVenda)||Number(l.lanceAtual)||Number(l.lanceInicial)||0)+'" data-selm2="'+(Number(l.m2)||0)+'" '+(SEL.has(l.id)?'checked':'')+' style="width:15px;height:15px;cursor:pointer;accent-color:#2563EB" onchange="toggleSel(\''+l.id+'\',this.checked)"></td>'
     +'<td style="'+TD+'font-weight:800;white-space:nowrap;color:#0F172A">'+l.num+'</td>'
     +'<td style="'+TD+'font-size:12px;max-width:400px;color:#334155">'+((l.descricao||'').slice(0,90))+'</td>'
-    +'<td style="'+TD+'font-size:12px;color:#64748B">'+(l.arrematante||'—')+'</td>'
-    +'<td style="'+TD+'font-weight:800;white-space:nowrap;color:#0F172A">'+money(val)+'</td>'
-    +'<td style="'+TD+'">'+st+'</td>'
+    +'<td style="'+TD+'font-size:12px">'+arrHtml+'</td>'
+    +'<td style="'+TD+'white-space:nowrap"><div style="font-weight:800;color:#0F172A">'+money(val)+'</div>'
+      +'<div style="font-size:10px;color:'+corNat+';font-weight:700;letter-spacing:.04em">'+natureza+'</div></td>'
+    +'<td style="'+TD+'">'+st+selo+'</td>'
     +'<td style="'+TD+'"><div style="display:flex;gap:14px">'+toggles+'</div></td></tr>';}).join('');
 box.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 18px 12px">'+chips+(FILTRO==='naoVendido'&&fl.length?'<button class="btn-p" style="font-size:11px;padding:7px 13px" onclick="exportNaoVendidos()"><i class="ti ti-download"></i> Exportar Excel p/ repostar</button>':'')+'<button id="btn-exp-sel" class="btn-p" style="font-size:11px;padding:7px 13px;background:#0F766E;'+(SEL.size?'':'display:none')+'" onclick="exportSelecionados()"><i class="ti ti-download"></i> Exportar selecionados ('+SEL.size+')</button>'+'</div>'+resumo
   +(fl.length
-    ?'<div style="padding:0 18px 16px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="text-align:left;color:#94A3B8;font-size:10px;text-transform:uppercase;letter-spacing:.5px"><th style="padding:8px"><input type="checkbox" style="width:14px;height:14px;cursor:pointer" onchange="toggleSelAll(this.checked)" title="Selecionar todos"></th><th style="padding:8px">Lote</th><th style="padding:8px">Descrição</th><th style="padding:8px">Arrematante</th><th style="padding:8px">Valor</th><th style="padding:8px">Status</th><th style="padding:8px">Ações</th></tr></thead><tbody>'+linhas+'</tbody></table></div>'
+    ?'<div class="ctl-tbl-wrap" style="padding:0 18px 16px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="text-align:left;color:#94A3B8;font-size:10px;text-transform:uppercase;letter-spacing:.5px"><th style="padding:8px"><input type="checkbox" style="width:14px;height:14px;cursor:pointer" onchange="toggleSelAll(this.checked)" title="Selecionar todos"></th><th style="padding:8px">Lote</th><th style="padding:8px">Descrição</th><th style="padding:8px">Arrematante</th><th style="padding:8px">Valor</th><th style="padding:8px">Status</th><th style="padding:8px">Ações</th></tr></thead><tbody>'+linhas+'</tbody></table></div>'
       +'<div id="sel-total" style="display:none;margin:0 18px 16px;padding:13px 16px;border:1px solid #BFDBFE;border-radius:14px;background:linear-gradient(180deg,#F0F7FF,#E8F2FE);align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap"></div>'
     :'<div style="padding:28px;text-align:center;color:#64748B;font-size:13px">Nenhum lote nesse status.</div>');
   updSelBtn();
@@ -2754,6 +2835,24 @@ setTimeout(function(){
 </script>
 
 <style id="xpcss">
+
+/* ===== Painel do robo (aba Gmail) ===== */
+.rb-k{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px}
+@media(max-width:900px){.rb-k{grid-template-columns:1fr}}
+.rb-c{position:relative;overflow:hidden;background:#fff;border:1px solid #E2E8F0;border-radius:18px;padding:17px 18px;
+  box-shadow:0 1px 2px rgba(15,23,42,.04),0 14px 30px -20px rgba(15,23,42,.3);
+  animation:xpUp .5s cubic-bezier(.22,1,.36,1) both;transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .25s}
+.rb-c:hover{transform:translateY(-4px);box-shadow:0 2px 4px rgba(15,23,42,.05),0 30px 50px -26px rgba(37,99,235,.5)}
+.rb-c::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:currentColor}
+.rb-t{font-size:10px;font-weight:800;letter-spacing:.11em;color:#94A3B8;text-transform:uppercase}
+.rb-v{font-size:20px;font-weight:800;letter-spacing:-.035em;color:#0F172A;margin-top:7px;line-height:1.15}
+.rb-s{font-size:11.5px;color:#64748B;margin-top:4px}
+.rb-ok{color:#059669}.rb-bad{color:#DC2626}.rb-mid{color:#2563EB}
+.rb-f{border:1px solid #FCA5A5;background:linear-gradient(180deg,#FFF7F7,#fff);border-radius:16px;padding:16px 18px;margin-bottom:16px}
+.rb-f h4{font-size:14px;font-weight:780;color:#991B1B;display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.rb-l{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:7px 0;border-top:1px solid #FEE2E2}
+.rb-l b{color:#0F172A;white-space:nowrap}
+.rb-l span{color:#64748B;text-align:right}
 /* ===== FILA DE RETIRADA — visual na linguagem do app (azul/branco) ===== */
 #xp-root{display:flex;flex-direction:column;gap:18px}
 @keyframes xpUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -2825,6 +2924,9 @@ setTimeout(function(){
 .xp-b{margin-left:5px;border:1px solid #E2E8F0;background:#fff;border-radius:8px;width:28px;height:28px;cursor:pointer;color:#64748B;transition:.2s}
 .xp-b:hover{background:#EFF6FF;color:#2563EB;border-color:#BFDBFE;transform:translateY(-2px)}
 .xp-vazio{padding:26px;text-align:center;color:#64748B;font-size:13px}
+/* Com 189 lotes voce perde a referencia das colunas ao rolar. */
+#pg-controle .ctl-tbl-wrap{max-height:70vh;overflow:auto}
+#pg-controle thead th{position:sticky;top:0;z-index:2;background:#F7F9FC;box-shadow:0 1px 0 #E2E8F0}
 @media(prefers-reduced-motion:reduce){.xp-k,.xp-c,.xp-sec,.xp-bar i,.xp-k-ic{animation:none!important}}
 
 /* ===== v3: material, foto real e efeitos ===== */
@@ -3102,6 +3204,68 @@ document.addEventListener('mouseout', function(ev){
   if(c.contains(ev.relatedTarget)) return;
   c.style.setProperty('--rx','0deg'); c.style.setProperty('--ry','0deg');
 }, {passive:true});
+
+
+/* ===== PAINEL DO ROBO =====
+   A aba Gmail era so um formulario de enviar e-mail. Nenhuma tela mostrava se o
+   robo rodou, o que ele leu ou o que falhou - foi por isso que 13 baixas e o
+   backup quebrado passaram semanas sem ninguem ver. Tudo aqui e leitura. */
+window.renderRobo = async function(){
+  var box=document.getElementById('rb-root'); if(!box) return;
+  var esc=function(t){return String(t==null?'':t).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
+  var money=function(v){return 'R$ '+(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});};
+  box.innerHTML='<div class="rb-k"><div class="rb-c rb-mid"><div class="rb-t">Carregando</div><div class="rb-v">…</div></div></div>';
+  var st=null, eps=[], lotes=[];
+  try{ var sn=await window._getDocs(window._col(window._db,'robo')); sn.forEach(function(d){ if(d.id==='status') st=d.data(); }); }catch(e){}
+  try{ var se=await window._getDocs(window._col(window._db,'emails_processados')); se.forEach(function(d){ eps.push(Object.assign({__id:d.id},d.data())); }); }catch(e){}
+  try{ var sl=await window._getDocs(window._col(window._db,'lotes')); sl.forEach(function(d){ lotes.push(Object.assign({id:d.id},d.data())); }); }catch(e){}
+
+  /* 1. ultima execucao */
+  var quando = st && st.rodouEm ? new Date(st.rodouEm) : null;
+  var hrs = quando ? Math.round((new Date()-quando)/36e5) : null;
+  var corExec = hrs==null ? 'rb-bad' : (hrs<=14 ? 'rb-ok' : 'rb-bad');
+  var txtExec = quando ? quando.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'nunca registrou';
+  var subExec = hrs==null ? 'o robô ainda não gravou status' : ('há '+hrs+'h · roda 10h e 16h, dias úteis');
+
+  /* 2. backup */
+  var bkOk = st ? st.backupOk===true : null;
+  var corBk = bkOk===true?'rb-ok':(bkOk===false?'rb-bad':'rb-mid');
+  var txtBk = bkOk===true?'Gravado':(bkOk===false?'FALHOU':'sem informação');
+  var subBk = st && st.backupInfo ? esc(String(st.backupInfo).slice(0,90)) : 'roda junto com o robô, antes de tudo';
+
+  /* 3. o que leu */
+  var tipos={}; eps.forEach(function(x){ var t=String(x.tipo||'?'); tipos[t]=(tipos[t]||0)+1; });
+  var falhas=eps.filter(function(x){ return x.baixaAplicada===false; });
+
+  var cards='<div class="rb-k">'
+    +'<div class="rb-c '+corExec+'"><div class="rb-t">Última execução</div><div class="rb-v">'+esc(txtExec)+'</div><div class="rb-s">'+esc(subExec)+'</div></div>'
+    +'<div class="rb-c '+corBk+'"><div class="rb-t">Backup do banco</div><div class="rb-v">'+txtBk+'</div><div class="rb-s">'+subBk+'</div></div>'
+    +'<div class="rb-c '+(falhas.length?'rb-bad':'rb-ok')+'"><div class="rb-t">E-mails processados</div>'
+      +'<div class="rb-v">'+eps.length+'</div>'
+      +'<div class="rb-s">'+(tipos.resultado||0)+' resultado · '+(tipos.fechamento||0)+' fechamento · '+(tipos.baixa||0)+' baixa</div></div>'
+    +'</div>';
+
+  /* 4. falhas, com o dinheiro que esta em jogo */
+  var bloco='';
+  if(falhas.length){
+    var linhas=falhas.map(function(x){
+      var n=String(x.leilao||x.__id.replace('baixa-',''));
+      var ls=lotes.filter(function(l){return String(l.leilaoNum||String(l.num||'').split('-')[0])===n;});
+      var v=ls.filter(function(l){return (l.vendido||l.pago)&&!l.pago;}).reduce(function(a,l){return a+(Number(l.valorVenda)||Number(l.lanceAtual)||0);},0);
+      return '<div class="rb-l"><b>Leilão '+esc(n)+(v?' · '+money(v):'')+'</b><span>'+esc(String(x.motivoFalha||'sem motivo registrado').slice(0,110))+'</span></div>';
+    }).join('');
+    bloco='<div class="rb-f"><h4><i class="ti ti-alert-triangle"></i> '+falhas.length+' baixa(s) que o robô leu e não conseguiu aplicar</h4>'+linhas+'</div>';
+  } else {
+    bloco='<div class="rb-f" style="border-color:#A7F3D0;background:linear-gradient(180deg,#F2FDF8,#fff)">'
+      +'<h4 style="color:#047857"><i class="ti ti-circle-check"></i> Nenhuma baixa pendente de leitura</h4>'
+      +'<div style="font-size:12px;color:#64748B">Todas as prestações de contas que chegaram foram aplicadas.</div></div>';
+  }
+  box.innerHTML=cards+bloco;
+};
+document.addEventListener('click',function(ev){
+  var n=ev.target&&ev.target.closest&&ev.target.closest('.nav');
+  if(n&&n.dataset&&n.dataset.p==='gmail'){ setTimeout(function(){ window.renderRobo(); },250); }
+});
 
 window.renderExpedicao=function(){ return window.__xpRender([]); };
 document.addEventListener('click',function(ev){
