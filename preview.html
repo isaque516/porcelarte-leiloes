@@ -2858,8 +2858,9 @@ setTimeout(function(){
 #xp-lb.on{display:flex;animation:xpFadeIn .22s ease both}
 .xp-lb-in{max-width:1080px;width:100%;max-height:88vh;overflow:auto}
 .xp-lb-t{color:#fff;font-size:17px;font-weight:780;letter-spacing:-.03em;margin-bottom:14px}
-.xp-lb-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
-.xp-lb-g img{width:100%;border-radius:14px;display:block;background:#0F172A;
+.xp-lb-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.xp-lb-g img{width:100%;height:330px;object-fit:contain;border-radius:14px;display:block;
+  background:linear-gradient(160deg,#111827,#0B1120);padding:6px;
   box-shadow:0 20px 46px -20px #000;animation:xpFadeIn .4s cubic-bezier(.22,1,.36,1) both;
   transition:transform .26s cubic-bezier(.22,1,.36,1)}
 .xp-lb-g img:hover{transform:scale(1.03)}
@@ -3013,15 +3014,11 @@ window.__xpBuscaFotos = async function(num){
     window.__xpCache[num]=urls; return urls;
   }catch(e){ window.__xpCache[num]=[]; return []; }
 };
-window.__xpProcessa = async function(){
-  if(window.__xpOcupado) return;
-  window.__xpOcupado=true;
-  while(window.__xpFila.length){
-    var el=window.__xpFila.shift();
-    if(!el || !el.isConnected) continue;
+window.__xpPinta = async function(el){
+    if(!el || !el.isConnected) return;
     var num=el.getAttribute('data-foto');
     var urls=await window.__xpBuscaFotos(num);
-    if(!el.isConnected) continue;
+    if(!el.isConnected) return;
     if(urls.length){
       var img=new Image();
       img.className='xp-img';
@@ -3035,7 +3032,16 @@ window.__xpProcessa = async function(){
       el.classList.add('vazio');
       el.innerHTML='<span class="xp-ph-ico"><i class="ti ti-photo-off"></i></span>';
     }
-  }
+};
+/* 4 downloads ao mesmo tempo: cada lote custa ~1,5 s, em fila unica a tela
+   levava quase um minuto para ficar cheia. */
+window.__xpProcessa = async function(){
+  if(window.__xpOcupado) return;
+  window.__xpOcupado=true;
+  var trab=function(){ return (async function(){
+    while(window.__xpFila.length){ await window.__xpPinta(window.__xpFila.shift()); }
+  })(); };
+  await Promise.all([trab(),trab(),trab(),trab()]);
   window.__xpOcupado=false;
 };
 window.__xpFotosLazy = function(){

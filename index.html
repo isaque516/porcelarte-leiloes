@@ -2827,6 +2827,73 @@ setTimeout(function(){
 .xp-vazio{padding:26px;text-align:center;color:#64748B;font-size:13px}
 @media(prefers-reduced-motion:reduce){.xp-k,.xp-c,.xp-sec,.xp-bar i,.xp-k-ic{animation:none!important}}
 
+/* ===== v3: material, foto real e efeitos ===== */
+@keyframes xpFadeIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+@keyframes xpGlow{0%,100%{opacity:.45}50%{opacity:.9}}
+
+/* --- miniatura real do lote --- */
+.xp-ph{width:56px;padding-right:0!important}
+.xp-thumb{position:relative;width:48px;height:48px;border-radius:11px;overflow:hidden;cursor:pointer;
+  background:linear-gradient(135deg,#EEF2F9,#E2E8F0);border:1px solid #E2E8F0;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 1px 2px rgba(15,23,42,.08),0 6px 14px -8px rgba(15,23,42,.35);
+  transition:transform .26s cubic-bezier(.22,1,.36,1),box-shadow .26s,border-color .26s}
+.xp-thumb::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:11px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75),inset 0 -8px 14px -10px rgba(15,23,42,.5)}
+.xp-thumb:hover{transform:translateY(-3px) scale(1.09);border-color:#93C5FD;
+  box-shadow:0 2px 4px rgba(15,23,42,.1),0 18px 28px -12px rgba(37,99,235,.75);z-index:3}
+.xp-thumb.vazio{cursor:default;opacity:.55}
+.xp-ph-ico{color:#B6C2D4;font-size:17px;animation:xpGlow 1.8s ease-in-out infinite}
+.xp-thumb.vazio .xp-ph-ico{animation:none}
+.xp-img{width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.08);filter:blur(6px);
+  transition:opacity .45s ease,transform .5s cubic-bezier(.22,1,.36,1),filter .45s ease}
+.xp-img.vis{opacity:1;transform:none;filter:none}
+.xp-thumb:hover .xp-img{transform:scale(1.12)}
+.xp-ph-n{position:absolute;right:2px;bottom:2px;font-size:8.5px;font-weight:800;color:#fff;
+  background:rgba(15,23,42,.72);border-radius:5px;padding:1px 4px;backdrop-filter:blur(3px)}
+
+/* --- galeria --- */
+#xp-lb{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;
+  background:rgba(8,12,24,.72);backdrop-filter:blur(10px) saturate(130%);padding:34px}
+#xp-lb.on{display:flex;animation:xpFadeIn .22s ease both}
+.xp-lb-in{max-width:1080px;width:100%;max-height:88vh;overflow:auto}
+.xp-lb-t{color:#fff;font-size:17px;font-weight:780;letter-spacing:-.03em;margin-bottom:14px}
+.xp-lb-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.xp-lb-g img{width:100%;height:330px;object-fit:contain;border-radius:14px;display:block;
+  background:linear-gradient(160deg,#111827,#0B1120);padding:6px;
+  box-shadow:0 20px 46px -20px #000;animation:xpFadeIn .4s cubic-bezier(.22,1,.36,1) both;
+  transition:transform .26s cubic-bezier(.22,1,.36,1)}
+.xp-lb-g img:hover{transform:scale(1.03)}
+.xp-lb-load{color:#CBD5E1;font-size:13px;padding:26px 0}
+.xp-lb-x{position:fixed;top:20px;right:22px;width:38px;height:38px;border-radius:12px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-size:17px;
+  transition:.2s}
+.xp-lb-x:hover{background:rgba(255,255,255,.2);transform:rotate(90deg)}
+
+/* --- material mais denso nos cartoes --- */
+.xp-c{perspective:900px;transform-style:preserve-3d;
+  transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
+  box-shadow:0 1px 2px rgba(15,23,42,.06),0 10px 22px -14px rgba(15,23,42,.4),inset 0 1px 0 rgba(255,255,255,.9)}
+.xp-c::before{content:'';position:absolute;inset:0;border-radius:16px;pointer-events:none;opacity:0;
+  background:radial-gradient(42% 60% at var(--mx,50%) var(--my,0%),rgba(96,165,250,.20),transparent 68%);
+  transition:opacity .3s;z-index:1}
+.xp-c:hover::before{opacity:1}
+.xp-c:hover{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-5px);
+  box-shadow:0 2px 4px rgba(15,23,42,.08),0 34px 56px -26px rgba(37,99,235,.7),inset 0 1px 0 rgba(255,255,255,1)}
+.xp-c>*{position:relative;z-index:2}
+.xp-av{position:relative;overflow:hidden}
+.xp-av::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(115deg,transparent 34%,rgba(255,255,255,.55) 50%,transparent 66%);
+  transform:translateX(-130%);transition:transform .7s}
+.xp-c:hover .xp-av::after{transform:translateX(130%)}
+.xp-bar{box-shadow:inset 0 1px 2px rgba(15,23,42,.14)}
+.xp-bar i{box-shadow:0 0 10px 1px rgba(5,150,105,.7)}
+.xp-k{backdrop-filter:blur(2px)}
+.xp-k-ic{box-shadow:0 8px 18px -8px currentColor,inset 0 1px 0 rgba(255,255,255,.45)}
+@media(prefers-reduced-motion:reduce){
+  .xp-c{transform:none!important}.xp-img{filter:none;transform:none}.xp-ph-ico{animation:none}
+}
+
 </style>
 <script id="xpjs">
 /* ===== FILA DE RETIRADA (Expedicao v2) =====
@@ -2888,7 +2955,8 @@ window.__xpRender=async function(lotes){
       tags+= l.pago ? '<span class="xp-t xp-t-ok">Pago</span>' : '<span class="xp-t xp-t-warn">A pagar</span>';
       if(TT[String(l.num)])tags+='<span class="xp-t xp-t-info">Termo no sistema</span>';
       if(l.dataRetirada)tags+='<span class="xp-t xp-t-ok">'+esc(String(l.dataRetirada).split('-').reverse().join('/'))+'</span>';
-      return '<tr><td class="xp-cel"><div class="xp-num">'+esc(l.num)+'</div>'
+      return '<tr><td class="xp-ph"><div class="xp-thumb" data-foto="'+esc(l.num)+'" onclick="window.__xpGaleria(\''+esc(l.num)+'\')" title="Ver fotos do lote"><span class="xp-ph-ico"><i class="ti ti-photo"></i></span></div></td>'
+        +'<td class="xp-cel"><div class="xp-num">'+esc(l.num)+'</div>'
         +'<div class="xp-desc">'+esc(String(l.descricao||'').slice(0,54))+'</div>'
         +'<div class="xp-tags">'+tags+'</div></td>'
         +'<td class="xp-val"><div>'+money(Number(l.valorVenda)||Number(l.lanceAtual)||0)+'</div>'
@@ -2907,6 +2975,8 @@ window.__xpRender=async function(lotes){
     +'<p>'+ordem.length+' comprador(es) · '+comNome.length+' lote(s). Quem ja pagou aparece primeiro.</p></div></header>'
     +(ordem.length?'<div class="xp-grid">'+cards+'</div>':'<div class="xp-vazio">Nenhum lote com comprador identificado na fila.</div>')+'</section>';
   box.innerHTML=topo+blocoA+blocoB;
+  window.__xpFotosLazy();
+  window.__xpSobe();
 };
 window.__xpCopiar=function(){
   var d=window.__xpDados; if(!d)return;
@@ -2923,6 +2993,116 @@ window.__xpAgendar=async function(el,id){
 };
 /* A tela antiga reatribui window.renderExpedicao mais de uma vez; por isso
    a troca e feita aqui, no ultimo script do arquivo, e tambem no clique do menu. */
+
+/* ============ FOTOS REAIS DO LOTE ============
+   As fotos ficam na colecao fotos_lotes, uma doc por lote (id = numero do lote),
+   com 5 imagens em base64 cada. Sao 200-360 KB por lote: carregar tudo de uma vez
+   derrubaria a tela. Entao busco so o que entra na area visivel, uma vez, e guardo. */
+window.__xpCache = window.__xpCache || {};
+window.__xpFila = [];
+window.__xpOcupado = false;
+window.__xpBuscaFotos = async function(num){
+  if(window.__xpCache[num]!==undefined) return window.__xpCache[num];
+  try{
+    var cfg=window._db.app.options;
+    var u='https://firestore.googleapis.com/v1/projects/'+cfg.projectId
+         +'/databases/(default)/documents/fotos_lotes/'+encodeURIComponent(num)
+         +'?key='+cfg.apiKey+'&mask.fieldPaths=fotos';
+    var j=await fetch(u).then(function(r){return r.json();});
+    var vs=j&&j.fields&&j.fields.fotos&&j.fields.fotos.arrayValue&&j.fields.fotos.arrayValue.values;
+    var urls=(vs||[]).map(function(v){var fl=v.mapValue&&v.mapValue.fields;return fl&&fl.dataURL?fl.dataURL.stringValue:null;}).filter(Boolean);
+    window.__xpCache[num]=urls; return urls;
+  }catch(e){ window.__xpCache[num]=[]; return []; }
+};
+window.__xpPinta = async function(el){
+    if(!el || !el.isConnected) return;
+    var num=el.getAttribute('data-foto');
+    var urls=await window.__xpBuscaFotos(num);
+    if(!el.isConnected) return;
+    if(urls.length){
+      var img=new Image();
+      img.className='xp-img';
+      img.alt='Foto do lote '+num;
+      img.onload=function(){ this.classList.add('vis'); };
+      img.src=urls[0];
+      el.innerHTML=''; el.appendChild(img);
+      if(urls.length>1){ var c=document.createElement('span'); c.className='xp-ph-n'; c.textContent=urls.length; el.appendChild(c); }
+      el.classList.add('tem');
+    } else {
+      el.classList.add('vazio');
+      el.innerHTML='<span class="xp-ph-ico"><i class="ti ti-photo-off"></i></span>';
+    }
+};
+/* 4 downloads ao mesmo tempo: cada lote custa ~1,5 s, em fila unica a tela
+   levava quase um minuto para ficar cheia. */
+window.__xpProcessa = async function(){
+  if(window.__xpOcupado) return;
+  window.__xpOcupado=true;
+  var trab=function(){ return (async function(){
+    while(window.__xpFila.length){ await window.__xpPinta(window.__xpFila.shift()); }
+  })(); };
+  await Promise.all([trab(),trab(),trab(),trab()]);
+  window.__xpOcupado=false;
+};
+window.__xpFotosLazy = function(){
+  var alvos=document.querySelectorAll('.xp-thumb[data-foto]:not(.tem):not(.vazio)');
+  if(!alvos.length) return;
+  if(window.__xpIO) window.__xpIO.disconnect();
+  window.__xpIO = new IntersectionObserver(function(ents){
+    ents.forEach(function(e){
+      if(!e.isIntersecting) return;
+      window.__xpIO.unobserve(e.target);
+      window.__xpFila.push(e.target);
+    });
+    window.__xpProcessa();
+  },{rootMargin:'320px 0px'});
+  alvos.forEach(function(a){ window.__xpIO.observe(a); });
+};
+
+/* ============ GALERIA ============ */
+window.__xpGaleria = async function(num){
+  var ov=document.getElementById('xp-lb');
+  if(!ov){ ov=document.createElement('div'); ov.id='xp-lb';
+    ov.addEventListener('click',function(e){ if(e.target===ov||e.target.classList.contains('xp-lb-x')) ov.classList.remove('on'); });
+    document.body.appendChild(ov); }
+  ov.innerHTML='<button class="xp-lb-x"><i class="ti ti-x"></i></button><div class="xp-lb-in"><div class="xp-lb-t">Lote '+num+'</div><div class="xp-lb-g"><div class="xp-lb-load">Carregando fotos…</div></div></div>';
+  ov.classList.add('on');
+  var urls=await window.__xpBuscaFotos(num);
+  var g=ov.querySelector('.xp-lb-g'); if(!g) return;
+  g.innerHTML = urls.length
+    ? urls.map(function(u,i){return '<img src="'+u+'" alt="Foto '+(i+1)+' do lote '+num+'" style="animation-delay:'+(i*70)+'ms">';}).join('')
+    : '<div class="xp-lb-load">Esse lote nao tem fotos no sistema.</div>';
+};
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ var o=document.getElementById('xp-lb'); if(o)o.classList.remove('on'); } });
+
+/* ============ EFEITOS ============ */
+/* numeros que sobem ate o valor */
+window.__xpSobe = function(){
+  document.querySelectorAll('.xp-k-n').forEach(function(el){
+    var alvo=parseInt(el.textContent,10); if(!isFinite(alvo)||alvo<2) return;
+    if(el.__f) return; el.__f=1;
+    var t0=performance.now(), dur=720;
+    (function passo(t){ var p=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-p,3);
+      el.textContent = p<1 ? Math.round(alvo*e) : alvo;
+      if(p<1) requestAnimationFrame(passo); else el.__f=0; })(t0);
+  });
+};
+/* inclinacao 3D e brilho seguindo o cursor nos cartoes de comprador */
+document.addEventListener('mousemove', function(ev){
+  var c=ev.target.closest && ev.target.closest('.xp-c'); if(!c) return;
+  var r=c.getBoundingClientRect();
+  var px=(ev.clientX-r.left)/r.width, py=(ev.clientY-r.top)/r.height;
+  c.style.setProperty('--mx',(px*100)+'%');
+  c.style.setProperty('--my',(py*100)+'%');
+  c.style.setProperty('--rx',((.5-py)*3.2)+'deg');
+  c.style.setProperty('--ry',((px-.5)*3.2)+'deg');
+}, {passive:true});
+document.addEventListener('mouseout', function(ev){
+  var c=ev.target.closest && ev.target.closest('.xp-c'); if(!c) return;
+  if(c.contains(ev.relatedTarget)) return;
+  c.style.setProperty('--rx','0deg'); c.style.setProperty('--ry','0deg');
+}, {passive:true});
+
 window.renderExpedicao=function(){ return window.__xpRender([]); };
 document.addEventListener('click',function(ev){
   var n=ev.target&&ev.target.closest&&ev.target.closest('.nav');
