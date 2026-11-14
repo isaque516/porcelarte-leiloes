@@ -3339,7 +3339,10 @@ window.renderHoje = async function(){
   var soma=function(arr,campo){return arr.reduce(function(s,l){return s+(Number(l[campo])||Number(l.lanceAtual)||Number(l.lanceInicial)||0);},0);};
 
   var naoVend=L.filter(function(l){return !l.cancelado&&!l.vendido&&!l.pago&&!l.condicional&&!l.repostado&&!l.vendidoFora&&!l.duplicado&&String(l.data||'')<HJ;});
-  var canc=L.filter(function(l){return l.cancelado&&!l.repostado;});
+  /* Cancelado nao basta para entrar em "repostar": o lote pode ter sido cancelado
+     na plataforma e depois vendido por fora. O 29034-001 esta assim no banco
+     (cancelado=true e vendidoFora=true ao mesmo tempo). */
+  var canc=L.filter(function(l){return l.cancelado&&!l.repostado&&!l.vendidoFora&&!l.duplicado&&!l.vendido&&!l.pago;});
   var repostar=naoVend.concat(canc);
   var fila=L.filter(function(l){return (l.vendido||l.pago)&&!l.retirou;});
   var semNome=fila.filter(function(l){var a=String(l.arrematante||'').trim();return !a||mask(a);});
