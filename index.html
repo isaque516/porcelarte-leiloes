@@ -501,6 +501,9 @@ td{padding:12px 18px}
   body{display:block !important;width:100%;overflow-x:hidden}
   .mn{width:100% !important;min-width:0}
 }
+
+/* Expedição: fila de trabalho, feita para executar e não só visualizar. */
+.exp-work-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:4px 2px}.exp-eyebrow{font-size:10px;letter-spacing:.14em;font-weight:850;color:#0E9488}.exp-work-head h2{font-size:26px;letter-spacing:-.04em;margin:5px 0 4px;color:#0F172A}.exp-work-head p{font-size:12px;color:#64748B}.exp-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.exp-stat{border:1px solid #E2E8F0;border-radius:16px;background:#fff;padding:14px 16px;box-shadow:0 6px 18px -18px rgba(15,23,42,.45)}.exp-stat b{display:block;font-size:24px;letter-spacing:-.05em;color:#0F172A}.exp-stat span{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#64748B}.exp-stat.warn b{color:#D97706}.exp-stat.danger b{color:#DC2626}.exp-stat.ok b{color:#059669}.exp-work-card{overflow:visible}.exp-toolbar{padding:16px 18px;display:flex;gap:10px;align-items:center;border-bottom:1px solid #EEF2F7}.exp-toolbar .sw{min-width:260px}.exp-legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 18px;background:#F8FAFC;border-bottom:1px solid #EEF2F7;font-size:10.5px;color:#64748B;font-weight:650}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}.dot-doc{background:#F59E0B}.dot-release{background:#2563EB}.dot-physical{background:#10B981}.exp-table-wrap{overflow:auto}.exp-table{width:100%;min-width:1070px;border-collapse:collapse}.exp-table th{padding:11px 15px;background:#fff;border-bottom:1px solid #E8EDF4;color:#64748B;font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;text-align:left}.exp-table td{padding:13px 15px;border-bottom:1px solid #EEF2F7;vertical-align:middle;font-size:11.5px;color:#334155}.exp-table tr:hover td{background:#F8FBFF}.exp-lot{font-size:12px;font-weight:800;color:#0F172A}.exp-muted{display:block;font-size:10px;color:#7B8BA2;margin-top:3px}.exp-person{font-weight:750;color:#0F172A;max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.exp-chip{display:inline-flex;align-items:center;gap:4px;border-radius:99px;padding:4px 7px;font-size:9px;font-weight:800;white-space:nowrap;background:#F1F5F9;color:#64748B}.exp-chip.good{background:#DCFCE7;color:#15803D}.exp-chip.warn{background:#FEF3C7;color:#A16207}.exp-chip.release{background:#DBEAFE;color:#1D4ED8}.exp-step{font-weight:800;color:#0F172A}.exp-step small{display:block;margin-top:3px;color:#64748B;font-size:9.5px;font-weight:600}.exp-actions{display:flex;gap:6px;flex-wrap:wrap}.exp-action{border:1px solid #DCE5EF;background:#fff;color:#34465B;border-radius:8px;padding:6px 8px;font:inherit;font-size:10px;font-weight:800;cursor:pointer}.exp-action.primary{background:#0F766E;border-color:#0F766E;color:white}.ops-check{display:flex;align-items:center;gap:9px;border:1px solid #E2E8F0;border-radius:10px;padding:10px 11px;font-size:12px;font-weight:700;color:#334155}.ops-check input{width:17px;height:17px;accent-color:#0F766E}.ops-check.release{background:#EFF6FF;border-color:#BFDBFE}.ops-check.final{background:#ECFDF5;border-color:#A7F3D0}.exp-check-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.exp-empty{padding:42px;text-align:center;color:#64748B}.exp-empty b{display:block;color:#0F172A;font-size:14px;margin-bottom:6px}@media(max-width:900px){.exp-summary{grid-template-columns:repeat(2,1fr)}.exp-toolbar{flex-wrap:wrap}.exp-toolbar .sw{flex-basis:100%}}@media(max-width:600px){.exp-work-head{flex-direction:column}.exp-check-grid{grid-template-columns:1fr}.exp-toolbar .sw{min-width:100%}.exp-toolbar .f-sel{flex:1}.exp-work-head h2{font-size:22px}}@media print{.sb,.top,.exp-work-head button,.exp-toolbar,.exp-legend,.exp-actions{display:none!important}.mn,.ct{overflow:visible!important;background:#fff!important}.ct{padding:0!important}.exp-table{min-width:0!important}.exp-table th,.exp-table td{padding:7px!important;font-size:9px!important}}
 </style>
 </head>
 <body class="deslogado auth-indef">
@@ -698,9 +701,30 @@ td{padding:12px 18px}
     </div>
 
     <div class="pg" id="pg-expedicao">
-      <div class="ops-hero"><div style="position:relative;z-index:1"><div style="font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#9EE9D9">CENTRAL DE EXPEDIÇÃO</div><div style="font-size:25px;font-weight:850;letter-spacing:-.045em;margin-top:5px">Retiradas sem perder nenhum detalhe.</div><div style="margin-top:5px;color:rgba(255,255,255,.76);font-size:12px">Documento recebido não é liberação: só deixe o lote pronto quando o sistema confirmar.</div></div><div class="ops-kpis" id="exp-kpis"></div></div>
-      <div class="card"><div class="ch"><div class="visual-title"><div class="visual-orb"><i class="ti ti-alert-triangle"></i></div><div><div class="ch-title">Prioridades operacionais</div><div class="ch-sub">Resolva primeiro o que pode travar uma retirada.</div></div></div><button class="btn-o" onclick="renderExpedicao()"><i class="ti ti-refresh"></i>Atualizar</button></div><div class="cb"><div class="ops-alerts" id="exp-alerts"></div></div></div>
-      <div class="card"><div class="ch"><div class="visual-title"><div class="visual-orb"><i class="ti ti-users-group"></i></div><div><div class="ch-title">Visão consolidada por cliente</div><div class="ch-sub">Todos os lotes e paletes do mesmo arrematante no mesmo cartão.</div></div></div><button class="btn-p" onclick="window.print()"><i class="ti ti-printer"></i>Exportar A4 / PDF</button></div><div class="cb"><div class="exp-grid" id="exp-clientes"></div></div></div>
+      <div class="exp-work-head">
+        <div><div class="exp-eyebrow">OPERAÇÃO DE RETIRADAS</div><h2>Fila de expedição</h2><p>Controle o que falta antes de liberar e retirar cada lote.</p></div>
+        <button class="btn-p" onclick="window.print()"><i class="ti ti-printer"></i>Imprimir / PDF</button>
+      </div>
+      <div class="exp-summary" id="exp-kpis"></div>
+      <div class="card exp-work-card">
+        <div class="exp-toolbar">
+          <div class="sw"><i class="ti ti-search"></i><input class="si" id="exp-search" placeholder="Buscar lote, cliente ou leilão" oninput="renderExpedicao()"></div>
+          <select class="f-sel" id="exp-platform" onchange="renderExpedicao()"><option value="">Sodré + Kwara</option><option value="Sodré Santoro">Sodré Santoro</option><option value="Kwara">Kwara</option></select>
+          <select class="f-sel" id="exp-stage" onchange="renderExpedicao()"><option value="">Todas as pendências</option><option value="docs">Documentos pendentes</option><option value="liberacao">Aguardando liberação</option><option value="agendamento">Para agendar</option><option value="retirada">Agendados / retirar</option><option value="finalizado">Finalizados</option></select>
+          <button class="btn-o" onclick="renderExpedicao()"><i class="ti ti-refresh"></i></button>
+        </div>
+        <div class="exp-legend"><span><i class="dot dot-doc"></i>Documento recebido</span><span><i class="dot dot-release"></i>Liberado no sistema</span><span><i class="dot dot-physical"></i>Retirada física confirmada</span></div>
+        <div id="exp-queue"></div>
+      </div>
+    </div>
+
+    <div class="overlay" id="exp-check-overlay">
+      <div class="modal exp-modal"><div class="mh"><div><div class="mh-title">Checklist de expedição</div><div id="exp-check-lote" style="font-size:11px;color:var(--gray);margin-top:3px"></div></div><button class="ic-btn" onclick="opsFecharChecklist()"><i class="ti ti-x"></i></button></div>
+        <div class="mb"><input type="hidden" id="exp-check-id"><div class="exp-check-grid">
+          <label class="ops-check"><input type="checkbox" id="exp-email"><span>E-mail recebido</span></label><label class="ops-check"><input type="checkbox" id="exp-termo"><span>Termo recebido</span></label><label class="ops-check"><input type="checkbox" id="exp-nota"><span>Nota recebida</span></label><label class="ops-check"><input type="checkbox" id="exp-pagamento"><span>Pagamento confirmado</span></label><label class="ops-check release"><input type="checkbox" id="exp-liberado"><span>Lote liberado no sistema</span></label><label class="ops-check"><input type="checkbox" id="exp-fotos"><span>Fotos conferidas</span></label>
+        </div><div class="fgrid" style="margin-top:18px"><div class="fg"><div class="fl">Paletes</div><input class="fi" id="exp-paletes" placeholder="Ex: 3"></div><div class="fg"><div class="fl">Responsável</div><input class="fi" id="exp-responsavel" placeholder="Quem conferiu"></div><div class="fg" style="grid-column:span 2"><div class="fl">Agendamento de retirada</div><input class="fi" type="datetime-local" id="exp-agendamento"></div><div class="fg" style="grid-column:span 2"><div class="fl">Observações da expedição</div><textarea class="fi" id="exp-obs" style="height:76px;padding:10px;resize:vertical" placeholder="Ex: caminhão aberto, empilhadeira, divergência de paletes..."></textarea></div></div><label class="ops-check final" style="margin-top:8px"><input type="checkbox" id="exp-finalizado"><span>OK — retirada física finalizada</span></label><button class="btn-o" style="margin-top:15px" onclick="opsAbrirFotos()"><i class="ti ti-camera"></i>Adicionar / ver fotos do lote</button></div>
+        <div class="mf"><button class="btn-o" onclick="opsFecharChecklist()">Cancelar</button><button class="btn-p" onclick="opsSalvarChecklist()"><i class="ti ti-device-floppy"></i>Salvar checklist</button></div>
+      </div>
     </div>
 
     <div class="pg" id="pg-condicionais">
@@ -992,16 +1016,17 @@ document.getElementById('f-hora').value='10:00';
 })();
 
 window.addEventListener('fb-ok',async()=>{
-  document.getElementById('fb-st').textContent='Conectado';
-  document.getElementById('fb-dot').style.background='#22C55E';
-  await loadLotes();
-  try{await window.carregarPrestacoes();}catch(_e){}
-  try{await window.carregarLeiloesMapa();}catch(_e){}  /* precisa vir ANTES de desenhar o financeiro */
-  initDash();
-  try{if(window.renderHome)window.renderHome();}catch(_e){console.warn("home",_e);}
-  finally{document.body.classList.add('dash-pronto');}  /* mesmo se falhar, libera o resto: melhor conteudo antigo que tela vazia */
-  renderCal();updateDocSel();updateExpPrev();
-  {const _c=document.getElementById('csv-ct');if(_c)_c.textContent=lotes.length+' lote(s) cadastrados';}
+  try{
+    document.getElementById('fb-st').textContent='Conectado';
+    document.getElementById('fb-dot').style.background='#22C55E';
+    await loadLotes();
+    try{await window.carregarPrestacoes();}catch(_e){}
+    try{await window.carregarLeiloesMapa();}catch(_e){}
+    try{initDash();}catch(_e){console.warn('dashboard',_e);}
+    try{if(window.renderHome)window.renderHome();}catch(_e){console.warn('home',_e);}
+    try{renderCal();updateDocSel();updateExpPrev();}catch(_e){console.warn('complementos',_e);}
+    {const _c=document.getElementById('csv-ct');if(_c)_c.textContent=lotes.length+' lote(s) cadastrados';}
+  }finally{document.body.classList.add('dash-pronto');}
 });
 
 function ir(p){
@@ -2690,6 +2715,32 @@ body:not(.dash-pronto) #pg-dashboard > *:not(#home-blocks){display:none !importa
     const groups={};active.forEach(l=>{const n=(l.arrematante||'Sem arrematante').trim();(groups[n]||(groups[n]=[])).push(l)});
     const box=document.getElementById('exp-clientes');if(!box)return;const names=Object.keys(groups).sort((a,b)=>groups[b].length-groups[a].length);box.innerHTML=names.length?names.map(name=>{const ls=groups[name],p=ls.reduce((s,l)=>s+paletes(l),0),ready=ls.filter(l=>liberado(l)&&agenda(l)).length;return '<article class="exp-card"><h3>'+esc(name)+'</h3><div class="exp-meta">'+ls.length+' lote(s) · '+p+' palete(s) · '+ready+' pronto(s) para retirada</div>'+ls.map(l=>'<div class="exp-line"><div><strong>Lote '+esc(l.num)+'</strong><div style="margin-top:4px"><span class="exp-dot '+(liberado(l)?'y':'r')+'"></span>'+ (liberado(l)?'Liberado no sistema':'Aguardando liberação')+' <span style="margin-left:7px" class="exp-dot '+(retirada(l)?'y':agenda(l)?'w':'r')+'"></span>'+(retirada(l)?'Concluído':agenda(l)||'Sem agendamento')+'</div></div><div class="ops-actions"><button class="ops-action" onclick="opsToggle(\''+l.id+'\',\'termo\')">Termo</button><button class="ops-action" onclick="opsToggle(\''+l.id+'\',\'liberado\')">Lib.</button><button class="ops-action" onclick="opsToggle(\''+l.id+'\',\'retirada\')">OK</button></div></div>').join('')+'</article>'}).join(''):'<div class="empty"><div class="empty-title">Nenhum lote pós-venda</div><div class="empty-sub">Os arrematados aparecerão aqui agrupados por cliente.</div></div>';
   };
+  /* Fila operacional: cada linha é um lote e o checklist registra quem, quando e o que foi conferido. */
+  const expVenda=l=>!!(l.vendido||l.condicional||String(l.arrematante||'').trim());
+  const expPaletes=l=>{const v=Number(l.qtdPaletes||l.paletes||0);if(v)return v;const m=String(l.qtdCaixas||l.descricao||'').match(/(\d+)\s*(?:paletes?|pallets?)/i);return m?Number(m[1]):0};
+  const expDocs=l=>({email:!!l.emailRecebido,termo:!!l.termoRecebido,nota:!!l.notaRecebida,pagamento:!!(l.pagamentoConfirmado||l.pago)});
+  const expLiberado=l=>!!l.loteLiberado;
+  const expFinal=l=>!!(l.retiradaConfirmada||l.retirou);
+  const expAgenda=l=>String(l.agendamento||'').trim();
+  const expEsc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const expData=s=>{if(!s)return 'Sem agendamento';const d=new Date(s);return isNaN(d)?s:d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})};
+  const expEtapa=l=>{const d=expDocs(l);if(expFinal(l))return ['finalizado','Finalizado','Retirada confirmada'];if(!d.email||!d.termo||!d.nota||!d.pagamento)return ['docs','Documentos','Complete e-mail, termo, NF e pagamento'];if(!expLiberado(l))return ['liberacao','Liberar','Aguardando confirmação no sistema'];if(!expAgenda(l))return ['agendamento','Agendar','Defina data e responsável'];return ['retirada','Retirar','Carga pronta para a retirada física']};
+  const expTag=(label,on,type)=>'<span class="exp-chip '+(on?(type||'good'):'warn')+'">'+(on?'✓':'•')+' '+label+'</span>';
+  window.renderExpedicao=renderExpedicao=function(){
+    const box=document.getElementById('exp-queue');if(!box)return;
+    const search=(document.getElementById('exp-search')?.value||'').toLowerCase(), plat=document.getElementById('exp-platform')?.value||'', filtro=document.getElementById('exp-stage')?.value||'';
+    const todos=(lotes||[]).filter(expVenda), grupos={};todos.forEach(l=>{const k=(l.arrematante||'Sem arrematante').trim();(grupos[k]||(grupos[k]=[])).push(l)});
+    const fila=todos.filter(l=>{const etapa=expEtapa(l)[0], h=[l.num,l.descricao,l.arrematante,l.leilaoNum,l.plataforma].join(' ').toLowerCase();return (!search||h.includes(search))&&(!plat||(l.plataforma||'Sodré Santoro')===plat)&&(!filtro||etapa===filtro)}).sort((a,b)=>{const ao=expEtapa(a)[0]==='finalizado'?1:0,bo=expEtapa(b)[0]==='finalizado'?1:0;return ao-bo||String(a.data||'').localeCompare(String(b.data||''))});
+    const semDocs=todos.filter(l=>expEtapa(l)[0]==='docs').length, semLib=todos.filter(l=>expEtapa(l)[0]==='liberacao').length, retirar=todos.filter(l=>expEtapa(l)[0]==='retirada').length, ok=todos.filter(l=>expFinal(l)).length;
+    const k=document.getElementById('exp-kpis');if(k)k.innerHTML='<div class="exp-stat danger"><b>'+semDocs+'</b><span>Documentos pendentes</span></div><div class="exp-stat warn"><b>'+semLib+'</b><span>Sem liberação</span></div><div class="exp-stat"><b>'+retirar+'</b><span>Prontos para retirar</span></div><div class="exp-stat ok"><b>'+ok+'</b><span>Finalizados</span></div>';
+    if(!fila.length){box.innerHTML='<div class="exp-empty"><b>Nenhum lote neste filtro</b>Altere a busca ou os filtros da fila de expedição.</div>';return;}
+    box.innerHTML='<div class="exp-table-wrap"><table class="exp-table"><thead><tr><th>Lote / leilão</th><th>Cliente consolidado</th><th>Paletes</th><th>Etapa atual</th><th>Documentos e liberação</th><th>Agendamento</th><th>Expedição</th><th></th></tr></thead><tbody>'+fila.map(l=>{const d=expDocs(l),e=expEtapa(l),nome=(l.arrematante||'Sem arrematante').trim(),gs=grupos[nome]||[l],tp=gs.reduce((s,x)=>s+expPaletes(x),0);return '<tr><td><div class="exp-lot">Lote '+expEsc(l.num)+'</div><span class="exp-muted">'+expEsc(l.plataforma||'Sodré Santoro')+' · Leilão '+expEsc(l.leilaoNum||'—')+'</span></td><td><div class="exp-person">'+expEsc(nome)+'</div><span class="exp-muted">'+gs.length+' lote(s) · '+tp+' palete(s) no cliente</span></td><td><b>'+expPaletes(l)+'</b><span class="exp-muted">palete(s)</span></td><td><div class="exp-step">'+e[1]+'<small>'+e[2]+'</small></div></td><td><div class="ops-chips">'+expTag('E-mail',d.email)+expTag('Termo',d.termo)+expTag('NF',d.nota)+expTag('Pgto',d.pagamento)+expTag('Liberado',expLiberado(l),'release')+'</div></td><td><b>'+expData(expAgenda(l))+'</b><span class="exp-muted">'+expEsc(l.responsavelExpedicao||'Responsável não informado')+'</span></td><td>'+expTag('Fotos',!!l.fotosConferidas)+expTag('OK',expFinal(l))+'<span class="exp-muted">'+expEsc(l.obsExpedicao||'Sem observações')+'</span></td><td><div class="exp-actions"><button class="exp-action primary" onclick="opsChecklist(\''+l.id+'\')">Checklist</button><button class="exp-action" onclick="opsFotos(\''+l.id+'\')"><i class="ti ti-camera"></i></button></div></td></tr>'}).join('')+'</tbody></table></div>';
+  };
+  window.opsChecklist=id=>{const l=(lotes||[]).find(x=>x.id===id);if(!l)return;const d=expDocs(l);document.getElementById('exp-check-id').value=id;document.getElementById('exp-check-lote').textContent='Lote '+l.num+' · '+(l.arrematante||'Sem arrematante');document.getElementById('exp-email').checked=d.email;document.getElementById('exp-termo').checked=d.termo;document.getElementById('exp-nota').checked=d.nota;document.getElementById('exp-pagamento').checked=d.pagamento;document.getElementById('exp-liberado').checked=expLiberado(l);document.getElementById('exp-fotos').checked=!!l.fotosConferidas;document.getElementById('exp-paletes').value=l.qtdPaletes||l.paletes||expPaletes(l)||'';document.getElementById('exp-responsavel').value=l.responsavelExpedicao||'';document.getElementById('exp-agendamento').value=String(l.agendamento||'').slice(0,16);document.getElementById('exp-obs').value=l.obsExpedicao||'';document.getElementById('exp-finalizado').checked=expFinal(l);document.getElementById('exp-check-overlay').classList.add('open')};
+  window.opsFecharChecklist=()=>document.getElementById('exp-check-overlay').classList.remove('open');
+  window.opsAbrirFotos=()=>{const id=document.getElementById('exp-check-id').value;opsFecharChecklist();if(id)editarLote(id)};
+  window.opsFotos=id=>{if(id)editarLote(id)};
+  window.opsSalvarChecklist=async()=>{const id=document.getElementById('exp-check-id').value;if(!id)return;const p={emailRecebido:document.getElementById('exp-email').checked,termoRecebido:document.getElementById('exp-termo').checked,notaRecebida:document.getElementById('exp-nota').checked,pagamentoConfirmado:document.getElementById('exp-pagamento').checked,loteLiberado:document.getElementById('exp-liberado').checked,fotosConferidas:document.getElementById('exp-fotos').checked,qtdPaletes:document.getElementById('exp-paletes').value.trim(),responsavelExpedicao:document.getElementById('exp-responsavel').value.trim(),agendamento:document.getElementById('exp-agendamento').value,obsExpedicao:document.getElementById('exp-obs').value.trim(),retiradaConfirmada:document.getElementById('exp-finalizado').checked};try{await window._upd(window._doc(window._db,'lotes',id),p);await loadLotes();opsFecharChecklist();renderExpedicao();toast('Checklist salvo','ok')}catch(e){toast('Erro ao salvar: '+e.message,'er')}};
   function ensurePlatform(){const grid=document.querySelector('#modal-overlay .fgrid');if(!grid||document.getElementById('f-plataforma'))return;const d=document.createElement('div');d.className='fg';d.innerHTML='<div class="fl">Plataforma</div><select class="fi" id="f-plataforma"><option value="Sodré Santoro">Sodré Santoro</option><option value="Kwara">Kwara</option></select>';grid.appendChild(d)}
   const oldOpen=openModal;openModal=function(){oldOpen();ensurePlatform();document.getElementById('f-plataforma').value='Sodré Santoro'};window.openModal=openModal;
   const oldEdit=editarLote;editarLote=function(id){oldEdit(id);ensurePlatform();const l=lotes.find(x=>x.id===id);document.getElementById('f-plataforma').value=(l&&l.plataforma)||'Sodré Santoro'};window.editarLote=editarLote;
@@ -2697,6 +2748,15 @@ body:not(.dash-pronto) #pg-dashboard > *:not(#home-blocks){display:none !importa
   function openExp(){document.querySelectorAll('.pg').forEach(x=>x.style.display='none');document.getElementById('pg-expedicao').style.display='flex';document.getElementById('pg-expedicao').style.flexDirection='column';document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('on',x.dataset.p==='expedicao'));document.getElementById('pg-title').textContent='Expedição';document.getElementById('pg-sub').textContent='Documentos, liberação, agenda e retirada física';renderExpedicao()}
   setTimeout(()=>{const n=document.querySelector('.nav[data-p="expedicao"]');if(n)n.onclick=openExp;renderExpedicao()},500);
 })();
+</script>
+<script>
+/* Nunca manter a tela presa no esqueleto caso uma rotina secundária falhe. */
+setTimeout(function(){
+  if(document.body.classList.contains('dash-pronto'))return;
+  var bloco=document.getElementById('home-blocks');
+  if(bloco&&bloco.querySelector('.sk'))bloco.innerHTML='';
+  document.body.classList.add('dash-pronto');
+},1800);
 </script>
 </body>
 </html>
