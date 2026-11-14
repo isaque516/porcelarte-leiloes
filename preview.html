@@ -573,14 +573,7 @@ td{padding:12px 18px}
           <div class="sk sk-card" style="height:210px"></div>
         </div>
       </div>
-      <div class="krow">
-        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Lotes na praça</div><div class="kpi-ic blue"><i class="ti ti-gavel"></i></div></div><div class="kpi-val" id="k-lotes">0</div><div class="kpi-tr">pregão ainda por acontecer</div></div>
-        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Dias com pregão à frente</div><div class="kpi-ic purple"><i class="ti ti-calendar-event"></i></div></div><div class="kpi-val" id="k-dias">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
-        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Valor na praça (lance inicial)</div><div class="kpi-ic amber"><i class="ti ti-currency-dollar"></i></div></div><div class="kpi-val" id="k-total">R$ 0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
-        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Condicionais</div><div class="kpi-ic orange"><i class="ti ti-tag"></i></div></div><div class="kpi-val" id="k-cond">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
-        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Pagtos pendentes</div><div class="kpi-ic amber"><i class="ti ti-clock"></i></div></div><div class="kpi-val" id="k-pend">0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
-        <div class="kpi"><div class="kpi-top"><div class="kpi-lbl">Total vendido</div><div class="kpi-ic green"><i class="ti ti-chart-bar"></i></div></div><div class="kpi-val" id="k-vend">R$ 0</div><div class="kpi-tr"><i class="ti ti-trending-up"></i>0% vs mês anterior</div></div>
-      </div>
+      <div id="dh-root"></div>
       <div id="live-sec" style="display:none">
         <div class="live-wrap">
           <div><div class="live-badge"><span class="live-pulse"></span>Ao vivo agora</div><div class="live-lot" id="lv-num"></div><div class="live-title" id="lv-title"></div><div class="live-meta" id="lv-meta"></div></div>
@@ -1044,12 +1037,18 @@ function initDash(){
   const ini=lm.reduce((s,l)=>s+(Number(l.lanceInicial)||0),0);
   const conds=lotes.filter(l=>l.condicional&&!l.pago).length;
   const vend=lotes.filter(l=>l.vendido||l.pago).reduce((s,l)=>s+(Number(l.valorVenda)||l.lanceAtual||0),0);
-  document.getElementById('k-lotes').textContent=lm.length;
-  document.getElementById('k-dias').textContent=dias;
-  document.getElementById('k-total').textContent='R$ '+ini.toLocaleString('pt-BR');
-  document.getElementById('k-cond').textContent=conds;
-  document.getElementById('k-pend').textContent=lotes.filter(l=>(l.vendido||l.condicional)&&!l.pago).length;
-  document.getElementById('k-vend').textContent='R$ '+vend.toLocaleString('pt-BR');
+  /* Os seis cartoes soltos sairam do Dashboard (viraram o bloco "Hoje", com a
+     acao embaixo de cada numero). As contas continuam porque o Financeiro e a
+     visao geral do mes usam __finPend e __finConv logo abaixo. */
+  const _put=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+  _put('k-lotes',lm.length);
+  _put('k-dias',dias);
+  _put('k-total','R$ '+ini.toLocaleString('pt-BR'));
+  _put('k-cond',conds);
+  _put('k-pend',lotes.filter(l=>(l.vendido||l.condicional)&&!l.pago).length);
+  _put('k-vend','R$ '+vend.toLocaleString('pt-BR'));
+  window.__dhBase={naPraca:lm.length, dias:dias, valorPraca:ini, conds:conds, vendido:vend};
+  if(window.renderHoje)setTimeout(window.renderHoje,80);
   window.__finPend=lotes.filter(l=>(l.vendido||l.pago)&&!l.pago).reduce((s,l)=>s+(Number(l.valorVenda)||l.lanceAtual||0),0);
   {const hojeS=hoje.toISOString().slice(0,10);const passados=lotes.filter(l=>l.data&&l.data<hojeS).length;const vc=lotes.filter(l=>l.vendido||l.pago).length;window.__finConv=passados?Math.round(vc/passados*100):0;}
   {const mm=String(m+1).padStart(2,'0');const dias10=['01','04','07','10','13','16','19','22','25','28'];
@@ -2836,6 +2835,52 @@ setTimeout(function(){
 
 <style id="xpcss">
 
+
+
+.xp-acoes{display:flex;gap:8px;align-items:center;margin:2px 0 9px;flex-wrap:wrap}
+.xp-todos{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:#1D4ED8;
+  background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:5px 9px;cursor:pointer;transition:.2s}
+.xp-todos:hover{background:#DBEAFE;transform:translateY(-1px)}
+.xp-todos i{font-size:14px}
+.xp-todos .xp-date{width:112px;border-color:#BFDBFE}
+.xp-b2{font:inherit;font-size:11px;font-weight:700;color:#334155;background:#fff;border:1px solid #E2E8F0;
+  border-radius:10px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:.2s}
+.xp-b2:hover{background:#F1F5F9;color:#0F172A;transform:translateY(-1px)}
+.xp-b2 i{font-size:14px}
+/* ===== Dashboard: bloco HOJE =====
+   Os seis cartoes antigos mostravam um numero solto cada um e ocupavam metade da
+   tela. Aqui cada numero vem com a acao embaixo e leva para a tela certa, ja
+   filtrada - a mesma logica que fez a Expedicao funcionar. */
+.dh-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:16px}
+@media(max-width:1180px){.dh-g{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.dh-g{grid-template-columns:1fr}}
+.dh-c{position:relative;overflow:hidden;cursor:pointer;text-align:left;width:100%;font:inherit;
+  background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:15px 17px 14px;
+  box-shadow:0 1px 2px rgba(15,23,42,.04),0 12px 26px -20px rgba(15,23,42,.3);
+  animation:xpUp .5s cubic-bezier(.22,1,.36,1) both;
+  transition:transform .24s cubic-bezier(.22,1,.36,1),box-shadow .24s,border-color .24s}
+.dh-c:hover{transform:translateY(-4px);border-color:#BFDBFE;
+  box-shadow:0 2px 4px rgba(15,23,42,.05),0 28px 48px -26px rgba(37,99,235,.6)}
+.dh-c::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:currentColor}
+.dh-c::after{content:'';position:absolute;right:-26px;top:-26px;width:96px;height:96px;border-radius:50%;
+  background:currentColor;opacity:.06;transition:transform .32s}
+.dh-c:hover::after{transform:scale(1.45)}
+.dh-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.dh-n{font-size:27px;font-weight:800;letter-spacing:-.045em;color:#0F172A;line-height:1;font-variant-numeric:tabular-nums}
+.dh-i{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  background:currentColor;flex-shrink:0;transition:transform .28s cubic-bezier(.34,1.46,.5,1)}
+.dh-c:hover .dh-i{transform:scale(1.12) rotate(-8deg)}
+.dh-i i{font-size:17px;color:#fff}
+.dh-l{font-size:12.5px;font-weight:750;color:#0F172A;margin-top:9px;letter-spacing:-.015em}
+.dh-a{font-size:11.5px;color:#64748B;margin-top:3px;display:flex;align-items:center;gap:5px}
+.dh-a i{font-size:13px;opacity:.6}
+.dh-v{font-size:11.5px;font-weight:750;color:currentColor;margin-top:6px;font-variant-numeric:tabular-nums}
+.dh-hero{grid-column:1/-1;display:flex;align-items:center;gap:14px;background:linear-gradient(120deg,#0F172A,#1E3A8A 60%,#2563EB);
+  color:#fff;border:none;border-radius:18px;padding:17px 20px;box-shadow:0 20px 44px -24px rgba(37,99,235,.95)}
+.dh-hero .dh-hn{font-size:25px;font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.dh-hero .dh-ht{font-size:12.5px;opacity:.86}
+.dh-hero i{font-size:22px;opacity:.9}
+.dh-zero{color:#059669}
 /* ===== Painel do robo (aba Gmail) ===== */
 .rb-k{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px}
 @media(max-width:900px){.rb-k{grid-template-columns:1fr}}
@@ -3065,11 +3110,20 @@ window.__xpRender=async function(lotes){
         +'<div class="xp-m2">'+(Number(l.m2)||0).toLocaleString("pt-BR",{maximumFractionDigits:2})+' m²</div></td>'
         +'<td class="xp-ac"><input type="date" class="xp-date" value="'+esc(l.dataRetirada||'')+'" onchange="window.__xpAgendar(this,\''+l.id+'\')" title="Agendar retirada">'
         +'<button class="xp-b" title="Anexar termo de retirada" onclick="window.__xpTermo(\''+esc(l.num)+'\')"><i class="ti ti-file-upload"></i></button></td></tr>';}).join('');
+    /* Um comprador com 8 lotes vem buscar tudo no mesmo dia. Marcar data lote a
+       lote era trabalho repetido a toa - aqui ele agenda o grupo inteiro. */
+    var idsG=ls.map(function(l){return l.id;}).join(',');
     return '<article class="xp-c" style="animation-delay:'+Math.min(idx*45,450)+'ms">'
       +'<div class="xp-c-h"><div class="xp-av">'+esc(n.slice(0,2).toUpperCase())+'</div>'
       +'<div class="xp-c-t"><h4>'+esc(n)+'</h4>'
       +'<span>'+ls.length+' lote(s) · '+m2(ls).toLocaleString("pt-BR",{maximumFractionDigits:2})+' m² · '+money(val(ls))+'</span></div>'
       +'<span class="xp-badge xp-'+estado[1]+'">'+estado[0]+'</span></div>'
+      +'<div class="xp-acoes">'
+        +'<label class="xp-todos"><i class="ti ti-calendar-plus"></i> Agendar os '+ls.length+' de uma vez'
+        +'<input type="date" class="xp-date" onchange="window.__xpAgendarGrupo(this,\''+idsG+'\')"></label>'
+        +'<button class="xp-b2" onclick="window.__xpAviso(\''+esc(n).replace(/'/g,"")+'\',\''+idsG+'\')" title="Copiar aviso pronto para mandar ao comprador">'
+        +'<i class="ti ti-message-2"></i> Copiar aviso</button>'
+      +'</div>'
       +'<div class="xp-bar"><i style="width:'+prog+'%"></i></div>'
       +'<div class="xp-bar-r">'+pagos+' de '+ls.length+' pago(s)</div>'
       +'<table class="xp-tb"><tbody>'+linhas+'</tbody></table></article>';}).join('');
@@ -3264,8 +3318,61 @@ window.renderRobo = async function(){
 };
 document.addEventListener('click',function(ev){
   var n=ev.target&&ev.target.closest&&ev.target.closest('.nav');
-  if(n&&n.dataset&&n.dataset.p==='gmail'){ setTimeout(function(){ window.renderRobo(); },250); }
+  if(!n||!n.dataset)return;
+  if(n.dataset.p==='gmail'){ setTimeout(function(){ window.renderRobo(); },250); }
+  if(n.dataset.p==='dashboard'){ setTimeout(function(){ window.renderHoje(); },250); }
 });
+if(document.getElementById('dh-root')) setTimeout(function(){ window.renderHoje(); },1800);
+
+
+/* ===== DASHBOARD: bloco HOJE =====
+   Cada cartao e um botao: leva para a tela certa, ja no filtro certo. */
+window.renderHoje = async function(){
+  var box=document.getElementById('dh-root'); if(!box) return;
+  var money=function(v){return 'R$ '+Math.round(Number(v)||0).toLocaleString('pt-BR');};
+  var L=[];
+  try{ var sn=await window._getDocs(window._col(window._db,'lotes')); sn.forEach(function(d){L.push(Object.assign({id:d.id},d.data()));}); }catch(e){ return; }
+  var T={};
+  try{ var st=await window._getDocs(window._col(window._db,'termos_retirada')); st.forEach(function(d){ T[String((d.data()||{}).num||'')]=true; }); }catch(e){}
+  var HJ=new Date().toISOString().slice(0,10);
+  var mask=function(a){return String(a||'').indexOf('*')>-1;};
+  var soma=function(arr,campo){return arr.reduce(function(s,l){return s+(Number(l[campo])||Number(l.lanceAtual)||Number(l.lanceInicial)||0);},0);};
+
+  var naoVend=L.filter(function(l){return !l.cancelado&&!l.vendido&&!l.pago&&!l.condicional&&!l.repostado&&!l.vendidoFora&&!l.duplicado&&String(l.data||'')<HJ;});
+  var canc=L.filter(function(l){return l.cancelado&&!l.repostado;});
+  var repostar=naoVend.concat(canc);
+  var fila=L.filter(function(l){return (l.vendido||l.pago)&&!l.retirou;});
+  var semNome=fila.filter(function(l){var a=String(l.arrematante||'').trim();return !a||mask(a);});
+  var prontos=fila.filter(function(l){var a=String(l.arrematante||'').trim();return a&&!mask(a)&&l.pago&&!l.dataRetirada;});
+  var semTermo=fila.filter(function(l){return !T[String(l.num)];});
+  var praca=L.filter(function(l){return !l.cancelado&&!l.vendido&&!l.pago&&String(l.data||'')>=HJ;});
+  var aReceber=L.filter(function(l){return (l.vendido||l.condicional)&&!l.pago;});
+
+  function card(cor,ico,n,rot,acao,valor,fn){
+    return '<button class="dh-c" style="color:'+cor+'" onclick="'+fn+'">'
+      +'<div class="dh-top"><div class="dh-n">'+n+'</div><div class="dh-i"><i class="ti '+ico+'"></i></div></div>'
+      +'<div class="dh-l">'+rot+'</div>'
+      +(valor?'<div class="dh-v">'+valor+'</div>':'')
+      +'<div class="dh-a"><i class="ti ti-arrow-right"></i>'+acao+'</div></button>';
+  }
+  var html='<div class="dh-g">';
+  /* faixa de abertura: o dinheiro que esta parado sem fazer nada */
+  html+='<div class="dh-hero"><i class="ti ti-rotate-clockwise-2"></i><div>'
+    +'<div class="dh-hn">'+money(soma(repostar,'lanceInicial'))+' parados</div>'
+    +'<div class="dh-ht">'+repostar.length+' lote(s) sem pregão: '+naoVend.length+' não vendidos e '+canc.length+' cancelados que nunca voltaram.</div>'
+    +'</div></div>';
+  html+=card('#DC2626','ti-rotate-clockwise-2',repostar.length,'Para repostar','Abrir no Controle, filtro Não vendido',money(soma(repostar,'lanceInicial')),
+        "window.ir('controle');setTimeout(function(){window.setFiltroCtl&&window.setFiltroCtl('naoVendido');},400)");
+  html+=card(semNome.length?'#EA580C':'#059669','ti-user-question',semNome.length,'Vendidos sem nome do comprador',
+        semNome.length?'Pedir a lista à Sodré na Expedição':'Nada travado por falta de nome','',"window.ir('expedicao')");
+  html+=card('#2563EB','ti-calendar-plus',prontos.length,'Prontos para agendar retirada','Agendar na Expedição','',"window.ir('expedicao')");
+  html+=card(semTermo.length?'#7C3AED':'#059669','ti-file-text',semTermo.length,'Vendidos sem termo de retirada','Anexar em Documentos','',"window.ir('documentos')");
+  html+=card('#0891B2','ti-gavel',praca.length,'Na praça agora','Ver no Controle',money(soma(praca,'lanceInicial')),"window.ir('controle')");
+  html+=card(aReceber.length?'#D97706':'#059669','ti-cash',aReceber.length,'Lotes aguardando pagamento',
+        aReceber.length?'Conferir no Financeiro':'Tudo recebido',money(soma(aReceber,'valorVenda')),"window.ir('leiloes')");
+  html+='</div>';
+  box.innerHTML=html;
+};
 
 window.renderExpedicao=function(){ return window.__xpRender([]); };
 document.addEventListener('click',function(ev){
@@ -3275,6 +3382,42 @@ document.addEventListener('click',function(ev){
 if(document.getElementById('pg-expedicao')){ setTimeout(function(){
   var pg=document.getElementById('pg-expedicao');
   if(pg&&getComputedStyle(pg).display!=='none') window.__xpRender([]); },1500); }
+/* Agenda todos os lotes do comprador de uma vez. Grava um por um porque o
+   Firestore nao tem lote em massa aqui, mas o usuario clica uma vez so. */
+window.__xpAgendarGrupo=async function(el,ids){
+  var v=el.value||''; var lista=String(ids||'').split(',').filter(Boolean);
+  if(!lista.length)return;
+  el.disabled=true;
+  var ok=0, erro='';
+  for(var i=0;i<lista.length;i++){
+    try{ await window._upd(window._doc(window._db,'lotes',lista[i]),{dataRetirada:v}); ok++; }
+    catch(e){ erro=e.message; }
+  }
+  el.disabled=false;
+  if(window.toast)window.toast(erro?('Gravei '+ok+' de '+lista.length+' - '+erro):(ok+' lote(s) agendado(s) para '+(v?v.split('-').reverse().join('/'):'sem data')),erro?'err':'ok');
+  window.__xpRender([]);
+};
+/* Aviso pronto para mandar ao comprador, com os lotes e o endereco. */
+window.__xpAviso=function(nome,ids){
+  var d=window.__xpDados; if(!d)return;
+  var set={}; String(ids||'').split(',').forEach(function(x){set[x]=1;});
+  var ls=d.comNome.filter(function(l){return set[l.id];});
+  if(!ls.length)return;
+  var m2=ls.reduce(function(s,l){return s+(Number(l.m2)||0);},0);
+  var data=ls[0].dataRetirada ? String(ls[0].dataRetirada).split('-').reverse().join('/') : '(combinar a data)';
+  var txt='Ola, '+nome+'.\n\n'
+    +'Sobre a retirada do material arrematado:\n\n'
+    +ls.map(function(l){return '• Lote '+l.num+' — '+String(l.descricao||'').slice(0,60)+' ('+(Number(l.m2)||0).toLocaleString('pt-BR')+' m2)';}).join('\n')
+    +'\n\nTotal: '+ls.length+' lote(s), '+m2.toLocaleString('pt-BR',{maximumFractionDigits:2})+' m2.\n'
+    +'Data combinada: '+data+'\n'
+    +'Local: Avenida Maria Francisca da Silva, 390 - Parque Terras de Santa Maria - Hortolandia/SP\n'
+    +'Horario: dias uteis, das 8h as 17h.\n\n'
+    +'Por favor traga o documento do arrematante. Na retirada assinamos o termo.\n\n'
+    +'Isaque - Porcelarte - (19) 98187-5215';
+  navigator.clipboard.writeText(txt).then(function(){
+    if(window.toast)window.toast('Aviso copiado. Cole no WhatsApp ou no e-mail.','ok');
+  });
+};
 window.__xpTermo=function(num){
   if(window.ir)window.ir('documentos');
   setTimeout(function(){ var s=document.getElementById('sel-doc'); if(!s)return;
