@@ -2061,7 +2061,12 @@ async function renderPendentesDocs(){try{var box=document.getElementById('doc-pe
  var _esc=function(t){return String(t==null?'':t).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
  var _mask=function(a){return String(a||'').indexOf('*')>-1;};
  var grupos={}, SEMN='Comprador ainda não identificado';
- pend.forEach(function(l){var a=String(l.arrematante||'').trim();var k=(a&&!_mask(a))?a:SEMN;(grupos[k]=grupos[k]||[]).push(l);});
+ /* "ARADAM ... LTDA" e "ARADAM ... LTDA." sao o mesmo comprador: a chave ignora
+    ponto, virgula e espaco dobrado; o nome mostrado e o primeiro que apareceu. */
+ var _chave={};
+ pend.forEach(function(l){var a=String(l.arrematante||'').trim();var k=SEMN;
+   if(a&&!_mask(a)){var c=a.toUpperCase().replace(/[.,]/g,'').replace(/\s+/g,' ').trim();k=_chave[c]||(_chave[c]=a);}
+   (grupos[k]=grupos[k]||[]).push(l);});
  var nomes=Object.keys(grupos).sort(function(a,b){if(a===SEMN)return 1;if(b===SEMN)return -1;return grupos[b].length-grupos[a].length||a.localeCompare(b);});
  var totalV=pend.reduce(function(s,l){return s+(Number(l.valorVenda)||l.lanceAtual||0);},0);
  box.innerHTML='<div class="dp-top"><div><h3><i class="ti ti-truck-delivery"></i> Aguardando termo de retirada</h3>'
@@ -3094,7 +3099,11 @@ window.__xpRender=async function(lotes){
       +'<div class="xp-chips">'+chips+'</div></section>';
   }
   var grupos={};
-  comNome.forEach(function(l){var n=nomeDe(l);(grupos[n]=grupos[n]||[]).push(l);});
+  var _chv={};
+  comNome.forEach(function(l){var n=nomeDe(l);
+    var c=n.toUpperCase().replace(/[.,]/g,'').replace(/\s+/g,' ').trim();
+    n=_chv[c]||(_chv[c]=n);                 // mesma empresa com e sem ponto final = um comprador so
+    (grupos[n]=grupos[n]||[]).push(l);});
   var ordem=Object.keys(grupos).sort(function(a,b){
     var pa=grupos[a].filter(function(l){return l.pago;}).length, pb=grupos[b].filter(function(l){return l.pago;}).length;
     if((pb>0)!==(pa>0))return pb>0?1:-1;
@@ -3479,6 +3488,19 @@ window.__xpTermo=function(num){
 .tbl td.n{font-weight:800;color:#0F172A;white-space:nowrap}
 #lotes-wrap{max-height:72vh;overflow:auto;border-radius:0 0 20px 20px}
 
+/* --- 4b. tela Lotes --- */
+#f-platform,#f-ops{display:none !important}   /* filtravam campos que nao existem no banco */
+.lt3{width:100%;border-collapse:collapse;font-size:12.5px}
+.lt3 th{text-align:left;font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#64748B;padding:11px 16px}
+.lt3 td{padding:11px 16px;border-top:1px solid #F1F5F9;vertical-align:middle;color:#334155}
+.lt3-d{max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#475569}
+.lt3-dt{white-space:nowrap;font-size:11.5px;color:#64748B}
+.lt3-v{text-align:right;white-space:nowrap}
+.lt3-v div{font-weight:800;color:#0F172A}
+.lt3-v small{font-size:9.5px;font-weight:800;letter-spacing:.05em}
+.lt3-ap{font-family:ui-monospace,monospace;font-size:11px;background:#F1F5F9;color:#64748B;border-radius:6px;padding:2px 7px}
+.lt3-nm{font-weight:700;color:#0F172A}
+
 /* --- 5. Documentos: pendentes agrupados por comprador --- */
 .dp-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:13px}
 .dp-top h3{font-size:15px;font-weight:780;letter-spacing:-.025em;color:#0F172A;display:flex;align-items:center;gap:8px}
@@ -3542,6 +3564,45 @@ window.__xpTermo=function(num){
       else if(t.indexOf('PAGO')>-1) cs[i].classList.add('v8-pago');
     }
   }
+  /* ===== Tela LOTES com dado real =====
+     A tabela que estava no ar mostrava "E-mail / Termo / NF / Pgto", "Nao liberado"
+     e "0/7 etapas" para os 189 lotes - colunas de um checklist que le campos que
+     nao existem no banco. Era uma parede laranja que nao dizia nada. Volta a
+     mostrar o que o banco sabe: comprador, valor (com a natureza dele) e estado. */
+  function lotesV3(){
+    var el=document.getElementById('lotes-wrap'); if(!el) return;
+    var esc=function(t){return String(t==null?'':t).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
+    var q=((document.getElementById('s-lote')||{}).value||'').toLowerCase();
+    var st=(document.getElementById('f-st')||{}).value||'';
+    var ct=(document.getElementById('f-ct')||{}).value||'';
+    var fl=lotes.filter(function(l){
+      var hay=[l.descricao,l.num,l.arrematante,l.leilaoNum].join(' ').toLowerCase();
+      return (!q||hay.indexOf(q)>-1)&&(!st||getSt(l)===st)&&(!ct||l.categoria===ct);});
+    fl.sort(function(a,b){return String(b.data||'').localeCompare(String(a.data||''))||String(a.num).localeCompare(String(b.num));});
+    if(!fl.length){ el.innerHTML='<div class="empty"><div class="empty-ic"><i class="ti ti-search-off"></i></div><div class="empty-title">Nenhum lote neste filtro</div><div class="empty-sub">Altere os filtros ou cadastre um novo lote.</div></div>'; return; }
+    var COR={pago:'#059669',retirou:'#7C3AED',vendido:'#EA580C',condicional:'#D97706',duplicado:'#A21CAF',cancelado:'#94A3B8',vendidoFora:'#0891B2',repostado:'#4F46E5',naoVendido:'#DC2626',livre:'#E2E8F0'};
+    el.innerHTML='<table class="tbl lt3"><thead><tr><th>Lote</th><th>Descrição</th><th>Pregão</th><th>Comprador</th><th style="text-align:right">Valor</th><th>Status</th><th></th></tr></thead><tbody>'
+      +fl.map(function(l){
+        var e=getSt(l), arr=String(l.arrematante||'').trim(), mask=arr.indexOf('*')>-1;
+        var val=Number(l.valorVenda)||Number(l.lanceAtual)||Number(l.lanceInicial)||0;
+        var nat=Number(l.valorVenda)>0?'VENDA':(((Number(l.lanceAtual)||0)>(Number(l.lanceInicial)||0)||arr)?'LANCE':'ABERTURA');
+        var cn=nat==='VENDA'?'#059669':(nat==='LANCE'?'#2563EB':'#94A3B8');
+        var comp=!arr?'<span style="color:#CBD5E1">—</span>'
+          :(mask?'<span class="lt3-ap" title="Apelido da plataforma, não é o nome do comprador">'+esc(arr)+'</span>'
+                :'<span class="lt3-nm" title="Nome confirmado na prestação de contas">'+esc(arr)+'</span>');
+        return '<tr style="box-shadow:inset 3px 0 0 '+(COR[e]||'#E2E8F0')+'">'
+          +'<td class="n">'+esc(l.num)+'</td>'
+          +'<td class="lt3-d">'+esc(String(l.descricao||'').slice(0,78))+'</td>'
+          +'<td class="lt3-dt">'+fmtD(l.data)+(l.hora?' · '+esc(l.hora):'')+'</td>'
+          +'<td>'+comp+'</td>'
+          +'<td class="lt3-v"><div>R$ '+val.toLocaleString('pt-BR')+'</div><small style="color:'+cn+'">'+nat+'</small></td>'
+          +'<td>'+getBadge(l)+'</td>'
+          +'<td><div style="display:flex;gap:4px;justify-content:flex-end"><button class="ic-btn" title="Editar" onclick="editarLote(\''+l.id+'\')"><i class="ti ti-edit" style="font-size:12px"></i></button>'
+          +'<button class="ic-btn del" title="Excluir" onclick="deletarLote(\''+l.id+'\')"><i class="ti ti-trash" style="font-size:12px"></i></button></div></td></tr>';
+      }).join('')+'</tbody></table>';
+  }
+  try{ window.renderLotes=lotesV3; renderLotes=lotesV3; }catch(e){}
+
   try{
     var alvo=document.getElementById('pg-leiloes');
     if(alvo){ var t=null; new MutationObserver(function(){ clearTimeout(t); t=setTimeout(marca,120); }).observe(alvo,{childList:true,subtree:true}); }
