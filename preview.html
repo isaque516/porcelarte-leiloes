@@ -2055,19 +2055,26 @@ async function renderPendentesDocs(){try{var box=document.getElementById('doc-pe
  const pend=all.filter(function(l){return (l.vendido||l.pago)&&!(TCACHE||[]).some(function(t){return String(t.num)===String(l.num);});});
  pend.sort(function(a,b){return String(a.num).localeCompare(String(b.num),undefined,{numeric:true});});
  if(!pend.length){box.innerHTML='<div style="padding:12px 16px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:12px;font-size:13px;color:#059669;font-weight:700"><i class="ti ti-circle-check"></i> Todos os lotes vendidos têm termo de retirada arquivado.</div>';return;}
- box.innerHTML='<div style="font-size:13px;font-weight:800;color:#EA580C;margin-bottom:10px"><i class="ti ti-truck-delivery"></i> Aguardando termo de retirada ('+pend.length+') — o cliente retirou? Clique no cartão e anexe o termo:</div>'
- +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">'
- +pend.map(function(l){var val=Number(l.valorVenda)||l.lanceAtual||0;
-  return '<div onclick="abrirTermo(\''+l.num+'\')" style="cursor:pointer;border:1.5px solid #FED7AA;background:#FFFBF5;border-radius:14px;padding:13px 15px;transition:all .15s" '
-  +'onmouseover="this.style.borderColor=\'#EA580C\';this.style.boxShadow=\'0 6px 18px rgba(234,88,12,.12)\';this.style.transform=\'translateY(-2px)\'" '
-  +'onmouseout="this.style.borderColor=\'#FED7AA\';this.style.boxShadow=\'none\';this.style.transform=\'none\'">'
-  +'<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:800;font-size:14px;color:#0F172A">'+l.num+'</span>'
-  +'<span style="font-size:12.5px;font-weight:800;color:#EA580C">R$ '+val.toLocaleString('pt-BR')+'</span></div>'
-  +'<div style="font-size:11px;color:#64748B;margin:5px 0 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+((l.descricao||'').slice(0,55))+'</div>'
-  +'<div style="display:flex;justify-content:space-between;align-items:center">'
-  +'<span style="font-size:11.5px;color:#334155;font-weight:700"><i class="ti ti-user" style="color:#94A3B8"></i> '+(l.arrematante||'—')+'</span>'
-  +'<span style="font-size:11.5px;font-weight:800;color:#2563EB;background:#EFF6FF;border-radius:999px;padding:4px 10px"><i class="ti ti-paperclip"></i> Registrar</span>'
-  +'</div></div>';}).join('')+'</div>';
+ /* Antes eram 78 cartoes laranja soltos, um por lote, com o mesmo comprador
+    repetido cinco vezes. Quem retira e o comprador, nao o lote: agrupar por
+    comprador transforma a parede em uma lista que da para ler. */
+ var _esc=function(t){return String(t==null?'':t).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
+ var _mask=function(a){return String(a||'').indexOf('*')>-1;};
+ var grupos={}, SEMN='Comprador ainda não identificado';
+ pend.forEach(function(l){var a=String(l.arrematante||'').trim();var k=(a&&!_mask(a))?a:SEMN;(grupos[k]=grupos[k]||[]).push(l);});
+ var nomes=Object.keys(grupos).sort(function(a,b){if(a===SEMN)return 1;if(b===SEMN)return -1;return grupos[b].length-grupos[a].length||a.localeCompare(b);});
+ var totalV=pend.reduce(function(s,l){return s+(Number(l.valorVenda)||l.lanceAtual||0);},0);
+ box.innerHTML='<div class="dp-top"><div><h3><i class="ti ti-truck-delivery"></i> Aguardando termo de retirada</h3>'
+  +'<p>'+pend.length+' lote(s) de '+nomes.length+' comprador(es) · R$ '+Math.round(totalV).toLocaleString('pt-BR')+'. O cliente retirou? Clique no lote e anexe o termo.</p></div></div>'
+  +'<div class="dp-g">'+nomes.map(function(n,ix){var ls=grupos[n];var semN=(n===SEMN);
+    var tot=ls.reduce(function(s,l){return s+(Number(l.valorVenda)||l.lanceAtual||0);},0);
+    return '<div class="dp-c'+(semN?' dp-sem':'')+'" style="animation-delay:'+Math.min(ix*30,420)+'ms">'
+     +'<div class="dp-h"><div class="dp-av">'+(semN?'<i class="ti ti-user-question"></i>':_esc(n.slice(0,2).toUpperCase()))+'</div>'
+     +'<div class="dp-t"><b>'+_esc(n)+'</b><span>'+ls.length+' lote(s) · R$ '+Math.round(tot).toLocaleString('pt-BR')+'</span></div></div>'
+     +'<div class="dp-ls">'+ls.map(function(l){var val=Number(l.valorVenda)||l.lanceAtual||0;
+       return '<button class="dp-l" onclick="abrirTermo(\''+l.num+'\')" title="'+_esc((l.descricao||'').slice(0,80))+' — clique para anexar o termo">'
+        +'<i class="ti ti-paperclip"></i><b>'+l.num+'</b><span>R$ '+val.toLocaleString('pt-BR')+'</span></button>';}).join('')+'</div></div>';
+  }).join('')+'</div>';
 }catch(_e){}}
 window.setFiltroCtl=function(f){FILTRO=f;SEL.clear();window.renderControle();};
 window.toggleCtl=async function(id,campo,val){try{await db();const u={};u[campo]=val;if(campo==='retirou'&&val)u.dataRetirada=new Date().toISOString().slice(0,10);await window._upd(window._doc(window._db,'lotes',id),u);if(typeof window.toast==='function')window.toast('Atualizado!','ok');window.renderControle();}catch(e){if(typeof window.toast==='function')window.toast('Erro: '+e.message,'er');else alert('Erro: '+e.message);}};
@@ -3430,6 +3437,116 @@ window.__xpTermo=function(num){
   },600);
 };
 
+</script>
+
+<style id="vis8">
+/* ==========================================================================
+   VISUAL v8 - harmonizacao. Nao e pele nova: e levar para o app inteiro a
+   linguagem que funcionou na Expedicao (azul/branco, numero com acao, estado
+   por cor, movimento contido). Tudo aqui e aparencia; nenhum dado muda.
+   ========================================================================== */
+
+/* --- 1. o app sempre ocupa a janela inteira ---
+   O body virou grid e qualquer elemento solto no fim dele (extensao do
+   navegador, por exemplo) ganhava uma linha propria e empurrava uma faixa
+   escura para dentro da tela. A linha do app agora e fixa em 100vh. */
+@media (min-width:901px){
+  body{grid-template-rows:100vh !important;grid-auto-rows:0 !important}
+  .sb,.mn{height:100vh !important;max-height:100vh}
+}
+
+/* --- 2. troca de tela e rolagem --- */
+@keyframes v8In{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.pg{animation:v8In .32s cubic-bezier(.22,1,.36,1) both}
+.ct{scroll-behavior:smooth}
+.ct::-webkit-scrollbar{width:11px}
+.ct::-webkit-scrollbar-thumb{background:#C7D0DF;border-radius:8px;border:3px solid transparent;background-clip:padding-box}
+.ct::-webkit-scrollbar-thumb:hover{background:#94A3B8;border:3px solid transparent;background-clip:padding-box}
+
+/* --- 3. cartoes e cabecalhos no mesmo padrao da Expedicao --- */
+.card{border-radius:20px;border:1px solid #E2E8F0;
+  box-shadow:0 1px 2px rgba(15,23,42,.04),0 14px 30px -22px rgba(15,23,42,.28)}
+.ch{padding:17px 22px 14px}
+.ch-title{font-size:16px;font-weight:780;letter-spacing:-.03em;color:#0F172A}
+.ch-ico{width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,#EFF6FF,#DBEAFE);color:#2563EB;
+  box-shadow:0 8px 18px -10px rgba(37,99,235,.55),inset 0 1px 0 rgba(255,255,255,.9)}
+
+/* --- 4. tabelas: cabecalho que fica, linha que responde, numero alinhado --- */
+.tbl{font-variant-numeric:tabular-nums}
+.tbl thead th{position:sticky;top:0;z-index:2;background:#F7F9FC;box-shadow:0 1px 0 #E2E8F0}
+.tbl tbody tr{transition:background .14s}
+.tbl tbody tr:hover td{background:#F5F8FF}
+.tbl td.n{font-weight:800;color:#0F172A;white-space:nowrap}
+#lotes-wrap{max-height:72vh;overflow:auto;border-radius:0 0 20px 20px}
+
+/* --- 5. Documentos: pendentes agrupados por comprador --- */
+.dp-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:13px}
+.dp-top h3{font-size:15px;font-weight:780;letter-spacing:-.025em;color:#0F172A;display:flex;align-items:center;gap:8px}
+.dp-top h3 i{color:#EA580C;font-size:18px}
+.dp-top p{font-size:12.5px;color:#64748B;margin-top:3px}
+.dp-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.dp-c{position:relative;overflow:hidden;background:#fff;border:1px solid #E2E8F0;border-radius:15px;padding:13px 14px 12px 17px;
+  animation:xpUp .45s cubic-bezier(.22,1,.36,1) both;
+  transition:transform .22s cubic-bezier(.22,1,.36,1),box-shadow .22s,border-color .22s}
+.dp-c::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:#EA580C}
+.dp-c:hover{transform:translateY(-3px);border-color:#FDBA74;box-shadow:0 22px 40px -26px rgba(234,88,12,.55)}
+.dp-c.dp-sem::before{background:#DC2626}
+.dp-c.dp-sem{background:linear-gradient(180deg,#FFF7F7,#fff);border-color:#FCA5A5}
+.dp-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.dp-av{width:34px;height:34px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:11.5px;font-weight:800;color:#fff;background:linear-gradient(140deg,#FB923C,#EA580C);
+  box-shadow:0 8px 16px -8px rgba(234,88,12,.85)}
+.dp-sem .dp-av{background:linear-gradient(140deg,#F87171,#DC2626)}
+.dp-av i{font-size:16px}
+.dp-t{min-width:0}
+.dp-t b{display:block;font-size:12.8px;font-weight:780;color:#0F172A;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dp-t span{font-size:11px;color:#64748B}
+.dp-ls{display:flex;flex-wrap:wrap;gap:6px}
+.dp-l{font:inherit;display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  background:#FFF7ED;border:1px solid #FED7AA;border-radius:9px;padding:5px 9px;font-size:11.5px;color:#9A3412;
+  transition:transform .16s,background .16s,border-color .16s,box-shadow .16s}
+.dp-l i{font-size:12.5px;opacity:.7}
+.dp-l b{font-weight:800;color:#0F172A}
+.dp-l span{font-variant-numeric:tabular-nums;font-weight:650}
+.dp-l:hover{background:#FFEDD5;border-color:#EA580C;transform:translateY(-2px);box-shadow:0 8px 14px -8px rgba(234,88,12,.7)}
+
+/* --- 6. Financeiro: o que ja foi pago recua, o que falta receber aparece --- */
+.lei-card{position:relative;overflow:hidden;border-radius:18px;transition:transform .24s cubic-bezier(.22,1,.36,1),box-shadow .24s,opacity .2s}
+.lei-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:#CBD5E1}
+.lei-card.v8-pago::before{background:#059669}
+.lei-card.v8-areceber::before{background:#D97706}
+.lei-card.v8-atraso::before{background:#DC2626}
+.lei-card.v8-pago{opacity:.82}
+.lei-card.v8-pago:hover{opacity:1}
+.lei-card.v8-areceber,.lei-card.v8-atraso{box-shadow:0 1px 2px rgba(15,23,42,.05),0 18px 36px -22px rgba(217,119,6,.55)}
+.lei-card.v8-atraso{box-shadow:0 1px 2px rgba(15,23,42,.05),0 18px 36px -22px rgba(220,38,38,.6)}
+
+/* --- 7. calendario e campos --- */
+.cal-cell{transition:transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s,background .2s}
+.fi:focus,.f-sel:focus{outline:none;border-color:#60A5FA;box-shadow:0 0 0 4px rgba(37,99,235,.14)}
+.f-sel{border-radius:11px}
+
+@media (prefers-reduced-motion:reduce){ .pg,.dp-c{animation:none !important} }
+</style>
+<script id="vis8js">
+/* Marca cada cartao do Financeiro com o estado dele, lendo a etiqueta que o
+   proprio app ja escreve. So aparencia: nao le nem grava dado nenhum. */
+(function(){
+  function marca(){
+    var cs=document.querySelectorAll('#pg-leiloes .lei-card');
+    for(var i=0;i<cs.length;i++){
+      var b=cs[i].querySelector('.badge'); var t=b?(b.textContent||'').toUpperCase():'';
+      cs[i].classList.remove('v8-pago','v8-areceber','v8-atraso');
+      if(t.indexOf('NÃO RECEBIDO')>-1||t.indexOf('ATRAS')>-1) cs[i].classList.add('v8-atraso');
+      else if(t.indexOf('A RECEBER')>-1) cs[i].classList.add('v8-areceber');
+      else if(t.indexOf('PAGO')>-1) cs[i].classList.add('v8-pago');
+    }
+  }
+  try{
+    var alvo=document.getElementById('pg-leiloes');
+    if(alvo){ var t=null; new MutationObserver(function(){ clearTimeout(t); t=setTimeout(marca,120); }).observe(alvo,{childList:true,subtree:true}); }
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
